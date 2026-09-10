@@ -1,0 +1,8 @@
+{
+  "id": "wiki-corpus-empty",
+  "source_material_count": 0,
+  "registered_extracted_words": 0,
+  "corpus_snapshot_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "expected_count": null,
+  "note": "Empty kit state. On first intake, wiki-intake updates count and snapshot; expected_count may pin a release count."
+}

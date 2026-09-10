@@ -1,0 +1,10 @@
+{
+  "system_version": "1.0.0",
+  "required_paths": [
+    "00-system/registers/RELEASE_READINESS_REGISTER.md"
+  ],
+  "base_files": [],
+  "min_counts": {},
+  "word_thresholds": {},
+  "note": "Per-instance release contract. Start permissive; tighten min_counts, word_thresholds, and required_paths as the wiki layer grows. A numeric threshold is a defect detector, not a quality certificate."
+}

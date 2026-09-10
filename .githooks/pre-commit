@@ -1,0 +1,15 @@
+#!/bin/sh
+# Cross-tool integrity gate. Runs the same way whether `git commit` was
+# invoked by Claude Code, Codex, Hermes, or a human -- this is a Git hook,
+# not a harness feature, so no single tool's local config can skip it for
+# the others. Install once per machine/clone with:
+#   git config core.hooksPath .githooks
+#
+# Delegates to scripts/check_against_baseline.py, the same script CI runs
+# (.github/workflows/validate.yml), so a local pass and a CI pass mean the
+# same thing: no new validator error beyond .githooks/known-baseline-errors.txt.
+
+REPO_ROOT=$(git rev-parse --show-toplevel) || exit 1
+cd "$REPO_ROOT" || exit 1
+
+python scripts/check_against_baseline.py

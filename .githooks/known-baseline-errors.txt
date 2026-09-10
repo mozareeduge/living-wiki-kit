@@ -1,0 +1,32 @@
+# Pre-existing validator errors this repo already tolerates.
+#
+# One line per error, verbatim text after "ERROR: " as printed by
+# scripts/validate_repo.py --full and scripts/validate_content_release.py.
+# Blank lines and lines starting with # are ignored.
+#
+# The pre-commit hook (.githooks/pre-commit) fails a commit only when a
+# validator reports an error that is NOT in this file -- i.e. something new.
+# It never blocks on errors already listed here.
+#
+# To retire a baseline line: fix the underlying issue, confirm the
+# validators no longer report it, then delete the line here in the SAME
+# commit as the fix (never delete it separately "to make the hook pass").
+#
+# To add a line here for a genuinely new, deliberately-deferred issue:
+# that is a judgment call about the corpus, not a mechanical fix -- do it
+# in its own reviewed commit with a reason in the message, never silently
+# inside an unrelated change.
+
+# --- scripts/validate_repo.py --full ---
+# (currently empty: the "unresolved wikilink" false positives here were a
+# validator bug -- Path(target).stem split on a literal dot inside record
+# ids like "yd1.1-..." -- fixed directly, not tolerated. See
+# system/cross-tool-integrity-guardrails, 2026-09-05.)
+
+# --- scripts/validate_content_release.py ---
+03-objects/people/fred-truyen.md: person has 149 body words; release threshold is 150
+03-objects/people/sandy-claes.md: person has 137 body words; release threshold is 150
+04-notes/research/correspondence-state-after-apply-intake.md: research-note has 287 body words; release threshold is 450
+03-objects/projects/casebook.md: active canonical record has no inbound wikilink
+03-objects/projects/ontograph.md: active canonical record has no inbound wikilink
+_captures/HANDOFF--2026-09-04--apply-folder-intake.md: active canonical record has no inbound wikilink

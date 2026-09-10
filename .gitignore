@@ -1,0 +1,21 @@
+# Rebuildable / runtime state
+_search/
+_exports/interchange/
+_audits/runtime/
+scripts/__pycache__/
+scripts/capture/__pycache__/
+scripts/capture/tests/
+scripts/capture/fixtures/
+*.pyc
+
+# Proposals log is a runtime queue (durable state lives in adjudicated records)
+# _proposals/proposals.jsonl  # keep committed but inert; uncomment to ignore
+
+# Secrets and machine-specific config
+.env
+.env.*
+*.local.json
+
+# OS noise
+Thumbs.db
+.DS_Store

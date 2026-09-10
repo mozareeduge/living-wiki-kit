@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://living-wiki-kit.local/schemas/relation-object.schema.json",
+  "title": "Mozare Wiki relation object",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "participants",
+    "relation_status",
+    "current_claim_permission"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^mw-rel-"
+    },
+    "type": {
+      "const": "relation-object"
+    },
+    "title": {
+      "type": "string"
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "relation_status": {
+      "type": "string"
+    },
+    "current_claim_permission": {
+      "enum": [
+        "may-note",
+        "may-describe",
+        "may-argue-cautiously",
+        "may-argue",
+        "blocked"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

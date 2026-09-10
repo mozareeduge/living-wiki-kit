@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://living-wiki-kit.local/schemas/source-record.schema.json",
+  "title": "Living Wiki source record",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "filename",
+    "format",
+    "sha256",
+    "original_path",
+    "authority_scope",
+    "validation_status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{1,7}-src-[0-9a-f]{12}(?:-[0-9a-f]{4})?$"
+    },
+    "type": {
+      "const": "source-record"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "filename": {
+      "type": "string",
+      "minLength": 1
+    },
+    "format": {
+      "enum": [
+        "docx",
+        "pdf",
+        "png"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "original_path": {
+      "type": "string",
+      "pattern": "^_originals/"
+    },
+    "extracted_text_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "authority_scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "validation_status": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}
