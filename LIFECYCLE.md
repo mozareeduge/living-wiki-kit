@@ -27,6 +27,10 @@ artifacts into `_originals/` (never overwrite), mint content-derived IDs
 derivatives, assign authority scope and validation status, update
 manifest/corpus state, and stop for human review before commit.
 
+Derivative extraction for non-md sources runs through
+`scripts/file-to-md/to_md.py` (see `.claude/skills/wiki-file-to-md/SKILL.md`
+for OCR routing and Persian-text caveats).
+
 Key discipline: do not infer sent/published status from a filename.
 
 ## Stage 2 — Reconciliation (manual skill: wiki-reconcile)

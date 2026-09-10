@@ -25,7 +25,10 @@ Input: one or more files placed in `01-inbox/`.
 4. Compare checksums and normalized text against the manifest.
 5. Copy each new exact artifact into `_originals/`. Never overwrite an existing path.
 6. Create a content-derived source ID `<prefix>-src-<first-12-sha256>` (prefix set at instantiation; `mw-` in the source system).
-7. Create its source record and searchable derivative.
+7. Create its source record and searchable derivative. For a non-md source
+   (pdf/docx/pptx/xlsx/html/epub), extract the derivative with
+   `python scripts/file-to-md/to_md.py "<original>" -o "02-sources/text/<record-id>--<slug>.md"`
+   (OCR routing: `.claude/skills/wiki-file-to-md/SKILL.md`).
 8. Assign provisional family, authority scope, version role, extraction quality, and validation status. Do not infer sent/published status from filename.
 9. Invoke `/wiki-reconcile` before altering canonical object, lineage, relation, claim, or system pages.
 10. Update the manifest, corpus state, material register, source index, reconciliation audit, and system design when the intake changes the system.

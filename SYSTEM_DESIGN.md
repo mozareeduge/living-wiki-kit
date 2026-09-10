@@ -122,7 +122,8 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search`, `wiki_propose` — writes go only to `_proposals/` |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo |
-| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set |
+| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set
+| `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` |
 | `check_research_spans.py` | citation-span audit over an external research quarantine |
 | `*.ps1` | Windows helpers: QMD config/refresh, backup, verify-install, search wrapper |
 
