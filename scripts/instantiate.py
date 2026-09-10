@@ -41,12 +41,12 @@ TARGET_GLOBS = [
 ]
 
 MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-)")
-MOZARE_WORDS = [
-    ("mozare-wiki", "this-wiki"),
-    ("Mozare Wiki", "This Wiki"),
-    ("mozare", "wiki"),
-    ("Mozare", "Wiki"),
-    ("MOZARE", "WIKI"),
+WIKI_WORDS = [
+    ("this-wiki", "this-wiki"),
+    ("This Wiki", "This Wiki"),
+    ("wiki", "wiki"),
+    ("Wiki", "Wiki"),
+    ("WIKI", "WIKI"),
 ]
 
 
@@ -69,7 +69,7 @@ def main() -> int:
                 continue
             text = path.read_text(encoding="utf-8")
             new = MW_ID.sub(f"{prefix}-", text)
-            for old, repl in MOZARE_WORDS:
+            for old, repl in WIKI_WORDS:
                 new = new.replace(old, repl)
             if new != text:
                 path.write_text(new, encoding="utf-8")

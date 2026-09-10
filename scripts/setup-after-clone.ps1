@@ -18,7 +18,7 @@ function Has-Command($Name) {
 
 Step "Confirm repository root"
 if (-not (Test-Path "SYSTEM_DESIGN.md") -or -not (Test-Path "_originals")) {
-    throw "This script must run inside the Mozare Wiki Git root."
+    throw "This script must run inside the This Wiki Git root."
 }
 Write-Host "Repository: $RepoRoot"
 

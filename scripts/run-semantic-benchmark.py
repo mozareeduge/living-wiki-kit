@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Mozare Wiki 1.1.0 QMD semantic benchmark."""
+"""Run the This Wiki 1.1.0 QMD semantic benchmark."""
 from __future__ import annotations
 
 import argparse

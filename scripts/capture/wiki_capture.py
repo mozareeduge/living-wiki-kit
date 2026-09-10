@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Governed multimodal capture core — Mozare Wiki 1.2.0 (Task 3).
+"""Governed multimodal capture core — This Wiki 1.2.0 (Task 3).
 
 Single library used by ALL channels (Telegram/Hermes hook, Obsidian intake,
 MCP tools, CLI). Deterministic: no network, no model calls.

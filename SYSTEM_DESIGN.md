@@ -14,7 +14,7 @@ source_of_truth: true
 
 ## 1. What this kit is
 
-This repository is a **generalized extraction** of the mozare-wiki operational
+This repository is a **generalized extraction** of the this-wiki operational
 system: a private, Git-versioned, Obsidian-readable archive pattern that
 preserves not only current statements but *how works, concepts, claims, and
 directions changed* — a "living genetic archive."

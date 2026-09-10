@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://living-wiki-kit.local/schemas/relation-object.schema.json",
-  "title": "Mozare Wiki relation object",
+  "title": "This Wiki relation object",
   "type": "object",
   "required": [
     "id",

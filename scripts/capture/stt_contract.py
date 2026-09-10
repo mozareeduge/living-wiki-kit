@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provider-neutral speech-to-text contract — Mozare Wiki 1.2.0 (Task 5).
+"""Provider-neutral speech-to-text contract — This Wiki 1.2.0 (Task 5).
 
 Spec §5: every adapter accepts a local media path + optional language hint
 and returns text + segments + detected language + duration + quality flags

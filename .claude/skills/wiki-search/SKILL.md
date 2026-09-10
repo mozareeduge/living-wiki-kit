@@ -1,6 +1,6 @@
 ---
 name: wiki-search
-description: Search the Mozare Wiki read-only using QMD, exact text, properties, and source records. Use for bounded questions and retrieval. Do not change files.
+description: Search the This Wiki read-only using QMD, exact text, properties, and source records. Use for bounded questions and retrieval. Do not change files.
 ---
 
 # Wiki Search

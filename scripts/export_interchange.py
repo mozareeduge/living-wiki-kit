@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interchange exports for Mozare Wiki — Engine 2.
+"""Interchange exports for This Wiki — Engine 2.
 
 Deterministic, read-only exports into open standards. Everything emitted is a
 DERIVED VIEW: exports never become the system of record (standing reject,
@@ -190,7 +190,7 @@ def cmd_skos(_args) -> int:
         "@graph": [{
             "@id": "mw:concept-scheme",
             "@type": "skos:ConceptScheme",
-            "dcterms:title": "Mozare Wiki controlled vocabulary (derived view)",
+            "dcterms:title": "This Wiki controlled vocabulary (derived view)",
             "skos:hasTopConcept": [],
         }] + concepts,
     }
@@ -244,7 +244,7 @@ TEI_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
   <teiHeader>
     <fileDesc>
       <titleStmt><title>{title}</title></titleStmt>
-      <publicationStmt><p>Mozare Wiki interchange export; derived view.</p></publicationStmt>
+      <publicationStmt><p>This Wiki interchange export; derived view.</p></publicationStmt>
       <sourceDesc>
         <msDesc>
           <msIdentifier>
