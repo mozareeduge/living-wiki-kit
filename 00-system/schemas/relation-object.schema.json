@@ -14,7 +14,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^mw-rel-"
+      "pattern": "^[a-z][a-z0-9]{1,7}-rel-"
     },
     "type": {
       "const": "relation-object"

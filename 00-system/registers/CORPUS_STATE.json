@@ -1,8 +1,8 @@
 {
-  "id": "wiki-corpus-empty",
-  "source_material_count": 0,
-  "registered_extracted_words": 0,
-  "corpus_snapshot_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "id": "ref-corpus-2026-09-10",
+  "source_material_count": 11,
+  "registered_extracted_words": 19767,
+  "corpus_snapshot_sha256": "143ced909bdd5c5150a7bdc84a2e64221472d9508d4923936fa76ec251749e83",
   "expected_count": null,
-  "note": "Empty kit state. On first intake, wiki-intake updates count and snapshot; expected_count may pin a release count."
+  "note": "First intake: 11 research-campaign md sources (7 track dossiers T1-T7 + README/META/LANDSCAPE/FINAL). Intake branch intake/2026-09-10--research-campaign."
 }
