@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ref-wiki.local/schemas/object-record.schema.json",
+  "title": "Ref Wiki object record",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "kind",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ref-obj-"
+    },
+    "type": {
+      "const": "object"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "collection",
+        "concept",
+        "institution",
+        "method",
+        "person",
+        "project",
+        "reference",
+        "work"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}

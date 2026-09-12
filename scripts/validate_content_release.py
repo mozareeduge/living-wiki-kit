@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""Validate the populated Mozare Wiki content layer.
+"""Validate the populated This Wiki content layer.
 
 This validator detects structural incompleteness. It does not certify literary,
 historical, or interpretive truth.
@@ -19,8 +19,16 @@ except ImportError:
     raise SystemExit(2)
 
 ROOT = Path(__file__).resolve().parents[1]
+IGNORED_PREFIXES = (
+    ".git/",
+    ".pytest_cache/",
+    "_search/",
+    "02-sources/provenance/",
+    "_proposals/patches/",
+    "_proposals/generated/",
+)
 
-# Release contract is per-instance configuration, not hard-coded mozare paths.
+# Release contract is per-instance configuration, not hard-coded wiki paths.
 # The kit ships a generic config; instantiated wikis edit it as their layer grows.
 import configparser  # noqa: F401  (std; placeholder to keep imports stable)
 
@@ -75,8 +83,12 @@ def body_words(body: str) -> int:
 def markdown_files() -> list[Path]:
     return [
         p for p in ROOT.rglob("*.md")
-        if ".git" not in p.parts and "_search" not in p.parts
+        if not is_ignored_rel(p.relative_to(ROOT).as_posix())
     ]
+
+
+def is_ignored_rel(rel: str) -> bool:
+    return any(rel == prefix.rstrip("/") or rel.startswith(prefix) for prefix in IGNORED_PREFIXES)
 
 
 def curated(path: Path, fm: dict) -> bool:
@@ -99,6 +111,8 @@ def build_targets(files: list[Path]) -> tuple[dict[str, str], dict[str, list[str
         if not p.is_file() or ".git" in p.parts:
             continue
         rel = p.relative_to(ROOT).as_posix()
+        if is_ignored_rel(rel):
+            continue
         exact[rel] = rel
         if rel.endswith(".md"):
             exact[rel[:-3]] = rel

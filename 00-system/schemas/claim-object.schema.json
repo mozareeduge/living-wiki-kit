@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ref-wiki.local/schemas/claim-object.schema.json",
+  "title": "Ref Wiki claim object",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "statement",
+    "supporting_sources",
+    "unsupported_zones",
+    "counter_evidence",
+    "certainty",
+    "current_claim_permission",
+    "responsible_language"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ref-claim-"
+    },
+    "type": {
+      "const": "claim-object"
+    },
+    "current_claim_permission": {
+      "enum": [
+        "may-note",
+        "may-describe",
+        "may-argue-cautiously",
+        "may-argue",
+        "blocked"
+      ]
+    },
+    "supporting_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "unsupported_zones": {
+      "type": "array"
+    },
+    "counter_evidence": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

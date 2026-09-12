@@ -32,9 +32,15 @@
     },
     "format": {
       "enum": [
+        "md",
         "docx",
         "pdf",
-        "png"
+        "png",
+        "txt",
+        "html",
+        "epub",
+        "pptx",
+        "xlsx"
       ]
     },
     "sha256": {
