@@ -1,0 +1,8 @@
+* text=auto
+
+_originals/** -text
+02-sources/text/** -text
+02-sources/provenance/** -text -diff
+_proposals/patches/** -text -diff
+00-system/registers/MATERIALS_INDEX.jsonl text eol=lf
+00-system/registers/CORPUS_STATE.json text eol=lf

@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""Deterministic validation for Mozare Wiki.
+"""Deterministic validation for This Wiki.
 
 This script checks repository structure, metadata identity, source checksums,
 manifest consistency, and internal links. It does not judge literary or scholarly
@@ -23,6 +23,32 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "00-system/registers/MATERIALS_INDEX.jsonl"
 STATE = ROOT / "00-system/registers/CORPUS_STATE.json"
+IGNORED_PREFIXES = (
+    ".git/",
+    ".pytest_cache/",
+    "_search/",
+    "02-sources/provenance/",
+    "_proposals/patches/",
+    "_proposals/generated/",
+)
+SOURCE_FORMATS = {"md", "docx", "pdf", "png", "txt", "html", "epub", "pptx", "xlsx"}
+CLAIM_PERMISSIONS = {
+    "may-note",
+    "may-describe",
+    "may-argue-cautiously",
+    "may-argue",
+    "blocked",
+}
+OBJECT_KIND_BY_DIR = {
+    "concepts": "concept",
+    "institutions": "institution",
+    "methods": "method",
+    "people": "person",
+    "references": "reference",
+    "works": "work",
+    "projects": "project",
+    "collections": "collection",
+}
 REQUIRED_ROOT = [
     "README.md", "HOME.md", "SYSTEM_DESIGN.md", "SETUP_GUIDE_WINDOWS.md",
     "SEARCH_GUIDE.md", "CLAUDE.md", "AGENTS.md", ".mcp.json",
@@ -81,6 +107,89 @@ def looks_double_encoded(s: str) -> bool:
     return fixed != s
 
 
+def is_ignored_rel(rel: str) -> bool:
+    return any(rel == prefix.rstrip("/") or rel.startswith(prefix) for prefix in IGNORED_PREFIXES)
+
+
+def require_fields(rel: str, fm: dict, fields: tuple[str, ...], errors: list[str]) -> None:
+    for field in fields:
+        if field not in fm or fm[field] in ("", None):
+            errors.append(f"{rel}: missing required field '{field}'")
+
+
+def validate_live_record_schema(rel: str, fm: dict, errors: list[str]) -> None:
+    """Enforce the live record subset the local validators rely on."""
+    if rel.startswith("02-sources/records/"):
+        require_fields(
+            rel,
+            fm,
+            ("id", "type", "title", "filename", "format", "sha256",
+             "original_path", "authority_scope", "validation_status"),
+            errors,
+        )
+        if fm.get("type") != "source-record":
+            errors.append(f"{rel}: source record type must be 'source-record'")
+        if fm.get("format") and fm.get("format") not in SOURCE_FORMATS:
+            errors.append(f"{rel}: unsupported source format {fm.get('format')!r}")
+        return
+
+    if rel.startswith("03-objects/"):
+        require_fields(rel, fm, ("id", "type", "title", "kind", "status"), errors)
+        if fm.get("type") != "object":
+            errors.append(f"{rel}: object type must be 'object'")
+        folder = rel.split("/", 2)[1]
+        expected_kind = OBJECT_KIND_BY_DIR.get(folder)
+        if expected_kind and fm.get("kind") != expected_kind:
+            errors.append(
+                f"{rel}: object kind must be {expected_kind!r} for 03-objects/{folder}/, "
+                f"got {fm.get('kind')!r}"
+            )
+        return
+
+    if rel.startswith("05-claims/"):
+        require_fields(
+            rel,
+            fm,
+            ("id", "type", "title", "statement", "supporting_sources",
+             "unsupported_zones", "counter_evidence", "certainty",
+             "current_claim_permission", "responsible_language"),
+            errors,
+        )
+        if fm.get("type") != "claim-object":
+            errors.append(f"{rel}: claim type must be 'claim-object'")
+        if fm.get("current_claim_permission") not in CLAIM_PERMISSIONS:
+            errors.append(
+                f"{rel}: invalid current_claim_permission "
+                f"{fm.get('current_claim_permission')!r}"
+            )
+        for field in ("supporting_sources", "unsupported_zones", "counter_evidence"):
+            if field in fm and not isinstance(fm[field], list):
+                errors.append(f"{rel}: {field} must be a list")
+        return
+
+    if rel.startswith("06-relations/"):
+        require_fields(
+            rel,
+            fm,
+            ("id", "type", "title", "participants", "relation_status",
+             "current_claim_permission", "supporting_sources",
+             "counter_evidence"),
+            errors,
+        )
+        if fm.get("type") != "relation-object":
+            errors.append(f"{rel}: relation type must be 'relation-object'")
+        if fm.get("relation_status") not in {"candidate", "proposed", "accepted", "rejected", "blocked", "superseded"}:
+            errors.append(f"{rel}: invalid relation_status {fm.get('relation_status')!r}")
+        if fm.get("current_claim_permission") not in CLAIM_PERMISSIONS:
+            errors.append(
+                f"{rel}: invalid current_claim_permission "
+                f"{fm.get('current_claim_permission')!r}"
+            )
+        for field in ("participants", "supporting_sources", "counter_evidence"):
+            if field in fm and not isinstance(fm[field], list):
+                errors.append(f"{rel}: {field} must be a list")
+
+
 def build_link_index() -> tuple[set[str], dict[str, list[str]]]:
     exact = set()
     stems: dict[str, list[str]] = {}
@@ -88,6 +197,8 @@ def build_link_index() -> tuple[set[str], dict[str, list[str]]]:
         if not path.is_file() or ".git" in path.parts:
             continue
         rel = path.relative_to(ROOT).as_posix()
+        if is_ignored_rel(rel):
+            continue
         exact.add(rel)
         exact.add(rel.removesuffix(".md"))
         stems.setdefault(path.stem.casefold(), []).append(rel)
@@ -125,7 +236,7 @@ def validate(full: bool) -> list[str]:
     ids: dict[str, str] = {}
     md_files = [
         p for p in ROOT.rglob("*.md")
-        if ".git" not in p.parts and "_search" not in p.parts
+        if not is_ignored_rel(p.relative_to(ROOT).as_posix())
     ]
     no_frontmatter_allowed = {
         "README.md", "CLAUDE.md", "AGENTS.md", "SETUP_GUIDE_WINDOWS.md",
@@ -144,6 +255,7 @@ def validate(full: bool) -> list[str]:
             continue
         if rel.startswith(".claude/") or rel.startswith("00-system/templates/"):
             continue
+        validate_live_record_schema(rel, fm, errors)
         for key in ("id", "type", "title"):
             if key not in fm or fm[key] in ("", None):
                 errors.append(f"{rel}: missing frontmatter field '{key}'")
