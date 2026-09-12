@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public export valve for This Wiki — Engine 4 (publication layer).
+"""Public export valve for Mozare Wiki — Engine 4 (publication layer).
 
 One-way static export of canonical objects gated on their own `visibility:`
 frontmatter. Private material NEVER leaks:
@@ -119,7 +119,7 @@ footer{{margin-top:3em;padding-top:1em;border-top:1px solid #ccc;font-size:.8em;
 <h1>{html.escape(title)}</h1>
 {render_body(body)}
 <footer>
-<p>Exported from This Wiki · record <code>{html.escape(str(fm.get('id', '?')))}</code>
+<p>Exported from Mozare Wiki · record <code>{html.escape(str(fm.get('id', '?')))}</code>
 · visibility gate: <code>{html.escape(vis)}</code> (record's own property)</p>
 <details><summary>Record properties</summary><table>{meta_rows}</table></details>
 <p>Stamp: {stamp} · This is a derived view; the wiki remains the sole system of record.</p>

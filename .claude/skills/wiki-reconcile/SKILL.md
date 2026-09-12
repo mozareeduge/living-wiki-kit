@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Full-Corpus Reconciliation
 
-Current baseline: 94 artifacts, snapshot `ref-corpus-a33b260403015901`.
+Current baseline: 94 artifacts, snapshot `mw-corpus-a33b260403015901`.
 
 ## Completion criterion
 

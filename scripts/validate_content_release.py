@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""Validate the populated This Wiki content layer.
+"""Validate the populated Mozare Wiki content layer.
 
 This validator detects structural incompleteness. It does not certify literary,
 historical, or interpretive truth.
@@ -20,7 +20,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Release contract is per-instance configuration, not hard-coded wiki paths.
+# Release contract is per-instance configuration, not hard-coded mozare paths.
 # The kit ships a generic config; instantiated wikis edit it as their layer grows.
 import configparser  # noqa: F401  (std; placeholder to keep imports stable)
 
