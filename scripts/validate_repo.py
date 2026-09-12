@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""Deterministic validation for This Wiki.
+"""Deterministic validation for Mozare Wiki.
 
 This script checks repository structure, metadata identity, source checksums,
 manifest consistency, and internal links. It does not judge literary or scholarly

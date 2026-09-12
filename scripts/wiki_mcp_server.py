@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wiki governance MCP server — Engine 3 (agent surfaces).
+"""Mozare governance MCP server — Engine 3 (agent surfaces).
 
 Minimal MCP server (newline-delimited JSON-RPC 2.0 on stdio) exposing the
 wiki to ANY AI harness under the house authority model:
@@ -47,7 +47,7 @@ TOOLS = [
     {
         "name": "wiki_read",
         "description": (
-            "Read one file from the This Wiki repository (text content). "
+            "Read one file from the Mozare Wiki repository (text content). "
             "Read-only. Originals under _originals/ are immutable artifacts - "
             "reading them is allowed; there is no write operation."),
         "inputSchema": {

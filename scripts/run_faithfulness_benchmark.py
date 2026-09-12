@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Faithfulness benchmark for This Wiki — Engine 1 (evaluation loop).
+"""Faithfulness benchmark for Mozare Wiki — Engine 1 (evaluation loop).
 
 Extends the QMD retrieval benchmark (30 questions,
 00-system/configuration/semantic-benchmark-v1.1.0.json) with answer

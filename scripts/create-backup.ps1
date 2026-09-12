@@ -1,5 +1,5 @@
 param(
-    [string]$Destination = "$env:USERPROFILE\Documents\Wiki-Wiki-Backups"
+    [string]$Destination = "$env:USERPROFILE\Documents\Mozare-Wiki-Backups"
 )
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
