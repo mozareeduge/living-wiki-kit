@@ -282,6 +282,39 @@ def test_count_zero_marker_requires_label_not_coincidence():
                    for e in errors), errors
 
 
+def test_template_source_record_includes_filename_field():
+    template = (ROOT / "00-system" / "templates"
+                / "TEMPLATE_source-record.md").read_text(encoding="utf-8")
+    assert "filename:" in template
+
+
+def test_filled_template_source_record_has_no_filename_error():
+    errors = collect("02-sources/records/ref-src-deadbeef0000.md", {
+        "id": "ref-src-deadbeef0000",
+        "type": "source-record",
+        "title": "Example",
+        "aliases": [],
+        "family": "test",
+        "version_role": "original",
+        "current_priority": "normal",
+        "authority_scope": "test",
+        "format": "md",
+        "status": "registered",
+        "validation_status": "registered-not-fully-claim-validated",
+        "visibility": "private",
+        "sensitivity": "ordinary",
+        "created": "2026-09-16",
+        "updated": "2026-09-16",
+        "sha256": "0" * 64,
+        "original_path": "_originals/example.md",
+        "extracted_text_path": "02-sources/text/example.md",
+        "filename": "example.md",
+        "schema_version": "1.0.0",
+    })
+    assert not any("filename" in error and "missing" in error.lower()
+                   for error in errors)
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())

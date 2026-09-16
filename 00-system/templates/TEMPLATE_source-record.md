@@ -2,6 +2,9 @@
 id:
 type: source-record
 title:
+# filename: the exact received filename (with extension), e.g. report.pdf —
+# required by validate_repo.py; name source-record FILES by bare record id.
+filename:
 aliases: []
 family:
 version_role:

@@ -24,6 +24,14 @@ Files under `_originals/` are never edited, renamed, moved, or replaced.
 A correction enters as a new artifact. Every artifact is checksummed; the
 checksum detects alteration, never truth.
 
+Current corpus snapshot: `wiki-corpus-empty`
+Registered source artifacts: 0
+
+Live truth: `00-system/registers/CORPUS_STATE.json` and
+`MATERIALS_INDEX.jsonl` — this page restates register values only as
+verified-at-instantiation anchors, refreshed in the same change as the
+registers.
+
 ## The authority rule
 
 Everything an AI produces is candidate material. Fluency never upgrades it.

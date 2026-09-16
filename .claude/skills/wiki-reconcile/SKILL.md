@@ -6,7 +6,11 @@ disable-model-invocation: true
 
 # Full-Corpus Reconciliation
 
-Current baseline: 94 artifacts, snapshot `mw-corpus-a33b260403015901`.
+Current baseline: read the live source count and snapshot id from
+`00-system/registers/CORPUS_STATE.json` at run start; stop if that file is
+missing, malformed, or lacks a non-empty `id` and `source_material_count`.
+(Never hardcode an instance baseline in this skill. Behavior verified
+2026-09-16.)
 
 ## Completion criterion
 

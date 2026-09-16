@@ -38,6 +38,13 @@ It ships everything needed to start a **new wiki instance** for any subject:
 **This repo is not itself a populated wiki.** It is the empty, validated
 instrument. Instances made from it hold the content.
 
+Current corpus snapshot: `wiki-corpus-empty`
+Registered source artifacts: 0
+
+Live truth: `00-system/registers/CORPUS_STATE.json` and
+`MATERIALS_INDEX.jsonl`; entry-level summaries (README/HOME/CLAUDE) are
+pointer-true restatements refreshed in the same change as the registers.
+
 ## 2. The core idea (carry this, not the tooling)
 
 1. **Preservation contract.** What arrives is frozen. `_originals/` is
@@ -115,7 +122,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 
 | Script | Role |
 |---|---|
-| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks |
+| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories) |
 | `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark |
 | `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine |
