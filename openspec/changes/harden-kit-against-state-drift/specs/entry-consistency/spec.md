@@ -2,96 +2,188 @@
 
 ## ADDED Requirements
 
-### Requirement: Entry pages mirror the registers
+### Requirement: Entry pages expose labelled register anchors
 
-Every wiki instantiated from the kit SHALL keep its entry-level documents
-(HOME.md, README.md, SYSTEM_DESIGN.md) consistent with the machine registers
-(00-system/registers/CORPUS_STATE.json, MATERIALS_INDEX.jsonl) at every
-commit, enforced by the deterministic validator.
+Every wiki instantiated from the kit SHALL keep README.md, HOME.md,
+SYSTEM_DESIGN.md, and CLAUDE.md consistent with
+00-system/registers/CORPUS_STATE.json. Each page SHALL contain these literal
+label/value forms, using the current `id` and `source_material_count`:
 
-**Enforcement (validator):** `validate_repo.py` SHALL run
-`check_entry_pages(root, state, errors)` inside its main `validate()` path
-(so the pre-commit hook and CI enforce it identically). For each entry page
-the check SHALL:
+```text
+Current corpus snapshot: `<id>`
+Registered source artifacts: <count>
+```
 
-- emit an error when the current snapshot id from CORPUS_STATE.json is
-  absent from the page text (message names the missing id and says to
-  "refresh the entry page from the registers in the same change");
-- emit an error when the current `source_material_count` is absent;
-- emit an error when any `\d+ objects|relations|claims|indexes` phrasing in
-  the page contradicts the count derived from the corresponding record
-  directory (03-objects, 06-relations, 05-claims, 09-indexes);
-- tolerate a state dict without a snapshot id (empty-kit edge).
+Each page SHALL also identify CORPUS_STATE.json and MATERIALS_INDEX.jsonl as
+live truth.
 
-The empty kit SHALL pass at birth: `wiki-corpus-empty` / `0` must appear in
-the seeded entry pages (instantiator writes them; kit's own pages carry them
-natively).
+#### Scenario: fresh populated markers pass
 
-#### Scenario: fresh instance passes
+- **WHEN** all four pages contain the exact labelled values from a state with
+  id `snap-1` and source count `103`
+- **THEN** the entry-page check emits no snapshot or source-count error
 
-- WHEN a new instance is instantiated and validated before first intake
-- THEN both validators pass with no entry-page errors
+#### Scenario: a coincidental numeral does not satisfy the marker
 
-#### Scenario: intake without entry-page refresh is blocked
+- **WHEN** the live source count is `0` and a page contains an unrelated zero
+  but lacks `Registered source artifacts: 0`
+- **THEN** the check reports that page's missing source-count marker
 
-- WHEN a commit registers a new source (snapshot id and/or count change in
-  CORPUS_STATE.json) but no entry page is updated in the same change
-- THEN `git commit` fails via the pre-commit gate with the refresh
-  instruction, and CI fails identically on push
+#### Scenario: every state-bearing page is enforced
 
-#### Scenario: contradicted layer count is blocked
+- **WHEN** any one of README.md, HOME.md, SYSTEM_DESIGN.md, or CLAUDE.md has a
+  stale snapshot id or labelled source count
+- **THEN** the check emits an error naming that page, the expected value and
+  CORPUS_STATE.json, and instructs the operator to refresh the entry page from
+  the registers in the same change
 
-- WHEN an entry page states "N objects" where N differs from the number of
-  .md files under 03-objects/
-- THEN the validator emits the contradiction error
+#### Scenario: absent state id skips only its own check
+
+- **WHEN** the state mapping has no non-empty `id` but does have
+  `source_material_count`
+- **THEN** the snapshot-marker check is skipped while source-count and
+  layer-count checks still run
+
+### Requirement: The validator rejects visible layer-count contradictions
+
+`check_entry_pages(root, state, errors)` SHALL derive recursive Markdown-file
+counts for objects, relations, claims, and indexes from 03-objects,
+06-relations, 05-claims, and 09-indexes. It SHALL inspect every visible-prose
+singular or plural numeric declaration for those layers in all four entry
+pages, case-insensitively. It SHALL ignore declarations inside fenced or
+inline code and SHALL emit one actionable error for every contradictory
+occurrence.
+
+#### Scenario: a later contradiction cannot hide behind an earlier match
+
+- **WHEN** an entry page says `2 objects` and later says `3 objects`, while
+  the recursive directory count is `2`
+- **THEN** the first declaration passes and the second produces a
+  contradiction error naming the page, observed value, and actual value
+
+#### Scenario: empty layer directories pass at birth
+
+- **WHEN** the four layer directories contain no Markdown files and an entry
+  page declares `0 objects`, `0 relations`, `0 claims`, and `0 indexes`
+- **THEN** the layer-count check emits no contradiction
+
+#### Scenario: code examples are not corpus claims
+
+- **WHEN** a fenced or inline code example contains `99 objects`
+- **THEN** that example does not produce a layer-count error
+
+### Requirement: Normal validation, the hook, and CI enforce the same gate
+
+`validate_repo.py` SHALL call `check_entry_pages(ROOT, state, errors)` exactly
+once in its normal `validate()` path after loading the state and manifest.
+The pre-commit hook and CI SHALL continue to invoke that path through
+`scripts/check_against_baseline.py`. Entry-drift errors SHALL NOT be accepted
+in `.githooks/known-baseline-errors.txt`.
+
+#### Scenario: registered intake without refresh is blocked
+
+- **WHEN** an internally consistent registered-corpus change alters the live
+  snapshot id or source count but leaves one or more entry markers stale
+- **THEN** direct validation exits nonzero, a local commit is blocked, and CI
+  reports the same new validator error through the shared baseline script
+
+#### Scenario: governed capture alone does not create entry drift
+
+- **WHEN** a governed capture remains under `01-inbox/captures/` and does not
+  change CORPUS_STATE.json, MATERIALS_INDEX.jsonl, or a counted record layer
+- **THEN** the entry-page check requires no marker refresh
+
+### Requirement: The mutation suite runs without pytest
+
+`python tests/test_validator_mutations.py` SHALL discover and execute its
+`test_*` functions, print per-test results, and exit nonzero when any test
+fails. It SHALL use no new runtime dependency.
+
+#### Scenario: RED is observable
+
+- **WHEN** an entry-consistency assertion is deliberately unsatisfied
+- **THEN** the direct Python command names the failing test and exits nonzero
 
 ### Requirement: Intake and reconciliation skills carry the consistency duty
 
-- `.claude/skills/wiki-intake/SKILL.md` step 10 SHALL instruct refreshing
-  the current-state blocks of HOME.md, README.md, and SYSTEM_DESIGN.md §1
-  from the registers in the same change as the manifest update.
-- `.claude/skills/wiki-reconcile/SKILL.md` SHALL NOT hardcode a baseline;
-  it SHALL read the live source count and snapshot id from
-  CORPUS_STATE.json at run start.
+`.claude/skills/wiki-intake/SKILL.md` SHALL require all four entry markers to
+be refreshed from the registers in the same change whenever registered corpus
+state changes. `.claude/skills/wiki-reconcile/SKILL.md` SHALL read and validate
+the live source count and snapshot id from CORPUS_STATE.json at run start and
+SHALL NOT carry an instance-specific baseline value.
 
-#### Scenario: no hardcoded baseline survives
+#### Scenario: reconciliation starts from live state
 
-- Grep of `.claude/skills/*/SKILL.md` for `mw-corpus-` returns nothing.
+- **WHEN** reconciliation starts with a valid CORPUS_STATE.json
+- **THEN** its expected source count and snapshot id come from that file, not
+  from skill prose
+
+#### Scenario: no hardcoded corpus id survives in skills
+
+- **WHEN** `.claude/skills/*/SKILL.md` is searched for `mw-corpus-`
+- **THEN** the search returns no instance-specific baseline value
 
 ### Requirement: Templates match the validator contract
 
 TEMPLATE_source-record.md SHALL include the `filename:` frontmatter field
-required by validate_repo.py's source-record schema, so a record created
-from the template passes without template-drift debugging.
+required by `validate_repo.py` and a one-line description of the field.
 
-#### Scenario: template-created record passes schema
+#### Scenario: a filled template supplies filename
 
-- WHEN a source record is created by filling TEMPLATE_source-record.md
-- THEN validate_repo.py reports no missing-field error for `filename`
+- **WHEN** an operator creates a source record by filling every placeholder in
+  TEMPLATE_source-record.md, including `filename`
+- **THEN** `validate_live_record_schema` reports no missing-field error for
+  `filename`
 
-### Requirement: Instantiation seeds gate-clean entry pages
+### Requirement: Instantiation creates and preserves a gate-clean empty state
 
-`scripts/instantiate.py` SHALL update the entry pages' snapshot anchor and
-count to the fresh instance values (id `<prefix>-corpus-empty`, count 0) so
-the empty instance passes `check_entry_pages` at birth.
+On a fresh kit with an empty manifest and source count `0`,
+`scripts/instantiate.py --name X --prefix pxx` SHALL set the corpus-state id to
+`pxx-corpus-empty` and render that id and count into the exact markers on all
+four entry pages. The same invocation SHALL be idempotent. The command SHALL
+refuse before writing when the manifest is non-empty, the source count is
+nonzero, state and manifest disagree, or an existing INSTANCE.json identifies
+a different instance.
 
-#### Scenario: instantiator output passes the gate
+#### Scenario: fresh instantiator output passes both validators
 
-- WHEN instantiate.py runs with `--name X --prefix pxx`
-- THEN the entry pages reference `pxx-corpus-empty` and contain the count 0
+- **WHEN** the instantiator runs in a temporary copy as
+  `--name "Smoke Wiki" --prefix swk`
+- **THEN** CORPUS_STATE.json and all four pages contain
+  `swk-corpus-empty` / `0`, no page retains the `wiki-corpus-empty` marker,
+  and both validators exit zero before first intake
 
-### Requirement: Docs teach pointer-true state, not hardcoded state
+#### Scenario: same-instance rerun is idempotent
 
-INSTANTIATE.md SHALL include an explicit rule: entry docs restate register
-values only as verified-at-instantiation anchors plus live-truth pointers to
-the registers; the gate fails commits that drift. SYSTEM_DESIGN.md §6 SHALL
-document the entry-page freshness gate in the validate_repo.py role, and
-§1 SHALL carry the snapshot anchor (id + count) required by the gate.
+- **WHEN** the successful fresh invocation is repeated with the same name and
+  prefix
+- **THEN** tracked file content does not change
 
-#### Scenario: newcomer follows the documented rule
+#### Scenario: populated instance is not reseeded
 
-- WHEN an operator follows INSTANTIATE.md's pointer-true rule at
-  instantiation and on later intake rounds
-- THEN no entry doc hardcodes a count without its register anchor, and the
-  gate passes each commit; a doc that restates counts without the anchor is
-  rejected by the same gate
+- **WHEN** the instantiator is invoked after the manifest or source count is
+  non-empty
+- **THEN** it exits nonzero before changing the register, entry pages, or
+  INSTANCE.json
+
+### Requirement: Documentation teaches pointer-true state and adoption
+
+INSTANTIATE.md SHALL define the two labelled markers, the four-page refresh
+duty, the capture-only exception, and the manual adoption sequence for an
+existing instance. SYSTEM_DESIGN.md §1 SHALL carry the empty-kit markers and
+§6 SHALL document the validator gate. Documentation SHALL state that the
+registers remain live truth and that a populated instance must not rerun the
+instantiator.
+
+#### Scenario: a new operator follows one unambiguous rule
+
+- **WHEN** an operator instantiates a wiki and later registers source intake
+- **THEN** the initial pages are seeded automatically and the intake workflow
+  directs the operator to refresh all four markers from the registers in the
+  same change
+
+#### Scenario: an existing instance adopts without reseeding
+
+- **WHEN** an existing instance takes the new validator
+- **THEN** its documented path is to add markers from its current registers in
+  the same change, run both validators, and not run `instantiate.py`
