@@ -87,3 +87,11 @@ values only as verified-at-instantiation anchors plus live-truth pointers to
 the registers; the gate fails commits that drift. SYSTEM_DESIGN.md §6 SHALL
 document the entry-page freshness gate in the validate_repo.py role, and
 §1 SHALL carry the snapshot anchor (id + count) required by the gate.
+
+#### Scenario: newcomer follows the documented rule
+
+- WHEN an operator follows INSTANTIATE.md's pointer-true rule at
+  instantiation and on later intake rounds
+- THEN no entry doc hardcodes a count without its register anchor, and the
+  gate passes each commit; a doc that restates counts without the anchor is
+  rejected by the same gate
