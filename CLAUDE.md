@@ -45,6 +45,12 @@ to every wiki instantiated from this kit.
 ## Current state
 
 - kit version: `1.0.0`
-- source artifacts: `0` (empty kit — instance registries start empty)
+- Current corpus snapshot: `wiki-corpus-empty`
+- Registered source artifacts: 0 (empty kit — instance registries start empty)
 - entry page: `HOME.md`
 - instantiation guide: `INSTANTIATE.md`
+
+Live truth: `00-system/registers/CORPUS_STATE.json` and
+`00-system/registers/MATERIALS_INDEX.jsonl`. These bullets are pointers, not
+copies — update them in the same change as the registers (the entry-page
+freshness gate in `scripts/validate_repo.py` fails the commit otherwise).
