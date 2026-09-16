@@ -204,6 +204,97 @@ def build_link_index() -> tuple[set[str], dict[str, list[str]]]:
         stems.setdefault(path.stem.casefold(), []).append(rel)
     return exact, stems
 
+# Labelled markers every state-bearing entry page must carry, and the record
+# directories whose recursive .md counts the pages must not contradict.
+ENTRY_PAGES = ("HOME.md", "README.md", "SYSTEM_DESIGN.md", "CLAUDE.md")
+ENTRY_LAYER_DIRS = {
+    "objects": "03-objects",
+    "relations": "06-relations",
+    "claims": "05-claims",
+    "indexes": "09-indexes",
+}
+REFRESH_HINT = ("refresh the entry page from the registers in the same change")
+
+
+def _visible_prose(text: str) -> str:
+    """Strip fenced (```/~~~) and inline (`/``) code from Markdown text."""
+    text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+    text = re.sub(r"~~~.*?~~~", " ", text, flags=re.DOTALL)
+    text = re.sub(r"`[^`\n]*`", " ", text)
+    return text
+
+
+def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
+    """Entry-page freshness gate.
+
+    Entry pages restate register values for human readers; hardcoding them
+    lets those pages silently drift out of sync with CORPUS_STATE.json /
+    MATERIALS_INDEX.jsonl after an intake or adjudication round (this
+    happened in a production instance, 2026-09-16). Enforced properties:
+      1. every entry page carries the exact labelled markers
+         `Current corpus snapshot: `<id>`` and
+         `Registered source artifacts: <count>` for the current state
+         (labels prevent a coincidental numeral satisfying the check);
+      2. no visible-prose `\d+ object(s)/relation(s)/claim(s)/index(es)`
+         declaration contradicts the recursive .md count of its layer
+         directory; fenced/inline code is exempt; every occurrence checks.
+    """
+    snapshot_id = str(state.get("id", "") or "")
+    count = state.get("source_material_count")
+
+    layer_actual = {}
+    for layer, rel_dir in ENTRY_LAYER_DIRS.items():
+        d = root / rel_dir
+        layer_actual[layer] = sum(1 for p in d.rglob("*.md")) if d.exists() else 0
+
+    layer_re = re.compile(
+        r"\b(\d+)\s+(objects?|relations?|claims?|indexes?)\b", re.IGNORECASE)
+
+    for entry_rel in ENTRY_PAGES:
+        entry_path = root / entry_rel
+        if not entry_path.exists():
+            errors.append(f"missing entry page: {entry_rel}")
+            continue
+        raw = entry_path.read_text(encoding="utf-8", errors="replace")
+        prose = _visible_prose(raw)
+
+        if snapshot_id:
+            marker = f"Current corpus snapshot: `{snapshot_id}`"
+            if marker not in prose and marker not in raw:
+                obs = re.search(r"Current corpus snapshot:[^\n`]*`?[^\n]*",
+                                prose)
+                observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
+                errors.append(
+                    f"{entry_rel}: stale entry page: snapshot marker "
+                    f"'{marker}'{observed} (id from CORPUS_STATE.json) not "
+                    f"found; {REFRESH_HINT}"
+                )
+        if count is not None:
+            marker = f"Registered source artifacts: {count}"
+            if marker not in prose and marker not in raw:
+                obs = re.search(r"Registered source artifacts:\s*\S+", prose)
+                observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
+                errors.append(
+                    f"{entry_rel}: stale entry page: source-count marker "
+                    f"'{marker}'{observed} (from CORPUS_STATE.json) not "
+                    f"found; {REFRESH_HINT}"
+                )
+        for m in layer_re.finditer(prose):
+            num = int(m.group(1))
+            word = m.group(2).lower()
+            layer = ("objects" if word.startswith("object")
+                     else "relations" if word.startswith("relation")
+                     else "claims" if word.startswith("claim")
+                     else "indexes")
+            actual = layer_actual[layer]
+            if num != actual:
+                errors.append(
+                    f"{entry_rel}: entry page states {m.group(1)} "
+                    f"{m.group(2)} but {ENTRY_LAYER_DIRS[layer]} holds "
+                    f"{actual}; {REFRESH_HINT}"
+                )
+
+
 def validate(full: bool) -> list[str]:
     errors: list[str] = []
     warnings: list[str] = []
