@@ -1,4 +1,6 @@
 import importlib.util
+import inspect
+import sys
 from pathlib import Path
 
 
@@ -72,3 +74,26 @@ def test_claim_permission_enum_is_enforced():
         "responsible_language": "en",
     })
     assert any("invalid current_claim_permission" in error for error in errors)
+
+
+if __name__ == "__main__":
+    tests = [
+        fn for name, fn in sorted(globals().items())
+        if name.startswith("test_") and inspect.isfunction(fn)
+    ]
+    if not tests:
+        print("FAIL: no test functions discovered")
+        sys.exit(2)
+    failures = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"PASS {fn.__name__}")
+        except AssertionError as exc:
+            failures += 1
+            print(f"FAIL {fn.__name__}: {exc}")
+        except Exception as exc:  # noqa: BLE001 - report, keep running
+            failures += 1
+            print(f"ERROR {fn.__name__}: {type(exc).__name__}: {exc}")
+    print(f"\n{len(tests) - failures}/{len(tests)} passed")
+    sys.exit(1 if failures else 0)
