@@ -32,6 +32,16 @@ Live truth: `00-system/registers/CORPUS_STATE.json` and
 verified-at-instantiation anchors, refreshed in the same change as the
 registers.
 
+## Kit version
+
+`1.1.0` — entry-page freshness gate. The four entry pages (README.md,
+HOME.md, SYSTEM_DESIGN.md, CLAUDE.md) carry labelled
+`Current corpus snapshot:` / `Registered source artifacts:` markers, and
+`scripts/validate_repo.py` fails any commit whose pages lag
+`CORPUS_STATE.json`. `scripts/instantiate.py` seeds those markers and
+refuses to reseed a populated instance. Adopting this in an existing
+instance is a manual step — see INSTANTIATE.md §3.5.
+
 ## The authority rule
 
 Everything an AI produces is candidate material. Fluency never upgrades it.

@@ -261,8 +261,10 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
         if snapshot_id:
             marker = f"Current corpus snapshot: `{snapshot_id}`"
             if marker not in prose and marker not in raw:
-                obs = re.search(r"Current corpus snapshot:[^\n`]*`?[^\n]*",
-                                prose)
+                # Search the RAW text: _visible_prose() strips code spans,
+                # which is where the stale id lives, so a prose-only search
+                # would report a bare label and hide the observed value.
+                obs = re.search(r"Current corpus snapshot:[^\n]*", raw)
                 observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
                 errors.append(
                     f"{entry_rel}: stale entry page: snapshot marker "
@@ -272,7 +274,7 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
         if count is not None:
             marker = f"Registered source artifacts: {count}"
             if marker not in prose and marker not in raw:
-                obs = re.search(r"Registered source artifacts:\s*\S+", prose)
+                obs = re.search(r"Registered source artifacts:[^\n]*", raw)
                 observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
                 errors.append(
                     f"{entry_rel}: stale entry page: source-count marker "

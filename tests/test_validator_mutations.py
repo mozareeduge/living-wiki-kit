@@ -159,6 +159,11 @@ def test_entry_page_stale_snapshot_detected_per_page():
                 and REFRESH_HINT in e
                 for e in errors
             ), f"{stale}: {errors}"
+            # The message must show the value actually on the page, not a
+            # bare label: the stale id lives inside a code span, which
+            # _visible_prose() strips.
+            assert any("observed:" in e and "snap-0" in e for e in errors), (
+                f"{stale}: observed value missing from {errors}")
 
 
 def test_entry_page_wrong_labelled_count_detected_per_page():

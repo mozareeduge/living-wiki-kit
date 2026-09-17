@@ -133,7 +133,7 @@ def main() -> int:
         "id": f"{prefix}-instance",
         "name": args.name,
         "record_prefix": prefix,
-        "created_from": "living-wiki-kit 1.0.0",
+        "created_from": "living-wiki-kit 1.1.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
     }

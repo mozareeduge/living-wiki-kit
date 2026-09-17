@@ -44,7 +44,7 @@ to every wiki instantiated from this kit.
 
 ## Current state
 
-- kit version: `1.0.0`
+- kit version: `1.1.0`
 - Current corpus snapshot: `wiki-corpus-empty`
 - Registered source artifacts: 0 (empty kit — instance registries start empty)
 - entry page: `HOME.md`
