@@ -492,7 +492,7 @@ def test_instantiate_seeds_gate_clean_empty_instance():
             v = subprocess.run([sys.executable, script, "--full"], cwd=kit,
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace")
-            assert v.returncode == 0, v.std_safe(out) + v.stderr[-800:]
+            assert v.returncode == 0, _safe(v.stdout) + _safe(v.stderr)
 
 
 def test_instantiate_is_idempotent_on_same_empty_instance():
