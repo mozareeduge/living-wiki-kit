@@ -13,6 +13,13 @@ scripts/capture/fixtures/
 # Proposals log is a runtime queue (durable state lives in adjudicated records)
 # _proposals/proposals.jsonl  # keep committed but inert; uncomment to ignore
 
+# Harness runtime state (skills under .claude/skills/ stay tracked)
+.claude/state/
+.claude/sessions/
+.claude/memory/
+.harness-mem/
+**/.claude/state/
+
 # Secrets and machine-specific config
 .env
 .env.*
