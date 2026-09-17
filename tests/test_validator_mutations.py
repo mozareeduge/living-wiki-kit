@@ -17,6 +17,12 @@ validate_repo = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(validate_repo)
 
+RETIER = ROOT / "scripts" / "retier_holdings.py"
+_retier_spec = importlib.util.spec_from_file_location("retier_holdings", RETIER)
+retier_holdings = importlib.util.module_from_spec(_retier_spec)
+assert _retier_spec.loader is not None
+_retier_spec.loader.exec_module(retier_holdings)
+
 
 def collect(rel, frontmatter):
     errors = []
@@ -632,7 +638,8 @@ def _write_original(root, rel, content=b"x"):
     path.write_bytes(content)
 
 
-def _write_source_record(root, rel, *, status, original_path, holdings_tier=None):
+def _write_source_record(root, rel, *, status, original_path, holdings_tier=None,
+                          family=None, body="Body.\n"):
     fm = {
         "id": rel.rsplit("/", 1)[-1].removesuffix(".md"),
         "type": "source-record",
@@ -642,7 +649,9 @@ def _write_source_record(root, rel, *, status, original_path, holdings_tier=None
     }
     if holdings_tier is not None:
         fm["holdings_tier"] = holdings_tier
-    text = "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\nBody.\n"
+    if family is not None:
+        fm["family"] = family
+    text = "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\n" + body
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -969,6 +978,359 @@ def test_biconditional_violation_surfaces_through_validate_repo_subprocess():
         assert r.returncode != 0, _safe(out)
         assert record_rel in out, _safe(out)
         assert "status is 'registered' but no row in" in out, _safe(out)
+
+
+# ------------------------------------------------ retier_holdings.py (A5)
+# Fixture helpers mirror _census_root/_write_source_record/_write_manifest
+# above, extended with a CORPUS_STATE.json (build_plan needs
+# source_material_count) and an optional family_tier_overrides map.
+
+
+def _retier_policy_dict(family_tier_overrides=None):
+    policy = _census_policy_dict()
+    if family_tier_overrides is not None:
+        policy["family_tier_overrides"] = family_tier_overrides
+    return policy
+
+
+def _retier_root(base, *, source_material_count=0, family_tier_overrides=None):
+    root = base / "repo"
+    policies_dir = root / "00-system" / "policies"
+    policies_dir.mkdir(parents=True, exist_ok=True)
+    (policies_dir / "HOLDINGS_POLICY.json").write_text(
+        json.dumps(_retier_policy_dict(family_tier_overrides)), encoding="utf-8")
+    registers_dir = root / "00-system" / "registers"
+    registers_dir.mkdir(parents=True, exist_ok=True)
+    (registers_dir / "CORPUS_STATE.json").write_text(json.dumps({
+        "id": "test-corpus",
+        "source_material_count": source_material_count,
+    }), encoding="utf-8")
+    return root
+
+
+def _run_retier(cwd, *args):
+    import subprocess
+    # -B: retier_holdings.py imports validate_repo, which would otherwise
+    # write scripts/__pycache__/*.pyc into the fixture kit and make a
+    # "writes nothing" tree-hash comparison fail on a cache artifact that
+    # has nothing to do with the script's own behaviour.
+    return subprocess.run(
+        [sys.executable, "-B", "scripts/retier_holdings.py", *args],
+        cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+        errors="replace")
+
+
+def test_retier_plan_empty_repo_is_zero_records_to_retier():
+    """Acceptance (a) at the unit level: nothing declared, nothing to do."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=0)
+        plan = retier_holdings.build_plan(root)
+        assert plan["correctly_registered"] == 0, plan
+        assert plan["to_retier"] == [], plan
+        assert plan["held_artifact_count"] == 0, plan
+        assert plan["holdings_by_tier"] == {
+            "registered": 0, "pending-registration": 0, "reference-shelf": 0,
+        }, plan
+
+
+def test_retier_plan_flags_record_claiming_registered_without_manifest_row():
+    """Acceptance (b) shape at the unit level: one held-but-unregistered
+    original whose record wrongly claims `registered` is exactly one
+    record to retier, resolved to the policy's default tier."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=0)
+        _write_original(root, "_originals/a.pdf")
+        _write_source_record(
+            root, "02-sources/records/a.md",
+            status="registered", original_path="_originals/a.pdf")
+        plan = retier_holdings.build_plan(root)
+        assert plan["correctly_registered"] == 0, plan
+        assert len(plan["to_retier"]) == 1, plan
+        entry = plan["to_retier"][0]
+        assert entry["rel"] == "02-sources/records/a.md", entry
+        assert entry["new_tier"] == "pending-registration", entry
+        assert plan["holdings_by_tier"]["pending-registration"] == 1, plan
+        assert plan["held_artifact_count"] == 1, plan
+
+
+def test_retier_never_touches_correctly_registered_record():
+    """Negative: a record named as source_record_path in the manifest must
+    never appear in to_retier, regardless of its other fields.
+
+    Mutation probe: dropping the `continue` after `correctly_registered +=
+    1` in build_plan() would fall through and evaluate this record for
+    retiering too. This pins len(to_retier) == 0, not just a truthy count."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=1)
+        _write_original(root, "_originals/reg.pdf")
+        _write_source_record(
+            root, "02-sources/records/reg.md",
+            status="registered", original_path="_originals/reg.pdf",
+            holdings_tier="registered")
+        _write_manifest(root, [
+            {"source_record_path": "02-sources/records/reg.md",
+             "original_path": "_originals/reg.pdf"},
+        ])
+        plan = retier_holdings.build_plan(root)
+        assert plan["correctly_registered"] == 1, plan
+        assert plan["to_retier"] == [], plan
+        assert plan["holdings_by_tier"]["registered"] == 1, plan
+        assert plan["held_artifact_count"] == 1, plan
+
+
+def test_retier_family_tier_override_selects_declared_tier():
+    """Tier selection is family_tier_overrides[family] when the family is
+    present, not always default_tier_for_unregistered.
+
+    Mutation probe: hardcoding `new_tier = default_tier` (ignoring
+    `overrides`) would still pass a test that only checked "some tier was
+    assigned"; asserting the *specific* override tier and that the default
+    tier's bucket stays at 0 catches it."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(
+            Path(td), source_material_count=0,
+            family_tier_overrides={"backlog-scans": "reference-shelf"})
+        _write_original(root, "_originals/b.pdf")
+        _write_source_record(
+            root, "02-sources/records/b.md",
+            status="inbox", original_path="_originals/b.pdf",
+            family="backlog-scans")
+        plan = retier_holdings.build_plan(root)
+        assert len(plan["to_retier"]) == 1, plan
+        entry = plan["to_retier"][0]
+        assert entry["new_tier"] == "reference-shelf", entry
+        assert plan["per_family"] == {"backlog-scans": 1}, plan
+        assert plan["holdings_by_tier"]["reference-shelf"] == 1, plan
+        assert plan["holdings_by_tier"]["pending-registration"] == 0, plan
+
+
+def test_retier_skips_record_already_correctly_tiered():
+    """A non-registered record whose status/holdings_tier already equal the
+    resolved tier needs no change and must not appear in to_retier.
+
+    Mutation probe: removing the "already correctly tiered" early-continue
+    would count and (under --apply) rewrite a record with no actual change
+    -- a spurious diff on every rerun. This pins to_retier == []."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=0)
+        _write_original(root, "_originals/c.pdf")
+        _write_source_record(
+            root, "02-sources/records/c.md",
+            status="pending-registration", original_path="_originals/c.pdf",
+            holdings_tier="pending-registration")
+        plan = retier_holdings.build_plan(root)
+        assert plan["to_retier"] == [], plan
+        assert plan["holdings_by_tier"]["pending-registration"] == 1, plan
+        assert plan["held_artifact_count"] == 1, plan
+
+
+def test_retier_refuses_manifest_state_count_mismatch():
+    """Refusal condition 1/4 (tasks.md A5): manifest rows and
+    source_material_count disagree."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=5)
+        try:
+            retier_holdings.build_plan(root)
+            assert False, "expected RetierRefusal for count mismatch"
+        except retier_holdings.RetierRefusal as exc:
+            assert "5" in str(exc) and "0" in str(exc), str(exc)
+
+
+def test_retier_refuses_missing_holdings_policy():
+    """Refusal condition 2/4: HOLDINGS_POLICY.json missing."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        registers_dir = root / "00-system" / "registers"
+        registers_dir.mkdir(parents=True, exist_ok=True)
+        (registers_dir / "CORPUS_STATE.json").write_text(
+            json.dumps({"id": "x", "source_material_count": 0}),
+            encoding="utf-8")
+        try:
+            retier_holdings.build_plan(root)
+            assert False, "expected RetierRefusal for missing policy"
+        except retier_holdings.RetierRefusal as exc:
+            assert "HOLDINGS_POLICY.json" in str(exc), str(exc)
+
+
+def test_retier_refuses_family_override_matching_no_record():
+    """Refusal condition 4/4: a family_tier_overrides key names a family no
+    record carries."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(
+            Path(td), source_material_count=0,
+            family_tier_overrides={"ghost-family": "reference-shelf"})
+        _write_original(root, "_originals/e.pdf")
+        _write_source_record(
+            root, "02-sources/records/e.md",
+            status="inbox", original_path="_originals/e.pdf",
+            family="real-family")
+        try:
+            retier_holdings.build_plan(root)
+            assert False, "expected RetierRefusal for unmatched family"
+        except retier_holdings.RetierRefusal as exc:
+            assert "ghost-family" in str(exc), str(exc)
+
+
+def test_retier_rewrite_record_preserves_body_and_other_fields():
+    """_rewrite_record only ever changes status and holdings_tier.
+
+    Mutation probe: a rewrite that re-serializes the body (e.g. drops it,
+    or normalizes its whitespace) would corrupt archived prose. This
+    compares the body byte-for-byte and every untouched frontmatter key."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _retier_root(Path(td), source_material_count=0)
+        body = "# Title\n\nSome body text with *emphasis* and a  double space.\n"
+        _write_source_record(
+            root, "02-sources/records/f.md",
+            status="registered", original_path="_originals/f.pdf",
+            family="x", body=body)
+        path = root / "02-sources/records/f.md"
+        before_fm = validate_repo.parse_frontmatter(path)
+        retier_holdings._rewrite_record(
+            path, "pending-registration", "pending-registration")
+        text = path.read_text(encoding="utf-8")
+        assert text.endswith(body), repr(text[-80:])
+        after_fm = validate_repo.parse_frontmatter(path)
+        assert after_fm["status"] == "pending-registration", after_fm
+        assert after_fm["holdings_tier"] == "pending-registration", after_fm
+        for key in ("id", "title", "original_path", "family"):
+            assert after_fm[key] == before_fm[key], (key, before_fm, after_fm)
+
+
+def test_retier_dry_run_empty_kit_prints_zero_and_writes_nothing():
+    """Acceptance (a), CLI-level: a fresh copy of the tracked empty kit."""
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        before = _tree_hash(kit)
+        r = _run_retier(kit)
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode == 0, _safe(out)
+        assert "0 records to retier" in out, _safe(out)
+        assert _tree_hash(kit) == before, "dry run must write nothing"
+
+
+def test_retier_dry_run_then_apply_flips_unregistered_record_and_validates():
+    """Acceptance (b): dry run reports exactly 1, changes nothing; --apply
+    flips status/holdings_tier to pending-registration; validate_repo.py
+    --full then PASSes."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        record_rel = "02-sources/records/wiki-src-000000000001.md"
+        _write_original(kit, "_originals/claimed.pdf")
+        (kit / record_rel).parent.mkdir(parents=True, exist_ok=True)
+        (kit / record_rel).write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "wiki-src-000000000001",
+                "type": "source-record",
+                "title": "Claimed but unregistered",
+                "filename": "claimed.pdf",
+                "format": "pdf",
+                "sha256": "0" * 64,
+                "original_path": "_originals/claimed.pdf",
+                "authority_scope": "test",
+                "validation_status": "test",
+                "status": "registered",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+
+        before = _tree_hash(kit)
+        r = _run_retier(kit)
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode == 0, _safe(out)
+        assert "1 records to retier" in out, _safe(out)
+        assert _tree_hash(kit) == before, "dry run must write nothing"
+
+        r2 = _run_retier(kit, "--apply")
+        out2 = (r2.stdout or "") + (r2.stderr or "")
+        assert r2.returncode == 0, _safe(out2)
+
+        fm = validate_repo.parse_frontmatter(kit / record_rel)
+        assert fm["status"] == "pending-registration", fm
+        assert fm["holdings_tier"] == "pending-registration", fm
+
+        v = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        vout = (v.stdout or "") + (v.stderr or "")
+        assert v.returncode == 0, _safe(vout)
+        assert "PASS" in vout, _safe(vout)
+
+
+def test_retier_apply_refuses_on_dirty_working_tree():
+    """Acceptance (c): --apply on a dirty tree exits nonzero, names
+    'dirty', and writes nothing."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        subprocess.run(["git", "init", "-q"], cwd=kit, check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.invalid"],
+                       cwd=kit, check=True)
+        subprocess.run(["git", "config", "user.name", "test"],
+                       cwd=kit, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=kit, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=kit, check=True)
+
+        # Make the tree dirty: an uncommitted change to a tracked file.
+        state_path = kit / "00-system/registers/CORPUS_STATE.json"
+        state_path.write_text(
+            state_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+        before = _tree_hash(kit)
+        r = _run_retier(kit, "--apply")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, _safe(out)
+        assert "dirty" in out.lower(), _safe(out)
+        assert _tree_hash(kit) == before, "refused --apply must write nothing"
+
+
+def test_retier_refuses_manifest_state_mismatch_before_any_write():
+    """Acceptance (d): manifest/state disagreement exits nonzero before any
+    write, proven with a tree hash equal to the pre-run hash."""
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        state_path = kit / "00-system/registers/CORPUS_STATE.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["source_material_count"] = 3  # manifest still has 0 rows
+        state_path.write_text(json.dumps(state, indent=2) + "\n",
+                              encoding="utf-8")
+
+        before = _tree_hash(kit)
+        r = _run_retier(kit, "--apply")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, _safe(out)
+        assert _tree_hash(kit) == before, "refusal must precede any write"
+
+
+def test_retier_never_declares_original_or_materials_index_touched():
+    """Negative (tasks.md A5): the script must never edit _originals/ or
+    MATERIALS_INDEX.jsonl content, even under --apply. Proven by hashing
+    both before and after an --apply run that does retier a record."""
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        original_rel = "_originals/g.pdf"
+        _write_original(kit, original_rel, content=b"original bytes")
+        record_rel = "02-sources/records/g.md"
+        (kit / record_rel).parent.mkdir(parents=True, exist_ok=True)
+        (kit / record_rel).write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "g", "type": "source-record", "title": "G",
+                "filename": "g.pdf", "format": "pdf", "sha256": "0" * 64,
+                "original_path": original_rel, "authority_scope": "test",
+                "validation_status": "test", "status": "registered",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+        manifest_path = kit / "00-system/registers/MATERIALS_INDEX.jsonl"
+        manifest_before = (manifest_path.read_text(encoding="utf-8")
+                           if manifest_path.exists() else "")
+        original_before = (kit / original_rel).read_bytes()
+
+        r = _run_retier(kit, "--apply")
+        assert r.returncode == 0, _safe((r.stdout or "") + (r.stderr or ""))
+
+        assert (kit / original_rel).read_bytes() == original_before
+        manifest_after = (manifest_path.read_text(encoding="utf-8")
+                          if manifest_path.exists() else "")
+        assert manifest_after == manifest_before
 
 
 if __name__ == "__main__":
