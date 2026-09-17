@@ -1,5 +1,6 @@
 import importlib.util
 import inspect
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -313,6 +314,116 @@ def test_filled_template_source_record_has_no_filename_error():
     })
     assert not any("filename" in error and "missing" in error.lower()
                    for error in errors)
+
+
+def _copy_kit(base):
+    """Copy tracked kit files (no .git) into base/kit for smoke tests."""
+    import shutil, subprocess
+    dst = base / "kit"
+    dst.mkdir(parents=True, exist_ok=True)
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
+        encoding="utf-8", errors="replace").stdout.splitlines()
+    for rel in tracked:
+        src = ROOT / rel
+        if not src.is_file():
+            continue
+        target = dst / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, target)
+    return dst
+
+
+def _tree_hash(root):
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(root.rglob("*")):
+        if p.is_file() and ".git" not in p.parts:
+            h.update(str(p.relative_to(root)).encode())
+            h.update(p.read_bytes())
+    return h.hexdigest()
+
+
+def _run_instantiate(cwd, *args):
+    import subprocess
+    return subprocess.run(
+        [sys.executable, "scripts/instantiate.py", *args],
+        cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+        errors="replace")
+
+
+def test_instantiate_seeds_gate_clean_empty_instance():
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        r = _run_instantiate(kit, "--name", "Smoke Wiki", "--prefix", "swk")
+        assert r.returncode == 0, r.stdout + r.stderr
+        state = json.loads((kit / "00-system/registers/CORPUS_STATE.json")
+                           .read_text(encoding="utf-8"))
+        assert state["id"] == "swk-corpus-empty", state
+        assert state["source_material_count"] == 0, state
+        for name in ENTRY_PAGE_NAMES:
+            text = (kit / name).read_text(encoding="utf-8")
+            assert f"Current corpus snapshot: `swk-corpus-empty`" in text, name
+            assert "Registered source artifacts: 0" in text, name
+            assert "wiki-corpus-empty" not in text, name
+        for script in ("scripts/validate_repo.py",):
+            v = subprocess.run([sys.executable, script, "--full"], cwd=kit,
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace")
+            assert v.returncode == 0, v.stdout[-1500:] + v.stderr[-800:]
+
+
+def test_instantiate_is_idempotent_on_same_empty_instance():
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        assert _run_instantiate(kit, "--name", "Smoke Wiki",
+                                "--prefix", "swk").returncode == 0
+        before = _tree_hash(kit)
+        r = _run_instantiate(kit, "--name", "Smoke Wiki", "--prefix", "swk")
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert _tree_hash(kit) == before, "rerun changed tracked content"
+
+
+def test_instantiate_refuses_populated_state_before_writing():
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        assert _run_instantiate(kit, "--name", "Smoke Wiki",
+                                "--prefix", "swk").returncode == 0
+        # simulate a registered corpus: one manifest row + nonzero count
+        row = json.dumps({
+            "id": "swk-src-aaaaaaaaaaaa", "filename": "a.md",
+            "sha256": "0" * 64, "original_path": "_originals/a.md",
+            "source_record_path": "02-sources/records/x.md",
+            "extracted_text_path": "02-sources/text/x.md", "family": "t",
+            "registered": "2026-09-16", "intake": "2026-09-16",
+        }, ensure_ascii=False)
+        idx = kit / "00-system/registers/MATERIALS_INDEX.jsonl"
+        idx.write_text(row + "\n", encoding="utf-8")
+        state_path = kit / "00-system/registers/CORPUS_STATE.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["source_material_count"] = 1
+        state_path.write_text(json.dumps(state, indent=2) + "\n",
+                              encoding="utf-8")
+        before = _tree_hash(kit)
+        r = _run_instantiate(kit, "--name", "Smoke Wiki", "--prefix", "swk")
+        assert r.returncode != 0, "populated instance must refuse"
+        assert _tree_hash(kit) == before, "refusal must precede any write"
+
+
+def test_instantiate_refuses_different_existing_instance():
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        assert _run_instantiate(kit, "--name", "Smoke Wiki",
+                                "--prefix", "swk").returncode == 0
+        inst = kit / "00-system/registers/INSTANCE.json"
+        data = json.loads(inst.read_text(encoding="utf-8"))
+        data["id"] = "other-instance"
+        inst.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        before = _tree_hash(kit)
+        r = _run_instantiate(kit, "--name", "Smoke Wiki", "--prefix", "swk")
+        assert r.returncode != 0
+        assert _tree_hash(kit) == before
 
 
 if __name__ == "__main__":
