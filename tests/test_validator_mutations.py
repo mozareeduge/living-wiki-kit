@@ -551,6 +551,25 @@ def test_load_holdings_policy_raises_on_unknown_tier():
             assert "not-a-declared-tier" in str(exc), str(exc)
 
 
+def test_harness_worktree_is_ignored_by_the_validator():
+    """A git worktree checked out inside the repo must not be walked.
+
+    The harness creates .harness-worktrees/<session-id>/ for a delegated
+    worker. Walking it makes every record appear twice, so validate() used
+    to report ~50 duplicate-id errors that had nothing to do with the
+    change under test (observed 2026-09-18 while landing rung A1).
+    """
+    import importlib.util as _ilu
+    for script in ("validate_repo.py", "validate_content_release.py"):
+        spec = _ilu.spec_from_file_location(
+            f"_mod_{script}", ROOT / "scripts" / script)
+        mod = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        assert mod.is_ignored_rel(".harness-worktrees"), script
+        assert mod.is_ignored_rel(".harness-worktrees/abc/HOME.md"), script
+        assert not mod.is_ignored_rel("HOME.md"), script
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())

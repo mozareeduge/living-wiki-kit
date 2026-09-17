@@ -25,6 +25,7 @@ MANIFEST = ROOT / "00-system/registers/MATERIALS_INDEX.jsonl"
 STATE = ROOT / "00-system/registers/CORPUS_STATE.json"
 IGNORED_PREFIXES = (
     ".git/",
+    ".harness-worktrees/",
     ".pytest_cache/",
     "_search/",
     "02-sources/provenance/",
