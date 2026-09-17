@@ -2,7 +2,7 @@
 id: kit-system-design
 type: system-document
 title: "Living Wiki Kit — Operational System Design"
-system_version: "1.1.0"
+system_version: "1.2.0"
 schema_version: "1.0.0"
 status: operational-release
 created: 2026-09-10

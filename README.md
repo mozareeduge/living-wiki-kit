@@ -35,13 +35,19 @@ registers.
 
 ## Kit version
 
-`1.1.0` — entry-page freshness gate. The four entry pages (README.md,
-HOME.md, SYSTEM_DESIGN.md, CLAUDE.md) carry labelled
-`Current corpus snapshot:` / `Registered source artifacts:` markers, and
-`scripts/validate_repo.py` fails any commit whose pages lag
-`CORPUS_STATE.json`. `scripts/instantiate.py` seeds those markers and
-refuses to reseed a populated instance. Adopting this in an existing
-instance is a manual step — see INSTANTIATE.md §3.5.
+`1.2.0` — holdings census gate. A source record carries `status: registered`
+if and only if the manifest names it, and every file under `_originals/`
+now carries a declared holdings tier — so a file can no longer sit
+uncounted and undeclared. The four entry pages carry a third labelled
+marker, `Artifacts held:`, alongside the existing
+`Current corpus snapshot:` / `Registered source artifacts:` pair (the
+1.1.0 entry-page freshness gate that keeps those pages from lagging
+`CORPUS_STATE.json`). `scripts/retier_holdings.py` is the migration tool
+for an existing instance adopting the census: read-only by default
+(`--dry-run`), it only writes with `--apply` and only on a clean tree.
+`scripts/instantiate.py` seeds all three markers and refuses to reseed a
+populated instance. Adopting this in an existing instance is a manual
+step — see INSTANTIATE.md §3.5.
 
 ## The authority rule
 
