@@ -270,11 +270,32 @@ def main(argv: list[str] | None = None) -> int:
         _rewrite_record(root / entry["rel"], entry["new_tier"], entry["new_tier"])
 
     state = plan["state"]
-    state["held_artifact_count"] = plan["held_artifact_count"]
+    old_held = state.get("held_artifact_count")
+    new_held = plan["held_artifact_count"]
+    state["held_artifact_count"] = new_held
     state["holdings_by_tier"] = plan["holdings_by_tier"]
     (root / STATE_REL).write_text(
         json.dumps(state, indent=2) + "\n", encoding="utf-8"
     )
+
+    # Keep the entry-page "Artifacts held:" marker pointer-true in the same
+    # change (INSTANTIATE.md section 3.5; tasks.md B1's entry-page freshness
+    # gate): retiering can change held_artifact_count, so the marker must
+    # move with it here or the gate correctly reports the pages as stale.
+    # Skipped when the marker was never adopted (old_held is None) or the
+    # count did not change (nothing to refresh).
+    if old_held is not None and old_held != new_held:
+        old_marker = f"Artifacts held: {old_held}"
+        new_marker = f"Artifacts held: {new_held}"
+        for name in validate_repo.ENTRY_PAGES:
+            page_path = root / name
+            if not page_path.exists():
+                continue
+            text = page_path.read_text(encoding="utf-8")
+            updated = text.replace(old_marker, new_marker)
+            if updated != text:
+                page_path.write_text(updated, encoding="utf-8")
+
     print(f"applied: retiered {len(plan['to_retier'])} record(s)")
     return 0
 

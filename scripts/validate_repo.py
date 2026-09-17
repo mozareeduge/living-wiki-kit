@@ -276,9 +276,17 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
       2. no visible-prose `\d+ object(s)/relation(s)/claim(s)/index(es)`
          declaration contradicts the recursive .md count of its layer
          directory; fenced/inline code is exempt; every occurrence checks.
+      3. every entry page also carries the exact labelled marker
+         `Artifacts held: <held_artifact_count>` (design.md section 5: a
+         second independent labelled marker, not folded into a compound
+         string, so the check stays exact-string-match). Skipped entirely
+         when `held_artifact_count` is absent from state, so an instance
+         that has not adopted the holdings-census change (tasks.md A3) is
+         not broken by a kit upgrade.
     """
     snapshot_id = str(state.get("id", "") or "")
     count = state.get("source_material_count")
+    held_count = state.get("held_artifact_count")
 
     layer_actual = {}
     for layer, rel_dir in ENTRY_LAYER_DIRS.items():
@@ -316,6 +324,19 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
                 observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
                 errors.append(
                     f"{entry_rel}: stale entry page: source-count marker "
+                    f"'{marker}'{observed} (from CORPUS_STATE.json) not "
+                    f"found; {REFRESH_HINT}"
+                )
+        if held_count is not None:
+            marker = f"Artifacts held: {held_count}"
+            if marker not in prose and marker not in raw:
+                # Search the RAW text, same reason as the source-count
+                # marker above: _visible_prose() strips code spans, which
+                # is where a stale value can live (1.1.0 precedent).
+                obs = re.search(r"Artifacts held:[^\n]*", raw)
+                observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
+                errors.append(
+                    f"{entry_rel}: stale entry page: held-count marker "
                     f"'{marker}'{observed} (from CORPUS_STATE.json) not "
                     f"found; {REFRESH_HINT}"
                 )

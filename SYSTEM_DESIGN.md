@@ -40,6 +40,7 @@ instrument. Instances made from it hold the content.
 
 Current corpus snapshot: `wiki-corpus-empty`
 Registered source artifacts: 0
+Artifacts held: 0
 
 Live truth: `00-system/registers/CORPUS_STATE.json` and
 `MATERIALS_INDEX.jsonl`; entry-level summaries (README/HOME/CLAUDE) are

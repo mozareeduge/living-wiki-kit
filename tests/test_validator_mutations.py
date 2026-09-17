@@ -92,13 +92,15 @@ def test_claim_permission_enum_is_enforced():
 ENTRY_PAGE_NAMES = ("HOME.md", "README.md", "SYSTEM_DESIGN.md", "CLAUDE.md")
 
 
-def _page_text(snapshot, count, layers):
+def _page_text(snapshot, count, layers, held=None):
     """Build one entry page body with the exact labelled markers."""
     parts = []
     if snapshot is not None:
         parts.append(f"Current corpus snapshot: `{snapshot}`")
     if count is not None:
         parts.append(f"Registered source artifacts: {count}")
+    if held is not None:
+        parts.append(f"Artifacts held: {held}")
     if layers:
         parts.append("Layer counts: " + ", ".join(layers) + ".")
     parts.append("Live truth: 00-system/registers/CORPUS_STATE.json and "
@@ -106,14 +108,16 @@ def _page_text(snapshot, count, layers):
     return "\n\n".join(parts) + "\n"
 
 
-def _fresh_pages(state_id="snap-1", count=103):
+def _fresh_pages(state_id="snap-1", count=103, held=544):
     return {
         "HOME.md": _page_text(state_id, count,
-                              ["2 objects", "1 relations", "1 claims", "1 indexes"]),
+                              ["2 objects", "1 relations", "1 claims", "1 indexes"],
+                              held=held),
         "README.md": _page_text(state_id, count,
-                                ["2 objects", "1 relations", "1 claims", "1 indexes"]),
-        "SYSTEM_DESIGN.md": _page_text(state_id, count, None),
-        "CLAUDE.md": _page_text(state_id, count, None),
+                                ["2 objects", "1 relations", "1 claims", "1 indexes"],
+                                held=held),
+        "SYSTEM_DESIGN.md": _page_text(state_id, count, None, held=held),
+        "CLAUDE.md": _page_text(state_id, count, None, held=held),
     }
 
 
@@ -296,6 +300,95 @@ def test_count_zero_marker_requires_label_not_coincidence():
                    for e in errors), errors
 
 
+# ------------------------------------------------------ B1: Artifacts held:
+
+def test_entry_pages_all_fresh_pass_with_artifacts_held():
+    with tempfile.TemporaryDirectory() as td:
+        root = _gate_root(Path(td), _fresh_pages(held=544))
+        state = {"id": "snap-1", "source_material_count": 103,
+                 "held_artifact_count": 544}
+        assert _run_gate(root, state) == []
+
+
+def test_entry_page_missing_artifacts_held_detected_per_page():
+    for stale in ENTRY_PAGE_NAMES:
+        with tempfile.TemporaryDirectory() as td:
+            pages = _fresh_pages(held=544)
+            pages[stale] = pages[stale].replace("Artifacts held: 544\n\n", "")
+            root = _gate_root(Path(td), pages)
+            state = {"id": "snap-1", "source_material_count": 103,
+                     "held_artifact_count": 544}
+            errors = _run_gate(root, state)
+            assert any(
+                stale in e and "Artifacts held: 544" in e for e in errors
+            ), f"{stale}: {errors}"
+
+
+def test_entry_page_wrong_held_count_detected_per_page():
+    for stale in ENTRY_PAGE_NAMES:
+        with tempfile.TemporaryDirectory() as td:
+            pages = _fresh_pages(held=544)
+            pages[stale] = pages[stale].replace(
+                "Artifacts held: 544", "Artifacts held: 999")
+            root = _gate_root(Path(td), pages)
+            state = {"id": "snap-1", "source_material_count": 103,
+                     "held_artifact_count": 544}
+            errors = _run_gate(root, state)
+            assert any(
+                stale in e and "544" in e and "999" in e and REFRESH_HINT in e
+                for e in errors
+            ), f"{stale}: {errors}"
+            # (c): the observed value must be quoted from the RAW page text.
+            assert any("observed:" in e and "999" in e for e in errors), (
+                f"{stale}: observed value missing from {errors}")
+
+
+def test_artifacts_held_observed_value_read_from_raw_not_prose():
+    """1.1.0 precedent: _visible_prose() strips code spans, which is
+    exactly where a stale value can live; the observed hint must be built
+    from the raw page text or it silently shows a bare label instead."""
+    with tempfile.TemporaryDirectory() as td:
+        pages = _fresh_pages(held=544)
+        # Wrap the (wrong) marker in a code span so _visible_prose() strips
+        # it entirely out of prose.
+        pages["HOME.md"] = pages["HOME.md"].replace(
+            "Artifacts held: 544", "`Artifacts held: 999`")
+        root = _gate_root(Path(td), pages)
+        state = {"id": "snap-1", "source_material_count": 103,
+                 "held_artifact_count": 544}
+        errors = _run_gate(root, state)
+        assert any(
+            "HOME.md" in e and "observed:" in e and "999" in e
+            for e in errors
+        ), errors
+
+
+def test_held_artifact_count_absent_from_state_skips_only_that_check():
+    with tempfile.TemporaryDirectory() as td:
+        pages = _fresh_pages(held=544)
+        for name in ENTRY_PAGE_NAMES:
+            # drop the held marker entirely from every page
+            pages[name] = pages[name].replace("Artifacts held: 544\n\n", "")
+        root = _gate_root(Path(td), pages)
+        # held_artifact_count is absent -> a kit that has not adopted A3
+        # must not be broken by this check.
+        state = {"id": "snap-1", "source_material_count": 103}
+        assert _run_gate(root, state) == []
+
+
+def test_held_artifact_count_absent_still_enforces_other_two_checks():
+    with tempfile.TemporaryDirectory() as td:
+        pages = _fresh_pages(held=544)
+        pages["HOME.md"] = pages["HOME.md"].replace("snap-1", "snap-0")
+        for name in ENTRY_PAGE_NAMES:
+            pages[name] = pages[name].replace("Artifacts held: 544\n\n", "")
+        root = _gate_root(Path(td), pages)
+        state = {"id": "snap-1", "source_material_count": 103}
+        errors = _run_gate(root, state)
+        assert any("HOME.md" in e and "snap-1" in e for e in errors), errors
+        assert not any("held" in e.lower() for e in errors), errors
+
+
 def test_template_source_record_includes_filename_field():
     template = (ROOT / "00-system" / "templates"
                 / "TEMPLATE_source-record.md").read_text(encoding="utf-8")
@@ -391,6 +484,9 @@ def test_instantiate_seeds_gate_clean_empty_instance():
             text = (kit / name).read_text(encoding="utf-8")
             assert f"Current corpus snapshot: `swk-corpus-empty`" in text, name
             assert "Registered source artifacts: 0" in text, name
+            # B2: all three markers must survive instantiation on every one
+            # of the four entry pages, not just some of them.
+            assert "Artifacts held: 0" in text, name
             assert "wiki-corpus-empty" not in text, name
         for script in ("scripts/validate_repo.py",):
             v = subprocess.run([sys.executable, script, "--full"], cwd=kit,

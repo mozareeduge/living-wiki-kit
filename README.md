@@ -26,6 +26,7 @@ checksum detects alteration, never truth.
 
 Current corpus snapshot: `wiki-corpus-empty`
 Registered source artifacts: 0
+Artifacts held: 0
 
 Live truth: `00-system/registers/CORPUS_STATE.json` and
 `MATERIALS_INDEX.jsonl` — this page restates register values only as

@@ -105,6 +105,14 @@ def main() -> int:
     corpus_new = f"{prefix}-corpus-empty"
     entry_pages = ("HOME.md", "README.md", "SYSTEM_DESIGN.md", "CLAUDE.md")
 
+    # Artifacts-held marker: read from CORPUS_STATE.json (the filesystem
+    # truth), never typed by hand. A fresh instance starts from this same
+    # empty kit, so the seeded value is still 0 -- but the marker itself
+    # must survive instantiation on all four entry pages (tasks.md B2).
+    held_count = state.get("held_artifact_count", 0)
+    held_old = "Artifacts held: 0"
+    held_new = f"Artifacts held: {held_count}"
+
     changed = []
     for pattern in TARGET_GLOBS:
         for path in ROOT.glob(pattern):
@@ -118,6 +126,7 @@ def main() -> int:
                 new = new.replace(
                     f"Current corpus snapshot: `{corpus_old}`",
                     f"Current corpus snapshot: `{corpus_new}`")
+                new = new.replace(held_old, held_new)
             if new != text:
                 path.write_text(new, encoding="utf-8")
                 changed.append(path.relative_to(ROOT).as_posix())
