@@ -481,6 +481,76 @@ def test_stale_marker_makes_validate_repo_exit_nonzero():
             assert name in out, f"{name} missing from gate output: {out[-800:]}"
 
 
+def _parse_markdown_tier_names(text):
+    """Extract the first-column values of the '## Holdings tier' table."""
+    marker = "## Holdings tier"
+    if marker not in text:
+        return set()
+    section = text.split(marker, 1)[1]
+    next_heading = section.find("\n## ")
+    if next_heading != -1:
+        section = section[:next_heading]
+    names = set()
+    for line in section.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if not cells or not cells[0]:
+            continue
+        if cells[0].lower() == "value":
+            continue
+        if set(cells[0]) <= {"-"}:
+            continue
+        names.add(cells[0])
+    return names
+
+
+def test_holdings_policy_parses():
+    policy = validate_repo.load_holdings_policy(ROOT)
+    assert isinstance(policy, dict)
+    assert isinstance(policy.get("tiers"), dict) and policy["tiers"]
+
+
+def test_default_tier_for_unregistered_is_declared_tier():
+    policy = validate_repo.load_holdings_policy(ROOT)
+    assert policy["default_tier_for_unregistered"] in policy["tiers"], policy
+
+
+def test_controlled_vocabulary_tier_set_matches_policy():
+    policy = validate_repo.load_holdings_policy(ROOT)
+    vocab_text = (ROOT / "00-system/policies/CONTROLLED_VOCABULARY.md").read_text(
+        encoding="utf-8")
+    vocab_tiers = _parse_markdown_tier_names(vocab_text)
+    assert vocab_tiers == set(policy["tiers"]), (vocab_tiers, set(policy["tiers"]))
+
+
+def test_load_holdings_policy_raises_on_unknown_tier():
+    with tempfile.TemporaryDirectory() as td:
+        fixture_root = Path(td)
+        policies_dir = fixture_root / "00-system/policies"
+        policies_dir.mkdir(parents=True)
+        bad_policy = {
+            "schema_version": "1.0.0",
+            "tiers": {
+                "registered": {
+                    "description": "x",
+                    "manifest_row": "required",
+                    "counted_in": "source_material_count",
+                },
+            },
+            "default_tier_for_unregistered": "not-a-declared-tier",
+            "family_tier_overrides": {},
+        }
+        (policies_dir / "HOLDINGS_POLICY.json").write_text(
+            json.dumps(bad_policy), encoding="utf-8")
+        try:
+            validate_repo.load_holdings_policy(fixture_root)
+            assert False, "expected ValueError for unknown tier"
+        except ValueError as exc:
+            assert "not-a-declared-tier" in str(exc), str(exc)
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())

@@ -87,6 +87,43 @@ def load_manifest() -> list[dict]:
         rows.append(row)
     return rows
 
+def load_holdings_policy(root: Path) -> dict:
+    """Load and validate 00-system/policies/HOLDINGS_POLICY.json.
+
+    Declares the holdings-tier vocabulary (design.md section 3): which
+    tiers exist, whether each is a manifest row, and which corpus-state
+    count it feeds. Parsing only — not yet wired into validate(); a later
+    task adds the census check that consumes this policy.
+    """
+    path = root / "00-system/policies/HOLDINGS_POLICY.json"
+    if not path.exists():
+        raise ValueError(
+            f"holdings policy not found: {path} — every instance of this "
+            f"kit must ship 00-system/policies/HOLDINGS_POLICY.json "
+            f"(design.md section 3)"
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path}: invalid JSON: {exc}") from exc
+    tiers = data.get("tiers")
+    if not isinstance(tiers, dict) or not tiers:
+        raise ValueError(f"{path}: 'tiers' must be a non-empty object")
+    default_tier = data.get("default_tier_for_unregistered")
+    if default_tier not in tiers:
+        raise ValueError(
+            f"{path}: default_tier_for_unregistered names unknown tier "
+            f"{default_tier!r}; declared tiers are {sorted(tiers)}"
+        )
+    for family, tier_name in (data.get("family_tier_overrides") or {}).items():
+        if tier_name not in tiers:
+            raise ValueError(
+                f"{path}: family_tier_overrides[{family!r}] names unknown "
+                f"tier {tier_name!r}; declared tiers are {sorted(tiers)}"
+            )
+    return data
+
+
 def looks_double_encoded(s: str) -> bool:
     """Detect the classic UTF-8-bytes-read-as-cp1252 mojibake round-trip.
 

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "tiers": {
+    "registered": {
+      "description": "Adjudicated, provenance-complete, part of the corpus of record.",
+      "manifest_row": "required",
+      "counted_in": "source_material_count"
+    },
+    "pending-registration": {
+      "description": "Held, intended for registration, not yet adjudicated.",
+      "manifest_row": "forbidden",
+      "counted_in": "held_artifact_count"
+    },
+    "reference-shelf": {
+      "description": "Held deliberately as background; never intended for the corpus of record.",
+      "manifest_row": "forbidden",
+      "counted_in": "held_artifact_count"
+    }
+  },
+  "default_tier_for_unregistered": "pending-registration",
+  "family_tier_overrides": {}
+}

@@ -102,3 +102,11 @@ when an existing value cannot describe a recurring real condition.
 | dispute | Mark a claim or relation as challenged |
 | archive | Move outside the active route without deletion |
 | no-change | Record that comparison produced no justified change |
+
+## Holdings tier
+
+| Value | Meaning |
+|---|---|
+| registered | Adjudicated, provenance-complete, part of the corpus of record |
+| pending-registration | Held, intended for registration, not yet adjudicated |
+| reference-shelf | Held deliberately as background; never intended for the corpus of record |
