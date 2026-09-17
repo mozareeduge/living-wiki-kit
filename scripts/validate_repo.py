@@ -324,6 +324,10 @@ def validate(full: bool) -> list[str]:
             f"{state.get('source_material_count')}"
         )
 
+    # Entry-page freshness gate: the four entry pages restate register values
+    # for human readers, so they must never lag CORPUS_STATE.json.
+    check_entry_pages(ROOT, state, errors)
+
     ids: dict[str, str] = {}
     md_files = [
         p for p in ROOT.rglob("*.md")

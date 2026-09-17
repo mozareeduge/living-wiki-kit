@@ -426,6 +426,56 @@ def test_instantiate_refuses_different_existing_instance():
         assert _tree_hash(kit) == before
 
 
+# ------------------------------------------- gate wiring (tasks 4.1/4.2)
+
+
+def test_validate_calls_entry_gate_once_with_loaded_state():
+    """The gate must run inside the normal validate() path, not only when
+    a test calls the helper directly."""
+    calls = []
+    original = validate_repo.check_entry_pages
+
+    def recorder(root, state, errors):
+        calls.append((root, state, errors))
+        return original(root, state, errors)
+
+    validate_repo.check_entry_pages = recorder
+    try:
+        errors = validate_repo.validate(False)
+    finally:
+        validate_repo.check_entry_pages = original
+
+    assert len(calls) == 1, f"check_entry_pages called {len(calls)} times"
+    root, state, passed_errors = calls[0]
+    assert root == validate_repo.ROOT
+    live = json.loads(
+        (ROOT / "00-system/registers/CORPUS_STATE.json").read_text(
+            encoding="utf-8"))
+    assert state.get("id") == live["id"], state
+    assert state.get("source_material_count") == live["source_material_count"]
+    assert passed_errors is errors or isinstance(passed_errors, list)
+
+
+def test_stale_marker_makes_validate_repo_exit_nonzero():
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        state_path = kit / "00-system/registers/CORPUS_STATE.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["id"] = "drifted-corpus-id"
+        state_path.write_text(json.dumps(state, indent=2) + chr(10),
+                              encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, out[-1500:]
+        assert "stale entry page" in out, out[-1500:]
+        for name in ENTRY_PAGE_NAMES:
+            assert name in out, f"{name} missing from gate output: {out[-800:]}"
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())
