@@ -67,6 +67,11 @@ pointer-true restatements refreshed in the same change as the registers.
    change or patch manifest → validator green → reviewable diff → merge → CI
    green. Conversational edits never modify the wiki.
 
+`source_material_count` (rows registered in `MATERIALS_INDEX.jsonl`) and
+`held_artifact_count` (files present under `_originals/`) are two different
+counts and are not interchangeable — a held artifact need not yet be
+registered.
+
 ## 3. Repository layout
 
 ```text
@@ -122,7 +127,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 
 | Script | Role |
 |---|---|
-| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories) |
+| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, not yet wired into `validate()`) |
 | `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark |
 | `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine |
