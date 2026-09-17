@@ -323,6 +323,18 @@ def test_filled_template_source_record_has_no_filename_error():
                    for error in errors)
 
 
+def _safe(text):
+    """ASCII-safe tail of captured output, for assertion messages.
+
+    A failing assertion prints its message to the console. On Windows that
+    console is cp1252, and captured validator output can carry U+FFFD (from
+    errors="replace") or an em dash, which cp1252 cannot encode -- the runner
+    then dies with UnicodeEncodeError instead of reporting which test failed.
+    Observed 2026-09-18 while mutation-testing the A4 gate.
+    """
+    return (text or "")[-1200:].encode("ascii", "replace").decode("ascii")
+
+
 def _copy_kit(base):
     """Copy tracked kit files (no .git) into base/kit for smoke tests."""
     import shutil, subprocess
@@ -378,7 +390,7 @@ def test_instantiate_seeds_gate_clean_empty_instance():
             v = subprocess.run([sys.executable, script, "--full"], cwd=kit,
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace")
-            assert v.returncode == 0, v.stdout[-1500:] + v.stderr[-800:]
+            assert v.returncode == 0, v.std_safe(out) + v.stderr[-800:]
 
 
 def test_instantiate_is_idempotent_on_same_empty_instance():
@@ -460,7 +472,11 @@ def test_validate_calls_entry_gate_once_with_loaded_state():
             encoding="utf-8"))
     assert state.get("id") == live["id"], state
     assert state.get("source_material_count") == live["source_material_count"]
-    assert passed_errors is errors or isinstance(passed_errors, list)
+    # Strictly identity, never `or isinstance(..., list)`: the recorder's
+    # third argument is always a list, so the isinstance form is
+    # tautological and a wiring regression that routes errors into a
+    # fresh throwaway list passes it (mutation-confirmed 2026-09-18).
+    assert passed_errors is errors, "gate got a different errors list"
 
 
 def test_stale_marker_makes_validate_repo_exit_nonzero():
@@ -477,10 +493,10 @@ def test_stale_marker_makes_validate_repo_exit_nonzero():
             capture_output=True, text=True, encoding="utf-8",
             errors="replace")
         out = (r.stdout or "") + (r.stderr or "")
-        assert r.returncode != 0, out[-1500:]
-        assert "stale entry page" in out, out[-1500:]
+        assert r.returncode != 0, _safe(out)
+        assert "stale entry page" in out, _safe(out)
         for name in ENTRY_PAGE_NAMES:
-            assert name in out, f"{name} missing from gate output: {out[-800:]}"
+            assert name in out, f"{name} missing from gate output: {_safe(out)}"
 
 
 def _parse_markdown_tier_names(text):
@@ -842,7 +858,11 @@ def test_validate_calls_holdings_census_gate_exactly_once_with_loaded_state():
             encoding="utf-8"))
     assert state.get("id") == live["id"], state
     assert state.get("source_material_count") == live["source_material_count"]
-    assert passed_errors is errors or isinstance(passed_errors, list)
+    # Strictly identity, never `or isinstance(..., list)`: the recorder's
+    # third argument is always a list, so the isinstance form is
+    # tautological and a wiring regression that routes errors into a
+    # fresh throwaway list passes it (mutation-confirmed 2026-09-18).
+    assert passed_errors is errors, "gate got a different errors list"
 
 
 def test_undeclared_original_makes_validate_repo_exit_nonzero():
@@ -863,9 +883,92 @@ def test_undeclared_original_makes_validate_repo_exit_nonzero():
             capture_output=True, text=True, encoding="utf-8",
             errors="replace")
         out = (r.stdout or "") + (r.stderr or "")
-        assert r.returncode != 0, out[-1500:]
-        assert undeclared_rel in out, out[-1500:]
-        assert "held under _originals/ but undeclared" in out, out[-1500:]
+        assert r.returncode != 0, _safe(out)
+        assert undeclared_rel in out, _safe(out)
+        assert "held under _originals/ but undeclared" in out, _safe(out)
+
+
+# ---------------------------------------- census gate gap closure (A4 audit)
+# A test-wiring audit of the A4 wiring (2026-09-18) found three branches of
+# check_holdings_census reachable through validate() with no coverage, and
+# proved two of them survive a mutation that silently removes their error
+# reporting. These close them.
+
+
+def test_holdings_census_reports_malformed_policy_instead_of_swallowing_it():
+    """A broken HOLDINGS_POLICY.json must surface, not silently pass.
+
+    Mutation probe: replacing the `except ValueError` body with a bare
+    `return` left the suite at 39/39. That branch is reachable from
+    validate() as of A4, so a malformed policy would have disabled the
+    entire census gate without a single error line.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        (root / "00-system/policies/HOLDINGS_POLICY.json").write_text(
+            '{"tiers": {"registered": {}}, '
+            '"default_tier_for_unregistered": "nope"}', encoding="utf-8")
+        errors = _run_census(root, {"source_material_count": 0})
+        assert errors, "a malformed policy produced no error at all"
+        assert any("HOLDINGS_POLICY.json" in e for e in errors), errors
+        assert any("nope" in e for e in errors), errors
+
+
+def test_holdings_census_reports_malformed_manifest_line():
+    """A broken MATERIALS_INDEX.jsonl line must be named with its number."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        manifest = root / "00-system/registers/MATERIALS_INDEX.jsonl"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text('{"id": "a", "original_path": "_originals/a.pdf"}\n'
+                            '{this is not json}\n', encoding="utf-8")
+        errors = _run_census(root, {"source_material_count": 1})
+        assert errors, "a malformed manifest line produced no error"
+        assert any("MATERIALS_INDEX.jsonl" in e and "line 2" in e
+                   for e in errors), errors
+
+
+def test_biconditional_violation_surfaces_through_validate_repo_subprocess():
+    """End-to-end proof for invariant 1, not just a direct helper call.
+
+    Every other census invariant is tested by calling the helper directly.
+    The auditor's finding: only the coverage branch had end-to-end proof that
+    a violation actually reaches `validate_repo.py --full`. This pins the
+    headline invariant -- `status: registered` iff the manifest names the
+    record -- to the real command an operator runs.
+    """
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        # A record that claims registration while the manifest stays empty:
+        # exactly the mozare-wiki defect shape that motivated this change.
+        record_rel = "02-sources/records/wiki-src-000000000000.md"
+        _write_original(kit, "_originals/claimed.pdf")
+        # Schema-complete on purpose: if the record were missing required
+        # fields, validate_repo.py would exit nonzero for those instead and
+        # the test would pass without proving anything about the census.
+        (kit / record_rel).parent.mkdir(parents=True, exist_ok=True)
+        (kit / record_rel).write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "wiki-src-000000000000",
+                "type": "source-record",
+                "title": "Claimed but unregistered",
+                "filename": "claimed.pdf",
+                "format": "pdf",
+                "sha256": "0" * 64,
+                "original_path": "_originals/claimed.pdf",
+                "authority_scope": "test",
+                "validation_status": "test",
+                "status": "registered",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, _safe(out)
+        assert record_rel in out, _safe(out)
+        assert "status is 'registered' but no row in" in out, _safe(out)
 
 
 if __name__ == "__main__":
