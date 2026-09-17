@@ -335,6 +335,178 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
                 )
 
 
+HOLDINGS_TIER_REGISTERED = "registered"
+
+
+def check_holdings_census(root: Path, state: dict, errors: list[str]) -> None:
+    """Holdings census gate (design.md sections 3-4; tasks.md A2).
+
+    "Registered" (MATERIALS_INDEX.jsonl) and "held" (_originals/) are
+    different claims and this enforces both stay honest, using the tier
+    vocabulary from 00-system/policies/HOLDINGS_POLICY.json (never
+    hardcoded here):
+      1. Biconditional: a source record carries `status: registered` iff
+         its repo-relative path is a `source_record_path` in the manifest.
+         Both directions are errors, naming the record and which side
+         disagrees.
+      2. Coverage: every file under `_originals/` is either a manifest
+         `original_path`, or is named by a source record whose
+         `holdings_tier` is a declared non-'registered' tier.
+      3. Tier legality: `holdings_tier: registered` implies a manifest row;
+         a manifest row's record must not carry a different declared tier.
+      4. Counts: `held_artifact_count` (files under `_originals/`),
+         `holdings_by_tier` (must sum to it), and `source_material_count`
+         (manifest row count, and must equal
+         `holdings_by_tier["registered"]`) all agree. Skipped entirely,
+         invariants 1-3 still run, when `held_artifact_count` is absent from
+         state (an instance that has not adopted this change yet).
+
+    Not wired into validate() — tasks.md A4 wires it.
+    """
+    try:
+        policy = load_holdings_policy(root)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return
+    declared_tiers = policy["tiers"]
+
+    manifest_rel = "00-system/registers/MATERIALS_INDEX.jsonl"
+    manifest_path = root / manifest_rel
+    rows: list[dict] = []
+    if manifest_path.exists():
+        had_parse_error = False
+        for number, line in enumerate(
+            manifest_path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                errors.append(f"{manifest_rel}: line {number}: {exc}")
+                had_parse_error = True
+        if had_parse_error:
+            return
+
+    registered_record_paths = {
+        row["source_record_path"] for row in rows if row.get("source_record_path")
+    }
+    manifest_original_paths = {
+        row["original_path"] for row in rows if row.get("original_path")
+    }
+
+    records_dir = root / "02-sources" / "records"
+    records: dict[str, dict] = {}
+    if records_dir.exists():
+        for path in sorted(records_dir.rglob("*.md")):
+            rel = path.relative_to(root).as_posix()
+            try:
+                records[rel] = parse_frontmatter(path)
+            except Exception as exc:
+                errors.append(f"{rel}: {exc}")
+
+    # 1. Biconditional: status: registered <=> named as source_record_path.
+    for rel, fm in records.items():
+        claims_registered = fm.get("status") == HOLDINGS_TIER_REGISTERED
+        is_manifest_row = rel in registered_record_paths
+        if claims_registered and not is_manifest_row:
+            errors.append(
+                f"{rel}: status is 'registered' but no row in "
+                f"{manifest_rel} names it as source_record_path — either "
+                f"register it there or correct this record's status"
+            )
+        if is_manifest_row and not claims_registered:
+            errors.append(
+                f"{rel}: a row in {manifest_rel} names this record as "
+                f"source_record_path but its status is "
+                f"{fm.get('status')!r}, not 'registered'"
+            )
+
+    # 3. Tier legality.
+    for rel, fm in records.items():
+        tier = fm.get("holdings_tier")
+        is_manifest_row = rel in registered_record_paths
+        if tier is None:
+            continue
+        if tier not in declared_tiers:
+            errors.append(
+                f"{rel}: holdings_tier {tier!r} is not a declared tier in "
+                f"HOLDINGS_POLICY.json; legal tiers are "
+                f"{sorted(declared_tiers)}"
+            )
+            continue
+        if tier == HOLDINGS_TIER_REGISTERED and not is_manifest_row:
+            errors.append(
+                f"{rel}: holdings_tier is 'registered' but no row in "
+                f"{manifest_rel} names it as source_record_path"
+            )
+        if is_manifest_row and tier != HOLDINGS_TIER_REGISTERED:
+            errors.append(
+                f"{rel}: is named as source_record_path in {manifest_rel} "
+                f"but holdings_tier is {tier!r}, not 'registered'"
+            )
+
+    # 2. Coverage: every file under _originals/ is accounted for.
+    originals_dir = root / "_originals"
+    originals_files = (
+        sorted(p for p in originals_dir.rglob("*") if p.is_file())
+        if originals_dir.exists() else []
+    )
+    covering_records = {
+        fm["original_path"]: rel
+        for rel, fm in records.items()
+        if fm.get("original_path")
+        and fm.get("holdings_tier") in declared_tiers
+        and fm.get("holdings_tier") != HOLDINGS_TIER_REGISTERED
+    }
+    for path in originals_files:
+        rel = path.relative_to(root).as_posix()
+        if rel in manifest_original_paths or rel in covering_records:
+            continue
+        errors.append(
+            f"{rel}: held under _originals/ but undeclared — it is neither "
+            f"a manifest original_path in {manifest_rel} nor named by a "
+            f"source record with a non-'registered' holdings_tier"
+        )
+
+    # 4. Counts — skipped entirely (invariants 1-3 still run above) if
+    # held_artifact_count is absent from state.
+    if "held_artifact_count" not in state:
+        return
+
+    held_declared = state.get("held_artifact_count")
+    held_actual = len(originals_files)
+    if held_declared != held_actual:
+        errors.append(
+            f"CORPUS_STATE.json: held_artifact_count is {held_declared} "
+            f"but _originals/ holds {held_actual} files"
+        )
+
+    by_tier = state.get("holdings_by_tier") or {}
+    tier_sum = sum(by_tier.values())
+    if tier_sum != held_declared:
+        errors.append(
+            f"CORPUS_STATE.json: holdings_by_tier sums to {tier_sum} but "
+            f"held_artifact_count is {held_declared}"
+        )
+
+    source_count = state.get("source_material_count")
+    manifest_count = len(rows)
+    if manifest_count != source_count:
+        errors.append(
+            f"CORPUS_STATE.json: source_material_count is {source_count} "
+            f"but {manifest_rel} has {manifest_count} rows"
+        )
+
+    registered_tier_count = by_tier.get(HOLDINGS_TIER_REGISTERED)
+    if registered_tier_count != source_count:
+        errors.append(
+            f"CORPUS_STATE.json: holdings_by_tier['registered'] is "
+            f"{registered_tier_count} but source_material_count is "
+            f"{source_count}"
+        )
+
+
 def validate(full: bool) -> list[str]:
     errors: list[str] = []
     warnings: list[str] = []

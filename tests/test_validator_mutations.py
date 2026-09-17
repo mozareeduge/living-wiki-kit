@@ -5,6 +5,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "scripts" / "validate_repo.py"
@@ -568,6 +570,248 @@ def test_harness_worktree_is_ignored_by_the_validator():
         assert mod.is_ignored_rel(".harness-worktrees"), script
         assert mod.is_ignored_rel(".harness-worktrees/abc/HOME.md"), script
         assert not mod.is_ignored_rel("HOME.md"), script
+
+
+# -------------------------------------------------- holdings census (A2)
+# Fixture helpers for check_holdings_census. Every fixture root gets its own
+# HOLDINGS_POLICY.json (mirroring the real 00-system/policies/HOLDINGS_POLICY.json
+# tier set) so the helper's legal-tier names come from load_holdings_policy(root),
+# never hardcoded here.
+
+
+def _census_policy_dict():
+    return {
+        "schema_version": "1.0.0",
+        "tiers": {
+            "registered": {
+                "description": "x", "manifest_row": "required",
+                "counted_in": "source_material_count",
+            },
+            "pending-registration": {
+                "description": "x", "manifest_row": "forbidden",
+                "counted_in": "held_artifact_count",
+            },
+            "reference-shelf": {
+                "description": "x", "manifest_row": "forbidden",
+                "counted_in": "held_artifact_count",
+            },
+        },
+        "default_tier_for_unregistered": "pending-registration",
+        "family_tier_overrides": {},
+    }
+
+
+def _census_root(base):
+    root = base / "repo"
+    policies_dir = root / "00-system" / "policies"
+    policies_dir.mkdir(parents=True, exist_ok=True)
+    (policies_dir / "HOLDINGS_POLICY.json").write_text(
+        json.dumps(_census_policy_dict()), encoding="utf-8")
+    return root
+
+
+def _write_original(root, rel, content=b"x"):
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+
+
+def _write_source_record(root, rel, *, status, original_path, holdings_tier=None):
+    fm = {
+        "id": rel.rsplit("/", 1)[-1].removesuffix(".md"),
+        "type": "source-record",
+        "title": "Example",
+        "status": status,
+        "original_path": original_path,
+    }
+    if holdings_tier is not None:
+        fm["holdings_tier"] = holdings_tier
+    text = "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\nBody.\n"
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _write_manifest(root, rows):
+    path = root / "00-system" / "registers" / "MATERIALS_INDEX.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [json.dumps(row) for row in rows]
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def _run_census(root, state):
+    errors = []
+    validate_repo.check_holdings_census(root, state, errors)
+    return errors
+
+
+def test_holdings_census_all_registered_and_consistent_passes():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/a.pdf")
+        _write_source_record(
+            root, "02-sources/records/a.md",
+            status="registered", original_path="_originals/a.pdf",
+            holdings_tier="registered")
+        _write_manifest(root, [
+            {"source_record_path": "02-sources/records/a.md",
+             "original_path": "_originals/a.pdf"},
+        ])
+        state = {
+            "source_material_count": 1,
+            "held_artifact_count": 1,
+            "holdings_by_tier": {"registered": 1, "pending-registration": 0,
+                                  "reference-shelf": 0},
+        }
+        assert _run_census(root, state) == []
+
+
+def test_holdings_census_unregistered_original_without_record_fails():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/stray.pdf")
+        state = {"source_material_count": 0}
+        errors = _run_census(root, state)
+        assert any(
+            "_originals/stray.pdf" in e and "undeclared" in e for e in errors
+        ), errors
+
+
+def test_holdings_census_record_claims_registered_without_manifest_row_fails():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_source_record(
+            root, "02-sources/records/b.md",
+            status="registered", original_path="_originals/b.pdf")
+        state = {"source_material_count": 0}
+        errors = _run_census(root, state)
+        assert any(
+            "02-sources/records/b.md" in e and "MATERIALS_INDEX.jsonl" in e
+            for e in errors
+        ), errors
+
+
+def test_holdings_census_manifest_row_record_not_registered_fails():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/c.pdf")
+        _write_source_record(
+            root, "02-sources/records/c.md",
+            status="pending-registration", original_path="_originals/c.pdf",
+            holdings_tier="pending-registration")
+        _write_manifest(root, [
+            {"source_record_path": "02-sources/records/c.md",
+             "original_path": "_originals/c.pdf"},
+        ])
+        state = {"source_material_count": 1}
+        errors = _run_census(root, state)
+        assert any(
+            "02-sources/records/c.md" in e and "pending-registration" in e
+            for e in errors
+        ), errors
+
+
+def test_holdings_census_held_artifact_count_off_by_one_fails():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/a.pdf")
+        _write_original(root, "_originals/b.pdf")
+        state = {
+            "source_material_count": 0,
+            "held_artifact_count": 1,
+            "holdings_by_tier": {"registered": 0, "pending-registration": 1,
+                                  "reference-shelf": 0},
+        }
+        errors = _run_census(root, state)
+        assert any(
+            "held_artifact_count" in e and "1" in e and "2" in e for e in errors
+        ), errors
+
+
+def test_holdings_census_holdings_by_tier_not_summing_fails():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/a.pdf")
+        _write_original(root, "_originals/b.pdf")
+        state = {
+            "source_material_count": 0,
+            "held_artifact_count": 2,
+            "holdings_by_tier": {"registered": 0, "pending-registration": 0,
+                                  "reference-shelf": 0},
+        }
+        errors = _run_census(root, state)
+        assert any("holdings_by_tier sums to" in e for e in errors), errors
+
+
+def test_holdings_census_empty_originals_zero_counts_passes():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        (root / "_originals").mkdir(parents=True, exist_ok=True)
+        state = {
+            "source_material_count": 0,
+            "held_artifact_count": 0,
+            "holdings_by_tier": {"registered": 0, "pending-registration": 0,
+                                  "reference-shelf": 0},
+        }
+        assert _run_census(root, state) == []
+
+
+def test_holdings_census_absent_held_artifact_count_skips_counts_only():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_source_record(
+            root, "02-sources/records/a.md",
+            status="registered", original_path="_originals/a.pdf")
+        # No manifest row for a.md -> invariant 1 must still fire even though
+        # held_artifact_count is absent. source_material_count is wildly
+        # wrong relative to the (zero) manifest rows, which invariant 4 would
+        # flag if it ran; held_artifact_count's absence must skip invariant 4
+        # entirely, not just the held-count sub-check.
+        state = {"source_material_count": 999}
+        errors = _run_census(root, state)
+        assert any("02-sources/records/a.md" in e for e in errors), errors
+        assert not any("source_material_count" in e for e in errors), errors
+        assert not any("held_artifact_count" in e for e in errors), errors
+
+
+def test_every_holdings_census_error_names_path_and_register():
+    """Acceptance (d): every error names a path and the disagreeing register."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/a.pdf")
+        _write_original(root, "_originals/stray.pdf")
+        _write_source_record(
+            root, "02-sources/records/a.md",
+            status="registered", original_path="_originals/a.pdf",
+            holdings_tier="registered")
+        _write_source_record(
+            root, "02-sources/records/b.md",
+            status="registered", original_path="_originals/b.pdf")
+        _write_manifest(root, [])
+        state = {
+            "source_material_count": 3,
+            "held_artifact_count": 5,
+            "holdings_by_tier": {"registered": 0, "pending-registration": 0,
+                                  "reference-shelf": 0},
+        }
+        errors = _run_census(root, state)
+        assert len(errors) >= 4, errors
+        for error in errors:
+            path, sep, _ = error.partition(":")
+            path = path.strip()
+            assert sep, error
+            assert (
+                path.startswith("02-sources/records/")
+                or path.startswith("_originals/")
+                or path == "CORPUS_STATE.json"
+            ), error
+            register_named = (
+                "MATERIALS_INDEX.jsonl" in error
+                or "CORPUS_STATE.json" in error
+                or "_originals/" in error
+                or "HOLDINGS_POLICY.json" in error
+            )
+            assert register_named, error
 
 
 if __name__ == "__main__":
