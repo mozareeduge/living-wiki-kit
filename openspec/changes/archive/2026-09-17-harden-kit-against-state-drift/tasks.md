@@ -84,9 +84,9 @@
       `00-system/configuration/content-release.json` `system_version`,
       `scripts/instantiate.py` `created_from`, and the README release note in
       the same change; rerun both validators after the bump.
-- [ ] 5.4 Open a reviewable PR from the existing `system/` branch. Require CI
+- [x] 5.4 Open a reviewable PR from the existing `system/` branch. Require CI
       green; do not use `--no-verify`, force-push, or a baseline exception.
       Merge, verify remote main SHA, and fast-forward the local checkout.
-- [ ] 5.5 Record the consequential-work handoff required by SYSTEM_DESIGN.md,
+- [x] 5.5 Record the consequential-work handoff required by SYSTEM_DESIGN.md,
       including changed files, decisions, exact validation output, unresolved
       risks, negative constraints, and the next operation.
