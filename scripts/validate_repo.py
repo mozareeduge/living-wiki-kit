@@ -540,6 +540,10 @@ def validate(full: bool) -> list[str]:
     # for human readers, so they must never lag CORPUS_STATE.json.
     check_entry_pages(ROOT, state, errors)
 
+    # Holdings census gate (design.md sections 3-4; tasks.md A2/A4):
+    # "registered" and "held" are different claims and must stay honest.
+    check_holdings_census(ROOT, state, errors)
+
     ids: dict[str, str] = {}
     md_files = [
         p for p in ROOT.rglob("*.md")

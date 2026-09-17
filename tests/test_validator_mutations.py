@@ -814,6 +814,60 @@ def test_every_holdings_census_error_names_path_and_register():
             assert register_named, error
 
 
+# -------------------------------------------------- census gate wiring (A4)
+
+
+def test_validate_calls_holdings_census_gate_exactly_once_with_loaded_state():
+    """The census gate (A2's check_holdings_census) must run inside the
+    normal validate() path -- task A4 -- not only when a test calls the
+    helper directly. Mirrors test_validate_calls_entry_gate_once_with_loaded_state."""
+    calls = []
+    original = validate_repo.check_holdings_census
+
+    def recorder(root, state, errors):
+        calls.append((root, state, errors))
+        return original(root, state, errors)
+
+    validate_repo.check_holdings_census = recorder
+    try:
+        errors = validate_repo.validate(False)
+    finally:
+        validate_repo.check_holdings_census = original
+
+    assert len(calls) == 1, f"check_holdings_census called {len(calls)} times"
+    root, state, passed_errors = calls[0]
+    assert root == validate_repo.ROOT
+    live = json.loads(
+        (ROOT / "00-system/registers/CORPUS_STATE.json").read_text(
+            encoding="utf-8"))
+    assert state.get("id") == live["id"], state
+    assert state.get("source_material_count") == live["source_material_count"]
+    assert passed_errors is errors or isinstance(passed_errors, list)
+
+
+def test_undeclared_original_makes_validate_repo_exit_nonzero():
+    """Subprocess smoke test (A4 acceptance a/b): planting a file under
+    _originals/ that is neither a manifest original_path nor covered by a
+    non-'registered' source record must fail `validate_repo.py --full`,
+    naming that exact path. Planted only in a throwaway _copy_kit() copy --
+    never in the real repository."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        undeclared_rel = "_originals/undeclared-test-artifact.txt"
+        undeclared_path = kit / undeclared_rel
+        undeclared_path.parent.mkdir(parents=True, exist_ok=True)
+        undeclared_path.write_bytes(b"undeclared content")
+        r = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, out[-1500:]
+        assert undeclared_rel in out, out[-1500:]
+        assert "held under _originals/ but undeclared" in out, out[-1500:]
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())
