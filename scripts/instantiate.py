@@ -34,6 +34,7 @@ TARGET_GLOBS = [
     "AGENTS.md",
     "CLAUDE.md",
     "HOME.md",
+    "README.md",
     "RUNBOOK_WEB_CAPTURE.md",
     "RUNBOOK_*.md",
     ".claude/skills/*/SKILL.md",
@@ -62,6 +63,48 @@ def main() -> int:
               "starting with a letter", file=sys.stderr)
         return 2
 
+    # --- Preconditions: never reseed a live corpus (checked before writing) ---
+    state_path = ROOT / "00-system/registers/CORPUS_STATE.json"
+    manifest_path = ROOT / "00-system/registers/MATERIALS_INDEX.jsonl"
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"ERROR: cannot parse CORPUS_STATE.json: {exc}", file=sys.stderr)
+        return 2
+    count = state.get("source_material_count")
+    rows = []
+    if manifest_path.exists():
+        for line in manifest_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(line)
+    if not isinstance(count, int) or count < 0:
+        print("ERROR: CORPUS_STATE.json source_material_count missing or "
+              "invalid", file=sys.stderr)
+        return 2
+    if rows or count != 0:
+        print(f"ERROR: instance is populated (manifest rows: {len(rows)}, "
+              f"registered count: {count}); instantiate.py only seeds a fresh "
+              "empty kit — never rerun it on a live instance", file=sys.stderr)
+        return 2
+    instance_path = ROOT / "00-system/registers/INSTANCE.json"
+    if instance_path.exists():
+        try:
+            existing = json.loads(instance_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"ERROR: cannot parse INSTANCE.json: {exc}", file=sys.stderr)
+            return 2
+        if not (existing.get("record_prefix") == prefix
+                and existing.get("id") == f"{prefix}-instance"):
+            print(f"ERROR: INSTANCE.json identifies a different instance "
+                  f"(id={existing.get('id')!r}, "
+                  f"record_prefix={existing.get('record_prefix')!r}); "
+                  "refusing to reseed", file=sys.stderr)
+            return 2
+
+    corpus_old = "wiki-corpus-empty"
+    corpus_new = f"{prefix}-corpus-empty"
+    entry_pages = ("HOME.md", "README.md", "SYSTEM_DESIGN.md", "CLAUDE.md")
+
     changed = []
     for pattern in TARGET_GLOBS:
         for path in ROOT.glob(pattern):
@@ -71,15 +114,26 @@ def main() -> int:
             new = MW_ID.sub(f"{prefix}-", text)
             for old, repl in MOZARE_WORDS:
                 new = new.replace(old, repl)
+            if path.name in entry_pages:
+                new = new.replace(
+                    f"Current corpus snapshot: `{corpus_old}`",
+                    f"Current corpus snapshot: `{corpus_new}`")
             if new != text:
                 path.write_text(new, encoding="utf-8")
                 changed.append(path.relative_to(ROOT).as_posix())
+
+    # Corpus register: rename the empty-state id to the instance's own.
+    if state.get("id") != corpus_new:
+        state["id"] = corpus_new
+        state_path.write_text(json.dumps(state, indent=2) + "\n",
+                              encoding="utf-8")
+        changed.append(state_path.relative_to(ROOT).as_posix())
 
     instance = {
         "id": f"{prefix}-instance",
         "name": args.name,
         "record_prefix": prefix,
-        "created_from": "living-wiki-kit 1.0.0",
+        "created_from": "living-wiki-kit 1.1.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
     }

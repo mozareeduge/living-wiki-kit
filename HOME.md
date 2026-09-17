@@ -22,6 +22,13 @@ its routes, its current state.
 4. `SEARCH_GUIDE.md` — authority-aware retrieval
 5. `GPT_WORKFLOW.md` — safe cloud-LLM authoring workflow
 
+Current corpus snapshot: `wiki-corpus-empty`
+Registered source artifacts: 0
+
+Live truth: `00-system/registers/CORPUS_STATE.json` and
+`MATERIALS_INDEX.jsonl` — refresh these anchors in the same change as the
+registers (the entry-page freshness gate enforces this).
+
 ## When instantiated, this page should list
 
 - Current release and corpus snapshot (from `CORPUS_STATE.json`)

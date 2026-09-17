@@ -38,9 +38,38 @@ committing.
 
 - `HOME.md` — subject, routes, entry points (replace mozare examples)
 - `SYSTEM_DESIGN.md` — keep §§2–5 (authority, preservation, record grammar)
-  verbatim; rewrite §1 and the corpus facts for your subject
-- `README.md` — instance name and purpose
+  verbatim; rewrite §1's subject description for your topic, but KEEP its
+  `Current corpus snapshot:` / `Registered source artifacts:` markers as
+  pointers to the registers
+- `README.md` — instance name and purpose (keep the markers + live-truth
+  pointers)
 - `AGENTS.md` / `CLAUDE.md` — update names, keep the non-negotiables verbatim
+  and the CLAUDE.md markers (the instantiator seeds them; see §3.5 below)
+
+### 3.5 Keep entry docs pointer-true (enforced)
+
+Every entry page (HOME.md, README.md, SYSTEM_DESIGN.md, CLAUDE.md) carries
+two labelled markers:
+
+```text
+Current corpus snapshot: `<id from CORPUS_STATE.json>`
+Registered source artifacts: <count from CORPUS_STATE.json>
+```
+
+These are pointers, not copies: whenever an intake or adjudication round
+changes CORPUS_STATE.json (or the counted record layers), refresh the
+markers — and any layer-count prose — on all four pages **in the same
+change**. `scripts/validate_repo.py` enforces this (entry-page freshness
+gate): the pre-commit hook and CI fail any commit whose entry pages lag or
+contradict the registers, so drift cannot happen silently again.
+
+Exceptions: a governed capture resting unregistered in `01-inbox/captures/`
+changes no register and no counted layer — no marker refresh needed.
+
+Adopting this system in an EXISTING instance: do NOT rerun
+`instantiate.py`. In one change, add the four markers from the instance's
+current registers, take the validator/skill/template updates, run both
+validators, and commit.
 
 ## 4. First validation
 

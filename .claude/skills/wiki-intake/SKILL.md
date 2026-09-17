@@ -31,7 +31,7 @@ Input: one or more files placed in `01-inbox/`.
    (OCR routing: `.claude/skills/wiki-file-to-md/SKILL.md`).
 8. Assign provisional family, authority scope, version role, extraction quality, and validation status. Do not infer sent/published status from filename.
 9. Invoke `/wiki-reconcile` before altering canonical object, lineage, relation, claim, or system pages.
-10. Update the manifest, corpus state, material register, source index, reconciliation audit, and system design when the intake changes the system.
+10. Update the manifest, corpus state, material register, source index, reconciliation audit, and system design when the intake changes the system. Whenever registered corpus state changes (snapshot id or source count in CORPUS_STATE.json), refresh the labelled markers — `Current corpus snapshot:` and `Registered source artifacts:` — plus any layer-count prose on all four entry pages (HOME.md, README.md, SYSTEM_DESIGN.md, CLAUDE.md) from the registers in the same change; the entry-page freshness gate in `validate_repo.py` fails the commit otherwise. An unregistered governed capture (resting in `01-inbox/captures/`) changes no register and triggers no refresh.
 11. Rebuild QMD: `qmd embed`.
 12. Run full validation.
 13. Write an intake report with unchanged areas and unresolved decisions.
