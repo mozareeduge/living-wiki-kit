@@ -86,6 +86,101 @@ def test_claim_permission_enum_is_enforced():
     assert any("invalid current_claim_permission" in error for error in errors)
 
 
+# --------------------------------------------------------- mojibake guard (C1)
+# looks_double_encoded() originally ran only over MATERIALS_INDEX.jsonl rows
+# (inline in validate(), lines ~616-624). design.md section 6 / tasks.md C1
+# extend it to every source record under 02-sources/records/: aliases (each
+# element), original_path, filename and title, inside the existing
+# frontmatter walk. Fixtures below spell the corrupted characters with
+# Python escapes so this test file itself stays plain, valid UTF-8:
+# "â€™" is the classic cp1252-misread of U+2019 (a right
+# single quote) and "â€”" is the same misread of U+2014 (an
+# em dash); looks_double_encoded() round-trips both back to the correct
+# character, which is what makes them real positives rather than a bare
+# U+FFFD placeholder (U+FFFD cannot even be cp1252-encoded, so it would
+# never trigger the guard).
+
+MOJIBAKE_ALIAS = "Annaâ€™s Archive.pdf"          # -> Anna's Archive.pdf
+MOJIBAKE_PATH_FRAGMENT = "Latour â€” Boekenkrant.pdf"  # -> Latour - Boekenkrant.pdf
+
+
+def _mojibake_record_fm(**overrides):
+    fm = {
+        "id": "ref-src-deadbeef0002",
+        "type": "source-record",
+        "title": "Clean Title",
+        "filename": "clean.pdf",
+        "original_path": "_originals/clean.pdf",
+        "aliases": ["Clean alias.pdf"],
+    }
+    fm.update(overrides)
+    return fm
+
+
+def test_source_record_mojibake_clean_record_produces_no_errors():
+    errors = []
+    validate_repo.check_source_record_mojibake(
+        "02-sources/records/clean.md", _mojibake_record_fm(), errors)
+    assert errors == []
+
+
+def test_source_record_mojibake_flags_every_offending_field():
+    rel = "02-sources/records/ref-src-deadbeef0002.md"
+    fm = _mojibake_record_fm(
+        aliases=["Clean alias.pdf", MOJIBAKE_ALIAS],
+        original_path="_originals/" + MOJIBAKE_PATH_FRAGMENT,
+        filename=MOJIBAKE_PATH_FRAGMENT,
+        title=MOJIBAKE_ALIAS,
+    )
+    errors = []
+    validate_repo.check_source_record_mojibake(rel, fm, errors)
+    assert len(errors) == 4, errors
+    for field in ("aliases", "original_path", "filename", "title"):
+        matches = [e for e in errors if rel in e and f"'{field}'" in e]
+        assert len(matches) == 1, (field, errors)
+        assert "double-encoded (mojibake)" in matches[0], matches[0]
+    # the clean alias must not be flagged alongside the corrupted one
+    assert not any("Clean alias.pdf" in e for e in errors), errors
+
+
+def test_source_record_mojibake_ignores_non_source_record_paths():
+    """Scoped to 02-sources/records/ -- an object page with a similarly
+    corrupted title must not be flagged here (scope creep beyond design.md
+    section 6)."""
+    errors = []
+    validate_repo.check_source_record_mojibake(
+        "03-objects/people/example.md",
+        {"title": MOJIBAKE_ALIAS},
+        errors)
+    assert errors == []
+
+
+def test_manifest_row_mojibake_check_unaffected_by_source_record_guard():
+    """Regression guard for the pre-existing manifest-row check (inline in
+    validate(), lines ~616-624): C1 must not touch its wording or call site.
+    No prior test exercised this path directly; this closes that gap."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        manifest_path = kit / "00-system/registers/MATERIALS_INDEX.jsonl"
+        row = {
+            "id": "ref-src-deadbeef0003",
+            "filename": MOJIBAKE_ALIAS,
+            "sha256": "0" * 64,
+            "original_path": "_originals/anna.pdf",
+            "source_record_path": "02-sources/records/ref-src-deadbeef0003.md",
+        }
+        manifest_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, out[-1200:].encode("ascii", "replace").decode("ascii")
+        assert "manifest row field 'filename' looks double-encoded (mojibake)" in out, \
+            out[-1200:].encode("ascii", "replace").decode("ascii")
+
+
 # ---------------------------------------------------------------- entry gate
 # Shared fixture helpers for check_entry_pages tests (task 1.2/1.3).
 

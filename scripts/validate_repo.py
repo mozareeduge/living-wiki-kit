@@ -145,6 +145,40 @@ def looks_double_encoded(s: str) -> bool:
     return fixed != s
 
 
+def check_source_record_mojibake(rel: str, fm: dict, errors: list[str]) -> None:
+    """Mojibake guard, extended from manifest rows to every source record
+    (design.md section 6; tasks.md C1).
+
+    looks_double_encoded() previously ran only over MATERIALS_INDEX.jsonl
+    rows, so a record that was never registered in the manifest could carry
+    corrupted text undetected. This applies the same check to every record
+    under 02-sources/records/, on aliases (each element), original_path,
+    filename and title, from inside the existing frontmatter walk in
+    validate(). Reuses the manifest-row check's error wording.
+    """
+    if not rel.startswith("02-sources/records/"):
+        return
+    for key in ("original_path", "filename", "title"):
+        value = fm.get(key)
+        if isinstance(value, str) and value and looks_double_encoded(value):
+            errors.append(
+                f"{rel}: field '{key}' looks double-encoded (mojibake): "
+                f"{value!r} — a tool likely wrote this with the wrong "
+                f"text encoding; re-derive it from the actual filesystem "
+                f"name, do not hand-patch the garbled string"
+            )
+    aliases = fm.get("aliases")
+    if isinstance(aliases, list):
+        for alias in aliases:
+            if isinstance(alias, str) and alias and looks_double_encoded(alias):
+                errors.append(
+                    f"{rel}: field 'aliases' looks double-encoded (mojibake): "
+                    f"{alias!r} — a tool likely wrote this with the "
+                    f"wrong text encoding; re-derive it from the actual "
+                    f"filesystem name, do not hand-patch the garbled string"
+                )
+
+
 def is_ignored_rel(rel: str) -> bool:
     return any(rel == prefix.rstrip("/") or rel.startswith(prefix) for prefix in IGNORED_PREFIXES)
 
@@ -588,6 +622,7 @@ def validate(full: bool) -> list[str]:
         if rel.startswith(".claude/") or rel.startswith("00-system/templates/"):
             continue
         validate_live_record_schema(rel, fm, errors)
+        check_source_record_mojibake(rel, fm, errors)
         for key in ("id", "type", "title"):
             if key not in fm or fm[key] in ("", None):
                 errors.append(f"{rel}: missing frontmatter field '{key}'")
