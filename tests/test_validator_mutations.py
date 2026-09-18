@@ -1854,6 +1854,93 @@ def test_generic_frontmatter_identity_and_duplicate_id_are_enforced():
         assert "duplicate id release-readiness-register" in out, _safe(out)
 
 
+SYSTEM_DESIGN = ROOT / "SYSTEM_DESIGN.md"
+SECTION6_HEADING = "## 6. What each script does"
+SECTION6_STATUS_VALUES = ("operational", "available (unexercised)")
+
+
+def _section6_table_rows(text):
+    """Return the raw '| ... |' data rows of the section-6 script table.
+
+    Skips the header row and the '---' separator, and stops at the next
+    '## ' heading or the first blank line once inside the table. Tolerant
+    of a missing trailing pipe (SYSTEM_DESIGN.md had exactly one such row
+    historically, on `run-semantic-benchmark.py`).
+    """
+    lines = text.splitlines()
+    try:
+        start = next(
+            i for i, ln in enumerate(lines) if ln.strip() == SECTION6_HEADING)
+    except StopIteration:
+        raise AssertionError(f"{SECTION6_HEADING!r} not found in SYSTEM_DESIGN.md")
+    table = []
+    seen_table = False
+    for ln in lines[start + 1:]:
+        stripped = ln.strip()
+        if stripped.startswith("## "):
+            break
+        if stripped.startswith("|"):
+            seen_table = True
+            table.append(stripped)
+        elif seen_table and not stripped:
+            break
+    if len(table) < 2:
+        raise AssertionError("section 6 table has no data rows")
+    return table[2:]  # drop the header row and the '---' separator
+
+
+def _split_row_cells(row):
+    """Split one '| a | b | c |' row into its cells.
+
+    Splits on pipes and drops the empty strings the outer pipes produce.
+    No cell in this table contains a literal '|' (verified against the
+    live file, not assumed), so this is not a full markdown-table parser
+    -- it is exactly robust enough for this table's real formatting,
+    including a missing trailing pipe.
+    """
+    parts = row.split("|")
+    if parts and parts[0].strip() == "":
+        parts = parts[1:]
+    if parts and parts[-1].strip() == "":
+        parts = parts[:-1]
+    return [p.strip() for p in parts]
+
+
+def check_section6_table_status(text):
+    """Return a list of errors, one per section-6 row missing an exact
+    status string in its last column.
+
+    A row passes only when it has a status cell and that cell is exactly
+    one of SECTION6_STATUS_VALUES. Too few cells, an empty status cell,
+    and a near-miss string (e.g. 'operational-ish') are all errors. This
+    is the single source of truth for both the permanent completeness
+    test and the D1 negative-check mutation.
+    """
+    errors = []
+    for row in _section6_table_rows(text):
+        cells = _split_row_cells(row)
+        script = cells[0] if cells else "<unparseable row>"
+        if len(cells) < 3:
+            errors.append(
+                f"section 6 row for {script!r} has no status column: {row!r}")
+            continue
+        status = cells[-1]
+        if status not in SECTION6_STATUS_VALUES:
+            errors.append(
+                f"section 6 row for {script!r} has invalid status "
+                f"{status!r}; expected one of {SECTION6_STATUS_VALUES}")
+    return errors
+
+
+def test_section6_table_status_completeness():
+    """D1: every section-6 row must carry an exact status string, so a
+    future script cannot arrive untagged and the kit cannot oversell an
+    unexercised part at the confidence of an operational one."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    errors = check_section6_table_status(text)
+    assert not errors, _safe("\n".join(errors))
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())

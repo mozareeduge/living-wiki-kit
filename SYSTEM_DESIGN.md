@@ -30,8 +30,10 @@ It ships everything needed to start a **new wiki instance** for any subject:
   reconcile, write, validate, handoff, voice capture);
 - a governed multimodal capture core (text/audio/image → checksummed,
   deduplicated, noncanonical capture records);
-- interchange exports (PROV-O JSON-LD, SKOS, TEI skeleton) and a public
-  export tool that never writes inside the repo;
+- interchange export scripts (PROV-O JSON-LD, SKOS, TEI skeleton) and a
+  public export tool that never writes inside the repo — shipped and
+  available, not yet exercised against a populated instance (see §6 for
+  the per-script status);
 - an MCP server exposing read / search / propose to any AI harness;
 - a controlled vocabulary so status words mean the same thing everywhere.
 
@@ -126,19 +128,20 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 
 ## 6. What each script does
 
-| Script | Role |
-|---|---|
-| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, not yet wired into `validate()`) |
-| `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark |
-| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` |
-| `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine |
-| `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search`, `wiki_propose` — writes go only to `_proposals/` |
-| `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record |
-| `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo |
-| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set
-| `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` |
-| `check_research_spans.py` | citation-span audit over an external research quarantine |
-| `*.ps1` | Windows helpers: QMD config/refresh, backup, verify-install, search wrapper |
+| Script | Role | Status |
+|---|---|---|
+| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, not yet wired into `validate()`) | operational |
+| `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark | operational |
+| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` | operational |
+| `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine | operational |
+| `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search`, `wiki_propose` — writes go only to `_proposals/` | operational |
+| `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
+| `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
+| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set | available (unexercised) |
+| `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` | operational |
+| `check_research_spans.py` | citation-span audit over an external research quarantine | available (unexercised) |
+| `create-backup.ps1` | Windows helper: zip backup of the repo to `_wiki_backups/` | operational |
+| `configure-search.ps1` / `refresh-search.ps1` / `search-wiki.ps1` / `verify-install.ps1` | Windows helpers: QMD config/refresh, verify-install, search wrapper | available (unexercised) |
 
 The capture core, MCP server, and validators are instance-agnostic: IDs use
 the instance prefix set by `instantiate.py`.
