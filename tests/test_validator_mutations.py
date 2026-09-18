@@ -23,6 +23,12 @@ retier_holdings = importlib.util.module_from_spec(_retier_spec)
 assert _retier_spec.loader is not None
 _retier_spec.loader.exec_module(retier_holdings)
 
+REPORT_HOLDINGS = ROOT / "scripts" / "report_holdings.py"
+_report_spec = importlib.util.spec_from_file_location("report_holdings", REPORT_HOLDINGS)
+report_holdings = importlib.util.module_from_spec(_report_spec)
+assert _report_spec.loader is not None
+_report_spec.loader.exec_module(report_holdings)
+
 
 def collect(rel, frontmatter):
     errors = []
@@ -1939,6 +1945,364 @@ def test_section6_table_status_completeness():
     text = SYSTEM_DESIGN.read_text(encoding="utf-8")
     errors = check_section6_table_status(text)
     assert not errors, _safe("\n".join(errors))
+
+
+# ------------------------------------------------------- E1: report_holdings.py
+
+def test_report_holdings_all_zero_on_empty_fixture_is_clean():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        report = report_holdings.generate_report(root)
+        assert report["registered"] == 0, report
+        assert report["held"] == 0, report
+        assert report["unregistered"] == 0, report
+        assert report["tier_breakdown"] == {
+            "registered": 0, "pending-registration": 0,
+            "reference-shelf": 0, "undeclared": 0,
+        }, report
+        assert report["status_contradictions"]["count"] == 0, report
+        assert report["findings"] == 0, report
+        assert report["verdict"] == "CENSUS CLEAN", report
+
+
+def test_report_holdings_registered_held_unregistered_and_tier_breakdown():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_original(root, "_originals/reg.pdf")
+        _write_original(root, "_originals/pending.pdf")
+        _write_manifest(root, [{
+            "id": "s1", "filename": "reg.pdf", "sha256": "x",
+            "original_path": "_originals/reg.pdf",
+            "source_record_path": "02-sources/records/reg.md",
+        }])
+        _write_source_record(root, "02-sources/records/reg.md",
+                              status="registered", original_path="_originals/reg.pdf",
+                              holdings_tier="registered")
+        _write_source_record(root, "02-sources/records/pending.md",
+                              status="pending-registration",
+                              original_path="_originals/pending.pdf",
+                              holdings_tier="pending-registration")
+        report = report_holdings.generate_report(root)
+        assert report["registered"] == 1, report
+        assert report["held"] == 2, report
+        assert report["unregistered"] == 1, report
+        assert report["tier_breakdown"] == {
+            "registered": 1, "pending-registration": 1,
+            "reference-shelf": 0, "undeclared": 0,
+        }, report
+        assert report["findings"] == 0, report
+        assert report["verdict"] == "CENSUS CLEAN", report
+
+
+def test_report_holdings_degrades_gracefully_without_holdings_policy():
+    """tasks.md E1 acceptance (d): an instance with no HOLDINGS_POLICY.json
+    (has not adopted this change) must still get real registered/held/
+    unregistered numbers and a working status-contradiction check -- only
+    the tier breakdown is unavailable, named by reason rather than crashing.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"  # deliberately: no _census_root(), no policy file
+        _write_original(root, "_originals/reg.pdf")
+        _write_original(root, "_originals/extra.pdf")
+        _write_manifest(root, [{
+            "id": "s1", "filename": "reg.pdf", "sha256": "x",
+            "original_path": "_originals/reg.pdf",
+            "source_record_path": "02-sources/records/reg.md",
+        }])
+        _write_source_record(root, "02-sources/records/reg.md",
+                              status="registered", original_path="_originals/reg.pdf")
+        report = report_holdings.generate_report(root)
+        assert report["registered"] == 1, report
+        assert report["held"] == 2, report
+        assert report["unregistered"] == 1, report
+        assert report["tier_breakdown"] is None, report
+        assert report["tier_breakdown_unavailable_reason"], report
+        assert "HOLDINGS_POLICY.json" in report["tier_breakdown_unavailable_reason"], report
+        assert report["status_contradictions"]["count"] == 0, report
+
+
+def test_report_holdings_status_contradiction_both_directions_counted():
+    """Mutation guard: a helper that only checks one direction of the
+    biconditional would pass this fixture with count 1 instead of 2."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_manifest(root, [{
+            "id": "s1", "filename": "a.pdf", "sha256": "x",
+            "original_path": "_originals/a.pdf",
+            "source_record_path": "02-sources/records/manifest-row-not-registered.md",
+        }])
+        # direction A: claims registered, absent from manifest
+        _write_source_record(root, "02-sources/records/claims-registered.md",
+                              status="registered", original_path="_originals/b.pdf")
+        # direction B: named by manifest row, but status is not 'registered'
+        _write_source_record(root, "02-sources/records/manifest-row-not-registered.md",
+                              status="pending-registration",
+                              original_path="_originals/a.pdf")
+        report = report_holdings.generate_report(root)
+        sc = report["status_contradictions"]
+        assert sc["count"] == 2, sc
+        assert "02-sources/records/claims-registered.md" in sc["first_five"], sc
+        assert "02-sources/records/manifest-row-not-registered.md" in sc["first_five"], sc
+
+
+def test_report_holdings_status_contradiction_first_five_caps_at_five():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        for i in range(7):
+            _write_source_record(root, f"02-sources/records/bad-{i}.md",
+                                  status="registered",
+                                  original_path=f"_originals/bad-{i}.pdf")
+        report = report_holdings.generate_report(root)
+        sc = report["status_contradictions"]
+        assert sc["count"] == 7, sc
+        assert len(sc["first_five"]) == 5, sc
+
+
+def test_report_holdings_proposals_grouped_by_status_new_called_out():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        path = root / "_proposals" / "proposals.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rows = [{"id": "p1", "status": "new"}, {"id": "p2", "status": "new"},
+                {"id": "p3", "status": "accepted"}, {"id": "p4", "status": "rejected"}]
+        path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+        report = report_holdings.generate_report(root)
+        pr = report["proposals_by_status"]
+        assert pr["total"] == 4, pr
+        assert pr["by_status"] == {"accepted": 1, "new": 2, "rejected": 1}, pr
+        assert pr["new"] == 2, pr
+
+
+def test_report_holdings_claims_grouped_by_permission_blocked_called_out():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        perms = ["may-note", "may-note", "may-describe", "blocked"]
+        for i, perm in enumerate(perms):
+            fm = {"id": f"c{i}", "type": "claim-object",
+                  "current_claim_permission": perm}
+            text = "---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\nBody.\n"
+            path = root / "05-claims" / f"c{i}.md"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        report = report_holdings.generate_report(root)
+        cl = report["claims_by_permission"]
+        assert cl["total"] == 4, cl
+        assert cl["by_permission"] == {
+            "blocked": 1, "may-describe": 1, "may-note": 2}, cl
+        assert cl["blocked"] == 1, cl
+
+
+def test_report_holdings_registers_stale_flag_per_intake_and_static():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_register_md(root, "00-system/registers/A_REG.md", frontmatter={
+            "id": "a", "type": "register", "title": "A",
+            "refresh_policy": "per-intake", "updated": "2026-01-01"})
+        _write_register_md(root, "00-system/registers/B_REG.md", frontmatter={
+            "id": "b", "type": "register", "title": "B",
+            "refresh_policy": "static", "updated": "2020-01-01"})
+        (root / "00-system/registers").mkdir(parents=True, exist_ok=True)
+        (root / "00-system/registers/CORPUS_STATE.json").write_text(
+            json.dumps({"updated": "2026-06-01"}), encoding="utf-8")
+        report = report_holdings.generate_report(root)
+        rows = {r["path"]: r for r in report["registers"]}
+        assert rows["00-system/registers/A_REG.md"]["stale"] is True, rows
+        assert rows["00-system/registers/B_REG.md"]["stale"] is False, rows
+        assert report["findings"] >= 1, report
+        assert report["verdict"].startswith("CENSUS DRIFT:"), report
+
+
+def test_report_holdings_register_missing_policy_reports_not_crashes():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_register_md(root, "00-system/registers/NOPOLICY.md", frontmatter={
+            "id": "n", "type": "register", "title": "N", "updated": "2020-01-01"})
+        report = report_holdings.generate_report(root)
+        rows = {r["path"]: r for r in report["registers"]}
+        row = rows["00-system/registers/NOPOLICY.md"]
+        assert row["stale"] is None, row
+        assert row["refresh_policy"] is None, row
+        # A missing declaration is not itself counted as a "stale" finding --
+        # validate_repo's own gate is what makes that a hard error.
+        assert report["verdict"] == "CENSUS CLEAN", report
+
+
+def test_report_holdings_mojibake_hits_grouped_by_field():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        mojibake_title = "CafÃ© Archive"
+        assert validate_repo.looks_double_encoded(mojibake_title)
+        _write_source_record(root, "02-sources/records/moji.md",
+                              status="pending-registration",
+                              original_path="_originals/moji.pdf")
+        path = root / "02-sources/records/moji.md"
+        text = path.read_text(encoding="utf-8")
+        text = text.replace("title: Example", f"title: {mojibake_title}")
+        path.write_text(text, encoding="utf-8")
+        report = report_holdings.generate_report(root)
+        assert report["mojibake_by_field"].get("title") == 1, report
+        assert report["findings"] >= 1, report
+        assert report["verdict"].startswith("CENSUS DRIFT:"), report
+
+
+def test_report_holdings_verdict_counts_findings_exactly():
+    """Mutation guard: the verdict line must reflect the actual finding
+    count, not just 'clean vs. not clean'. A mutation that hardcodes
+    CENSUS CLEAN, or one that always prints a fixed finding count, both
+    fail this exact-value assertion."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        # 1 undeclared held file (no manifest row, no covering record)
+        _write_original(root, "_originals/undeclared.pdf")
+        # 1 status contradiction
+        _write_source_record(root, "02-sources/records/bad.md",
+                              status="registered",
+                              original_path="_originals/bad.pdf")
+        # 1 stale per-intake register
+        _write_register_md(root, "00-system/registers/STALE_REG.md", frontmatter={
+            "id": "s", "type": "register", "title": "S",
+            "refresh_policy": "per-intake", "updated": "2020-01-01"})
+        (root / "00-system/registers").mkdir(parents=True, exist_ok=True)
+        (root / "00-system/registers/CORPUS_STATE.json").write_text(
+            json.dumps({"updated": "2026-01-01"}), encoding="utf-8")
+        # 1 mojibake hit, on the same record used for the contradiction
+        path = root / "02-sources/records/bad.md"
+        text = path.read_text(encoding="utf-8")
+        text = text.replace("title: Example", "title: CafÃ© Example")
+        path.write_text(text, encoding="utf-8")
+
+        report = report_holdings.generate_report(root)
+        assert report["status_contradictions"]["count"] == 1, report
+        assert report["tier_breakdown"]["undeclared"] == 1, report
+        assert sum(report["mojibake_by_field"].values()) == 1, report
+        stale_count = sum(1 for r in report["registers"] if r["stale"] is True)
+        assert stale_count == 1, report
+        assert report["findings"] == 4, report
+        assert report["verdict"] == "CENSUS DRIFT: 4 findings", report
+
+
+def test_report_holdings_json_handles_unquoted_yaml_date_updated_field():
+    """Regression: PyYAML parses an unquoted `updated: 2020-01-01` as a
+    datetime.date, not a str. json.dumps has no default encoding for that
+    type, so the first --json run against a real mozare-wiki throwaway
+    clone (CORPUS_MAP.md uses an unquoted date) crashed with
+    TypeError('Object of type date is not JSON serializable') before this
+    fix. The plain-text report never crashed here (f-strings call str()
+    implicitly); only --json did."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        path = root / "00-system/registers/DATE_REG.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Deliberately unquoted date -- yaml.safe_load parses this as
+        # datetime.date(2020, 1, 1), not the string "2020-01-01".
+        path.write_text(
+            "---\nid: d\ntype: register\ntitle: D\n"
+            "refresh_policy: static\nupdated: 2020-01-01\n---\n\nBody.\n",
+            encoding="utf-8",
+        )
+        report = report_holdings.generate_report(root)
+        payload = json.dumps(report, sort_keys=True, default=str)
+        reloaded = json.loads(payload)
+        row = next(r for r in reloaded["registers"]
+                   if r["path"] == "00-system/registers/DATE_REG.md")
+        assert row["updated"] == "2020-01-01", row
+
+
+def test_report_holdings_finds_files_past_windows_max_path():
+    """Regression: a plain os.scandir/pathlib.rglob walk silently drops
+    files whose full path exceeds Windows' classic 260-character MAX_PATH
+    -- no exception, just an undercount. Found live: 17 of 544
+    _originals/ files vanished when auditing a throwaway clone of
+    mozare-wiki nested under a deep temp directory. This fixture manufactures
+    the same condition portably by nesting enough directory levels that the
+    full path clears 260 characters, then asserts the file is still found."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        deep = root / "_originals"
+        segment = "a-very-long-directory-segment-name-used-only-to-pad-length"
+        for _ in range(6):
+            deep = deep / segment
+        target = deep / "deeply-nested-original.pdf"
+        full_len = len(str(target))
+        assert full_len > 260, f"fixture path too short to reproduce MAX_PATH: {full_len}"
+        # Creating the fixture itself hits the same MAX_PATH wall on
+        # Windows (plain mkdir/write use the same non-prefixed API), so the
+        # fixture setup has to go through the same long-path helper the
+        # fix uses -- exactly mirroring how the real bug was only visible
+        # once files already existed past the limit (e.g. copied there by
+        # a long-path-aware tool such as `cp`).
+        report_holdings._long_path(deep).mkdir(parents=True, exist_ok=True)
+        (report_holdings._long_path(deep) / "deeply-nested-original.pdf").write_bytes(b"x")
+        try:
+            report = report_holdings.generate_report(root)
+            assert report["held"] == 1, report
+        finally:
+            # tempfile.TemporaryDirectory's own cleanup uses the plain
+            # (non-prefixed) API and hits the same MAX_PATH wall on the
+            # way out, so the long tree has to be torn down through the
+            # same long-path-safe handle it was built with, before the
+            # `with` block's automatic cleanup ever gets there.
+            import shutil
+            shutil.rmtree(
+                str(report_holdings._long_path(root / "_originals")),
+                ignore_errors=True,
+            )
+
+
+def test_report_holdings_cli_empty_kit_prints_seven_sections_and_clean():
+    """tasks.md E1 acceptance (a)."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        r = subprocess.run(
+            [sys.executable, "-B", "scripts/report_holdings.py"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode == 0, _safe(out)
+        for heading in (
+            "1. Registered / held / unregistered",
+            "2. Records whose status contradicts the manifest",
+            "3. Proposals by status",
+            "4. Claims by current_claim_permission",
+            "5. Registers: refresh_policy and STALE flag",
+            "6. Mojibake hits by field",
+            "7. Verdict:",
+        ):
+            assert heading in out, _safe(out)
+        assert "CENSUS CLEAN" in out, _safe(out)
+        assert "registered: 0" in out, _safe(out)
+        assert "held: 0" in out, _safe(out)
+
+
+def test_report_holdings_cli_json_has_held_and_registered_keys():
+    """tasks.md E1 acceptance (c)."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        r = subprocess.run(
+            [sys.executable, "-B", "scripts/report_holdings.py", "--json"],
+            cwd=kit, capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        assert r.returncode == 0, _safe(r.stdout + r.stderr)
+        payload = json.loads(r.stdout)
+        assert payload["held"] == 0, payload
+        assert payload["registered"] == 0, payload
+
+
+def test_report_holdings_writes_nothing_to_the_tree():
+    """tasks.md E1 acceptance (b), expressed as a tree-hash comparison
+    (same technique the retier fixtures use) rather than `git status`,
+    since the fixture copy has no `.git` of its own."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        before = _tree_hash(kit)
+        r = subprocess.run(
+            [sys.executable, "-B", "scripts/report_holdings.py"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        assert r.returncode == 0, _safe(r.stdout + r.stderr)
+        after = _tree_hash(kit)
+        assert before == after, "report_holdings.py wrote to the tree"
 
 
 if __name__ == "__main__":
