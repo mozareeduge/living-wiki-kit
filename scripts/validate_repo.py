@@ -562,6 +562,122 @@ def check_holdings_census(root: Path, state: dict, errors: list[str]) -> None:
         )
 
 
+REGISTER_LEGAL_POLICIES = {"per-intake", "per-release", "static"}
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+CORPUS_STATE_REL = "00-system/registers/CORPUS_STATE.json"
+CONTENT_RELEASE_REL = "00-system/configuration/content-release.json"
+
+
+def check_register_policies(root: Path, state: dict, errors: list[str]) -> None:
+    """Register refresh-policy gate (design.md section 7; tasks.md C2).
+
+    Every register .md under 00-system/registers/ declares how often it
+    must be refreshed:
+      - `per-intake`  — fails when its `updated` predates CORPUS_STATE.updated
+      - `per-release` — fails when its `updated` predates the `updated` of
+        00-system/configuration/content-release.json
+      - `static`      — never fails on freshness
+    A missing or unknown `refresh_policy` value is an error naming the file
+    and listing the legal values. Dates are compared as ISO YYYY-MM-DD
+    strings after validating the shape; an unparseable date is its own
+    error, never a silent pass (design.md section 7 explicitly rejects a
+    day-count/timezone window — a comparison against the register that
+    *causes* the staleness is deterministic and correct on a repo nobody
+    has touched for a year).
+
+    Files under 00-system/registers/archive/ are exempt entirely.
+
+    CORPUS_STATE.json may not carry an `updated` key in every instance of
+    this kit. When absent, the per-intake freshness comparison has no
+    basis and is skipped for that check only — same "absent key skips only
+    its own check" pattern check_holdings_census uses for
+    held_artifact_count. The same applies if content-release.json is
+    missing its `updated` key for a per-release register.
+    """
+    registers_dir = root / "00-system" / "registers"
+    if not registers_dir.exists():
+        return
+
+    corpus_updated = state.get("updated")
+
+    release_cfg_path = root / CONTENT_RELEASE_REL
+    release_updated = None
+    release_cfg_error = None
+    if release_cfg_path.exists():
+        try:
+            release_cfg = json.loads(release_cfg_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            release_cfg_error = f"{CONTENT_RELEASE_REL}: invalid JSON: {exc}"
+        else:
+            release_updated = release_cfg.get("updated")
+
+    for path in sorted(registers_dir.rglob("*.md")):
+        rel = path.relative_to(root).as_posix()
+        if rel.startswith("00-system/registers/archive/"):
+            continue
+
+        try:
+            fm = parse_frontmatter(path)
+        except Exception as exc:
+            errors.append(f"{rel}: {exc}")
+            continue
+
+        policy = fm.get("refresh_policy")
+        if policy not in REGISTER_LEGAL_POLICIES:
+            errors.append(
+                f"{rel}: refresh_policy must be one of "
+                f"{sorted(REGISTER_LEGAL_POLICIES)}, got {policy!r}"
+            )
+            continue
+
+        updated = fm.get("updated")
+        if not isinstance(updated, str) or not ISO_DATE_RE.match(updated):
+            errors.append(
+                f"{rel}: 'updated' must be an ISO YYYY-MM-DD date string, "
+                f"got {updated!r}"
+            )
+            continue
+
+        if policy == "static":
+            continue
+
+        if policy == "per-intake":
+            if corpus_updated is None:
+                continue
+            if not isinstance(corpus_updated, str) or not ISO_DATE_RE.match(corpus_updated):
+                errors.append(
+                    f"{CORPUS_STATE_REL}: 'updated' must be an ISO "
+                    f"YYYY-MM-DD date string, got {corpus_updated!r}"
+                )
+                continue
+            if updated < corpus_updated:
+                errors.append(
+                    f"{rel}: refresh_policy 'per-intake' is stale: updated "
+                    f"{updated} predates {CORPUS_STATE_REL} updated "
+                    f"{corpus_updated}"
+                )
+            continue
+
+        if policy == "per-release":
+            if release_cfg_error is not None:
+                errors.append(release_cfg_error)
+                continue
+            if release_updated is None:
+                continue
+            if not isinstance(release_updated, str) or not ISO_DATE_RE.match(release_updated):
+                errors.append(
+                    f"{CONTENT_RELEASE_REL}: 'updated' must be an ISO "
+                    f"YYYY-MM-DD date string, got {release_updated!r}"
+                )
+                continue
+            if updated < release_updated:
+                errors.append(
+                    f"{rel}: refresh_policy 'per-release' is stale: "
+                    f"updated {updated} predates {CONTENT_RELEASE_REL} "
+                    f"updated {release_updated}"
+                )
+
+
 def validate(full: bool) -> list[str]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -598,6 +714,11 @@ def validate(full: bool) -> list[str]:
     # Holdings census gate (design.md sections 3-4; tasks.md A2/A4):
     # "registered" and "held" are different claims and must stay honest.
     check_holdings_census(ROOT, state, errors)
+
+    # Register refresh-policy gate (design.md section 7; tasks.md C2): every
+    # register declares how often it must be refreshed, and a stale
+    # per-intake/per-release register fails.
+    check_register_policies(ROOT, state, errors)
 
     ids: dict[str, str] = {}
     md_files = [

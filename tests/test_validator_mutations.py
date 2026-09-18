@@ -1171,6 +1171,243 @@ def test_biconditional_violation_surfaces_through_validate_repo_subprocess():
         assert "status is 'registered' but no row in" in out, _safe(out)
 
 
+# -------------------------------------- register refresh-policy gate (C2)
+# Fixture helpers for check_register_policies. design.md section 7 rejects a
+# day-count window: freshness is a plain ISO-string comparison against the
+# register that *causes* the staleness (CORPUS_STATE.json for per-intake,
+# content-release.json for per-release), never wall-clock time.
+
+
+def _write_register_md(root, rel, *, frontmatter=None, body="Body.\n"):
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if frontmatter is None:
+        text = body
+    else:
+        text = "---\n" + yaml.safe_dump(frontmatter, sort_keys=False) + "---\n\n" + body
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _write_content_release_config(root, *, updated=None):
+    path = root / "00-system/configuration/content-release.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = {"system_version": "1.0.0", "required_paths": [], "base_files": [],
+           "min_counts": {}, "word_thresholds": {}}
+    if updated is not None:
+        cfg["updated"] = updated
+    path.write_text(json.dumps(cfg), encoding="utf-8")
+    return path
+
+
+def _run_register_policies(root, state):
+    errors = []
+    validate_repo.check_register_policies(root, state, errors)
+    return errors
+
+
+def test_register_policy_missing_declaration_fails_naming_file_and_legal_values():
+    """Rule 1: no refresh_policy at all is an error naming the file and
+    listing the legal enum values."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(root, "00-system/registers/EXAMPLE.md", frontmatter=None)
+        errors = _run_register_policies(root, {})
+        assert errors, "missing refresh_policy produced no error"
+        assert any("EXAMPLE.md" in e for e in errors), errors
+        assert any(
+            "per-intake" in e and "per-release" in e and "static" in e
+            for e in errors
+        ), errors
+
+
+def test_register_policy_unknown_value_fails_naming_file_and_legal_values():
+    """Rule 1: an unknown refresh_policy value is an error naming the file,
+    the offending value, and the legal enum values."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/EXAMPLE.md",
+            frontmatter={"refresh_policy": "sometimes", "updated": "2026-09-01"})
+        errors = _run_register_policies(root, {})
+        assert any("EXAMPLE.md" in e and "sometimes" in e for e in errors), errors
+        assert any(
+            "per-intake" in e and "per-release" in e and "static" in e
+            for e in errors
+        ), errors
+
+
+def test_register_policy_per_intake_stale_fails_quoting_both_dates_and_files():
+    """Rule 2: a per-intake register whose updated date predates
+    CORPUS_STATE.updated fails, quoting both dates and naming both files."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/INTAKE_REGISTER.md",
+            frontmatter={"refresh_policy": "per-intake", "updated": "2026-01-01"})
+        state = {"updated": "2026-06-01"}
+        errors = _run_register_policies(root, state)
+        assert errors, "stale per-intake register produced no error"
+        msg = errors[0]
+        assert "INTAKE_REGISTER.md" in msg, msg
+        assert "CORPUS_STATE.json" in msg, msg
+        assert "2026-01-01" in msg and "2026-06-01" in msg, msg
+
+
+def test_register_policy_per_intake_fresh_passes():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/INTAKE_REGISTER.md",
+            frontmatter={"refresh_policy": "per-intake", "updated": "2026-06-01"})
+        state = {"updated": "2026-01-01"}
+        assert _run_register_policies(root, state) == []
+
+
+def test_register_policy_per_release_stale_fails_quoting_both_dates_and_files():
+    """Rule 3: a per-release register whose updated date predates
+    content-release.json's updated date fails, quoting both dates and
+    naming both files."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/RELEASE_REGISTER.md",
+            frontmatter={"refresh_policy": "per-release", "updated": "2026-01-01"})
+        _write_content_release_config(root, updated="2026-06-01")
+        errors = _run_register_policies(root, {})
+        assert errors, "stale per-release register produced no error"
+        msg = errors[0]
+        assert "RELEASE_REGISTER.md" in msg, msg
+        assert "content-release.json" in msg, msg
+        assert "2026-01-01" in msg and "2026-06-01" in msg, msg
+
+
+def test_register_policy_per_release_fresh_passes():
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/RELEASE_REGISTER.md",
+            frontmatter={"refresh_policy": "per-release", "updated": "2026-06-01"})
+        _write_content_release_config(root, updated="2026-01-01")
+        assert _run_register_policies(root, {}) == []
+
+
+def test_register_policy_static_never_fails_on_freshness():
+    """Rule 4: static never fails on freshness, however old its updated
+    date and however new the registers that would otherwise trigger it."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/STATIC_REGISTER.md",
+            frontmatter={"refresh_policy": "static", "updated": "1999-01-01"})
+        state = {"updated": "2026-09-01"}
+        _write_content_release_config(root, updated="2026-09-01")
+        assert _run_register_policies(root, state) == []
+
+
+def test_register_policy_archive_directory_exempt_entirely():
+    """Rule 5: files under 00-system/registers/archive/ are exempt
+    entirely -- not even the rule-1 declaration check applies."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/archive/OLD_REGISTER.md", frontmatter=None)
+        assert _run_register_policies(root, {}) == []
+
+
+def test_register_policy_unparseable_date_is_its_own_error():
+    """Rule 6: an unparseable date is its own error, never a silent pass."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/EXAMPLE.md",
+            frontmatter={"refresh_policy": "static", "updated": "not-a-date"})
+        errors = _run_register_policies(root, {})
+        assert errors, "unparseable date silently passed"
+        assert any("EXAMPLE.md" in e and "not-a-date" in e for e in errors), errors
+
+
+def test_register_policy_missing_corpus_state_updated_skips_only_that_check():
+    """CORPUS_STATE.json in this kit may not carry an 'updated' key. When
+    absent, the per-intake freshness comparison has no basis and is
+    skipped -- same 'absent key skips only its own check' pattern
+    check_holdings_census uses for held_artifact_count -- but rule 1
+    (declaration) still runs for every other register."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _write_register_md(
+            root, "00-system/registers/INTAKE_REGISTER.md",
+            frontmatter={"refresh_policy": "per-intake", "updated": "1999-01-01"})
+        _write_register_md(root, "00-system/registers/BROKEN.md", frontmatter=None)
+        state = {}
+        errors = _run_register_policies(root, state)
+        assert not any("INTAKE_REGISTER.md" in e for e in errors), errors
+        assert any("BROKEN.md" in e for e in errors), errors
+
+
+def test_validate_calls_register_policy_gate_once_with_loaded_state():
+    """The refresh-policy gate must run inside the normal validate() path
+    -- C2 wires itself in this rung. Mirrors
+    test_validate_calls_holdings_census_gate_exactly_once_with_loaded_state."""
+    calls = []
+    original = validate_repo.check_register_policies
+
+    def recorder(root, state, errors):
+        calls.append((root, state, errors))
+        return original(root, state, errors)
+
+    validate_repo.check_register_policies = recorder
+    try:
+        errors = validate_repo.validate(False)
+    finally:
+        validate_repo.check_register_policies = original
+
+    assert len(calls) == 1, f"check_register_policies called {len(calls)} times"
+    root, state, passed_errors = calls[0]
+    assert root == validate_repo.ROOT
+    live = json.loads(
+        (ROOT / "00-system/registers/CORPUS_STATE.json").read_text(
+            encoding="utf-8"))
+    assert state.get("id") == live["id"], state
+    assert passed_errors is errors, "gate got a different errors list"
+
+
+def test_stale_per_intake_register_makes_validate_repo_exit_nonzero():
+    """Subprocess smoke test (C2 acceptance c): a per-intake register whose
+    updated date predates CORPUS_STATE.json's updated date must fail
+    `validate_repo.py --full`, quoting both dates. Planted only in a
+    throwaway _copy_kit() copy -- never in the real repository (same
+    convention as test_undeclared_original_makes_validate_repo_exit_nonzero).
+    CORPUS_STATE.json in the copy gets an 'updated' key added purely so this
+    scenario has a comparison basis; the real repo's CORPUS_STATE.json is
+    never touched."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        state_path = kit / "00-system/registers/CORPUS_STATE.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["updated"] = "2026-09-18"
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+        register_path = kit / "00-system/registers/STALE_INTAKE_REGISTER.md"
+        register_path.write_text(
+            "---\n"
+            "id: stale-intake-register\n"
+            "type: register\n"
+            "title: Stale intake register\n"
+            "refresh_policy: per-intake\n"
+            "updated: '2026-01-01'\n"
+            "---\n\n# Stale intake register\n", encoding="utf-8")
+
+        r = subprocess.run(
+            [sys.executable, "scripts/validate_repo.py", "--full"], cwd=kit,
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, _safe(out)
+        assert "STALE_INTAKE_REGISTER.md" in out, _safe(out)
+        assert "2026-01-01" in out and "2026-09-18" in out, _safe(out)
+
+
 # ------------------------------------------------ retier_holdings.py (A5)
 # Fixture helpers mirror _census_root/_write_source_record/_write_manifest
 # above, extended with a CORPUS_STATE.json (build_plan needs
