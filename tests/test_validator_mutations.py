@@ -2305,6 +2305,67 @@ def test_report_holdings_writes_nothing_to_the_tree():
         assert before == after, "report_holdings.py wrote to the tree"
 
 
+# --------------------------------------- biconditional scoping (2026-09-18)
+# E1's run against mozare-wiki measured 459 contradictions, not the 447 the
+# spec predicted: 447 source-records + 12 capture-records. capture-record
+# uses `status` for the capture pipeline state machine, so the biconditional
+# must not read it as an adjudication claim.
+
+
+def test_capture_record_status_registered_is_not_a_holdings_claim():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_manifest(root, [])
+        path = root / "02-sources/records/wiki-cap-000000000000.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "wiki-cap-000000000000",
+                "type": "capture-record",
+                "title": "A governed capture",
+                "status": "registered",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+        errors = _run_census(root, {"source_material_count": 0})
+        assert not any("wiki-cap-000000000000" in e for e in errors), errors
+
+
+def test_source_record_status_registered_is_still_a_holdings_claim():
+    """The scoping must not weaken the invariant for real source records."""
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        _write_manifest(root, [])
+        _write_source_record(
+            root, "02-sources/records/wiki-src-000000000000.md",
+            status="registered", original_path="_originals/a.pdf")
+        errors = _run_census(root, {"source_material_count": 0})
+        assert any("wiki-src-000000000000" in e and "no row in" in e
+                   for e in errors), errors
+
+
+def test_manifest_row_pointing_at_a_non_source_record_is_an_error():
+    with tempfile.TemporaryDirectory() as td:
+        root = _census_root(Path(td))
+        rel = "02-sources/records/wiki-cap-000000000000.md"
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "wiki-cap-000000000000",
+                "type": "capture-record",
+                "title": "A governed capture",
+                "status": "registered",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+        _write_original(root, "_originals/a.pdf")
+        _write_manifest(root, [{
+            "id": "wiki-src-aaaaaaaaaaaa",
+            "original_path": "_originals/a.pdf",
+            "source_record_path": rel,
+        }])
+        errors = _run_census(root, {"source_material_count": 1})
+        assert any(rel in e and "not 'source-record'" in e
+                   for e in errors), errors
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())

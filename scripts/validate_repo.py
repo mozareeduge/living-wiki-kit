@@ -461,9 +461,29 @@ def check_holdings_census(root: Path, state: dict, errors: list[str]) -> None:
                 errors.append(f"{rel}: {exc}")
 
     # 1. Biconditional: status: registered <=> named as source_record_path.
+    #
+    # Scoped to `type: source-record`. 02-sources/records/ also holds
+    # `capture-record` files, whose `status` belongs to the capture
+    # pipeline's own state machine (received -> processing -> transcribed
+    # -> reviewed -> promoted); "registered" there means the capture was
+    # registered by that pipeline, not that an artifact was adjudicated
+    # into the corpus of record. Reading those 12 records (measured in
+    # mozare-wiki, 2026-09-18) as adjudication claims would demand the
+    # operator "fix" records that were never wrong.
     for rel, fm in records.items():
-        claims_registered = fm.get("status") == HOLDINGS_TIER_REGISTERED
+        record_type = fm.get("type")
         is_manifest_row = rel in registered_record_paths
+        if record_type != "source-record":
+            # A manifest row must point at a source record; anything else
+            # is a genuine registry error and is reported as such.
+            if is_manifest_row:
+                errors.append(
+                    f"{rel}: a row in {manifest_rel} names this record as "
+                    f"source_record_path, but its type is "
+                    f"{record_type!r}, not 'source-record'"
+                )
+            continue
+        claims_registered = fm.get("status") == HOLDINGS_TIER_REGISTERED
         if claims_registered and not is_manifest_row:
             errors.append(
                 f"{rel}: status is 'registered' but no row in "
