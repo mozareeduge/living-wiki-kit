@@ -1761,6 +1761,99 @@ def test_retier_never_declares_original_or_materials_index_touched():
         assert manifest_after == manifest_before
 
 
+# ------------------------------------------ C2 audit gap closure (2026-09-18)
+# A fresh-context test-wiring audit of 6bf53fc returned HOLDS WITH GAPS with
+# two SURVIVING mutations. These close them, plus a pre-existing coverage
+# hole the audit found that this commit made load-bearing.
+
+
+def test_malformed_corpus_state_updated_is_its_own_error():
+    """Gap 1: a malformed comparison BASIS date must not fall through.
+
+    Surviving mutation B2: removing the ISO-shape check on corpus_updated
+    left the suite at 78/78, while `'2026-06-01' < '09/18/2026'` evaluates
+    False -- so a malformed CORPUS_STATE.updated was silently reported as
+    "fresh" instead of raising its own error.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        _write_register_md(root, "00-system/registers/R.md", frontmatter={
+            "id": "r", "type": "register", "title": "R",
+            "refresh_policy": "per-intake", "updated": "2026-06-01"})
+        errors = []
+        validate_repo.check_register_policies(
+            root, {"updated": "09/18/2026"}, errors)
+        assert errors, "malformed CORPUS_STATE.updated produced no error"
+        assert any("CORPUS_STATE.json" in e and "ISO" in e for e in errors), errors
+        assert any("09/18/2026" in e for e in errors), errors
+
+
+def test_malformed_content_release_updated_is_its_own_error():
+    """Gap 1, the per-release half of the same surviving mutation."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        _write_register_md(root, "00-system/registers/R.md", frontmatter={
+            "id": "r", "type": "register", "title": "R",
+            "refresh_policy": "per-release", "updated": "2026-06-01"})
+        _write_content_release_config(root, updated="18-09-2026")
+        errors = []
+        validate_repo.check_register_policies(root, {}, errors)
+        assert errors, "malformed content-release updated produced no error"
+        assert any("content-release.json" in e and "ISO" in e
+                   for e in errors), errors
+
+
+def test_register_walk_is_recursive_for_non_archive_subdirectories():
+    """Gap 2: pin recursion independently of the archive/ exemption.
+
+    Surviving mutation C2: changing rglob to glob left the suite at 78/78,
+    because the only nested fixture lived under archive/ and was skipped
+    for an unrelated reason. A nested NON-archive register must still be
+    checked, which only a recursive walk can do.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        # nested, not under archive/, and missing refresh_policy entirely
+        _write_register_md(root, "00-system/registers/sub/NESTED.md",
+                           frontmatter={"id": "n", "type": "register",
+                                        "title": "Nested"})
+        errors = []
+        validate_repo.check_register_policies(root, {}, errors)
+        assert any("sub/NESTED.md" in e and "refresh_policy" in e
+                   for e in errors), (
+            "a nested non-archive register was not walked -- the walk is "
+            f"not recursive: {errors}")
+
+
+def test_generic_frontmatter_identity_and_duplicate_id_are_enforced():
+    """Gap 3: the generic id/type/title and duplicate-id checks had no test.
+
+    Pre-existing hole, but RELEASE_READINESS_REGISTER.md gained real
+    frontmatter in C2, so these checks now hold that file. Verified here
+    through the real validator in a throwaway copy, not by inspection.
+    """
+    import subprocess
+    with tempfile.TemporaryDirectory() as td:
+        kit = _copy_kit(Path(td))
+        # A second file claiming the register's id must collide.
+        dupe = kit / "00-system/registers/DUPE_PROBE.md"
+        dupe.write_text(
+            "---\n" + yaml.safe_dump({
+                "id": "release-readiness-register",
+                "type": "register",
+                "title": "Duplicate probe",
+                "refresh_policy": "static",
+                "updated": "2026-09-18",
+            }, sort_keys=False) + "---\n\nBody.\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, "-B", "scripts/validate_repo.py", "--full"],
+            cwd=kit, capture_output=True, text=True, encoding="utf-8",
+            errors="replace")
+        out = (r.stdout or "") + (r.stderr or "")
+        assert r.returncode != 0, _safe(out)
+        assert "duplicate id release-readiness-register" in out, _safe(out)
+
+
 if __name__ == "__main__":
     tests = [
         fn for name, fn in sorted(globals().items())
