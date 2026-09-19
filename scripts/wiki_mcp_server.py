@@ -75,6 +75,22 @@ TOOLS = [
         },
     },
     {
+        "name": "wiki_exact",
+        "description": (
+            "Exact substring search over canonical zones (02-sources, "
+            "03-objects, 04-notes, 05-claims, 06-relations). Deterministic "
+            "grep; zero retrieval-model dependence. Navigation only, never "
+            "evidence."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+            },
+            "required": ["text"],
+        },
+    },
+    {
         "name": "wiki_propose",
         "description": (
             "Submit a proposal for HUMAN adjudication (candidate tier, "
@@ -220,22 +236,53 @@ def tool_wiki_read(args: dict) -> str:
     }, ensure_ascii=False)
 
 
-def tool_wiki_search(args: dict) -> str:
-    query = str(args.get("query", "")).strip()
-    n = int(args.get("n") or 5)
+def _qmd_query_lexical(query: str, n: int) -> list | None:
+    """Hybrid route: typed query document `lex: <query>` - deterministic, no LLM.
+
+    qmd 2.x grammar: a multi-line query document with typed lines
+    (lex:/vec:/hyde:) runs WITHOUT LLM query expansion; a bare text query
+    triggers the full expand pipeline (~2 min, model-backed). The MCP
+    search surface uses the typed lexical form so results stay
+    deterministic and fast; the full expansion remains available to
+    context_pack with an explicit long timeout.
+    """
     qmd = shutil.which("qmd")
     if not qmd:
-        return json.dumps({"error": "qmd not found on PATH"})
+        return None
     proc = subprocess.run(
-        [qmd, "search", query, "--json", "-n", str(max(1, min(n, 20))),
+        [qmd, "query", f"lex: {query}", "--no-rerank", "--json", "-n", str(n),
          "--collection", "wiki"],
         cwd=ROOT, text=True, capture_output=True, timeout=60,
     )
+    if proc.returncode != 0:
+        return None
     try:
-        payload = json.loads(proc.stdout)
+        return json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return json.dumps({"error": "qmd returned unparseable output",
-                           "stderr": proc.stderr[:300]})
+        return None
+
+
+def tool_wiki_search(args: dict) -> str:
+    query = str(args.get("query", "")).strip()
+    n = int(args.get("n") or 5)
+    n = max(1, min(n, 20))
+    lexical = _qmd_query_lexical(query, n)
+    if lexical is not None:
+        payload = lexical
+    else:
+        qmd = shutil.which("qmd")
+        if not qmd:
+            return json.dumps({"error": "qmd not found on PATH"})
+        proc = subprocess.run(
+            [qmd, "search", query, "--json", "-n", str(n),
+             "--collection", "wiki"],
+            cwd=ROOT, text=True, capture_output=True, timeout=60,
+        )
+        try:
+            payload = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            return json.dumps({"error": "qmd returned unparseable output",
+                               "stderr": proc.stderr[:300]})
     # Spec §10: captures are noncanonical and never appear in canonical
     # search, even if the wiki collection also indexes the intake area.
     if isinstance(payload, list):
@@ -244,10 +291,46 @@ def tool_wiki_search(args: dict) -> str:
                    and "01-inbox/captures" not in str(h.get("file", ""))]
     return json.dumps({
         "results": payload,
+        "mode": "lexical-hybrid" if lexical is not None else "bm25",
         "authority_note": ("Retrieval scores organize attention and are never "
                            "evidence. Capture intake is excluded; use "
                            "wiki_search_captures for the noncanonical collection."),
     }, ensure_ascii=False)
+
+
+def tool_wiki_exact(args: dict) -> str:
+    """Exact substring search over tracked .md files - zero retrieval-model
+    dependence. Deterministic grep over 02-sources/records, 03-objects,
+    04-notes, 05-claims, 06-relations. Never evidence; navigation only."""
+    needle = str(args.get("text", "")).strip()
+    limit = int(args.get("limit") or 12)
+    if not needle:
+        return json.dumps({"error": "empty text"})
+    hits = []
+    zones = ("02-sources", "03-objects", "04-notes", "05-claims", "06-relations")
+    for zone in zones:
+        zone_dir = ROOT / zone
+        if not zone_dir.exists():
+            continue
+        for md in sorted(zone_dir.rglob("*.md")):
+            try:
+                text = md.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if needle in text:
+                first = text.find(needle)
+                line_no = text.count("\n", 0, first) + 1
+                hits.append({
+                    "file": md.relative_to(ROOT).as_posix(),
+                    "line": line_no,
+                    "context": text[max(0, first - 80):first + 120],
+                })
+                if len(hits) >= max(1, min(limit, 50)):
+                    return json.dumps({"matches": hits, "truncated": False},
+                                      ensure_ascii=False)
+    return json.dumps({"matches": hits,
+                       "truncated": len(hits) >= max(1, min(limit, 50))},
+                      ensure_ascii=False)
 
 
 def tool_wiki_propose(args: dict) -> str:
@@ -432,6 +515,7 @@ def tool_wiki_transcribe_capture(args: dict) -> str:
 DISPATCH = {
     "wiki_read": tool_wiki_read,
     "wiki_search": tool_wiki_search,
+    "wiki_exact": tool_wiki_exact,
     "wiki_propose": tool_wiki_propose,
     "wiki_capture_text": tool_wiki_capture_text,
     "wiki_list_captures": tool_wiki_list_captures,
