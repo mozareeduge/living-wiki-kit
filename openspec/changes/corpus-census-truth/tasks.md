@@ -1,6 +1,6 @@
 # Tasks: corpus-census-truth
 
-15 rungs in five tracks. IDs are stable and are the same IDs used in root
+16 rungs in five tracks. IDs are stable and are the same IDs used in root
 `Plans.md`. Read `EXECUTOR_BRIEF.md` before the first one.
 
 Tags: `[lane:gate]` touches validators; `[lane:doc]` documentation only;
