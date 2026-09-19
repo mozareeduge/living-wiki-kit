@@ -1,6 +1,6 @@
 # Tasks: corpus-census-truth
 
-15 rungs in five tracks. IDs are stable and are the same IDs used in root
+16 rungs in five tracks. IDs are stable and are the same IDs used in root
 `Plans.md`. Read `EXECUTOR_BRIEF.md` before the first one.
 
 Tags: `[lane:gate]` touches validators; `[lane:doc]` documentation only;
@@ -556,11 +556,26 @@ confidence as its validators.
 **Context.** `SYSTEM_DESIGN.md` section 6, `README.md` (the "what it ships"
 list), `tests/test_validator_mutations.py`.
 
-**Evidence, measured in `mozare-wiki` 2026-09-17.** Never run there:
-`export_interchange.py`, `export_public.py`, `run-semantic-benchmark.py`
-(`08-outputs/` does not exist; `_search/` is absent). Run routinely:
-`validate_repo.py`, `validate_content_release.py`, `check_against_baseline.py`,
-`wiki_capture.py`, `file-to-md/to_md.py`, `wiki_mcp_server.py`.
+**Evidence, measured in `mozare-wiki` 2026-09-17, extended 2026-09-18.**
+
+Operational (run routinely there): `validate_repo.py`,
+`validate_content_release.py`, `check_against_baseline.py`,
+`wiki_capture.py` (+ `capture/`), `file-to-md/to_md.py`,
+`wiki_mcp_server.py`, and `create-backup.ps1` (its output exists:
+`_wiki_backups/living-wiki-kit-be3fdd0-20260912-141648.zip`).
+
+Available (unexercised): `export_interchange.py`, `export_public.py`,
+`run-semantic-benchmark.py` (`08-outputs/` does not exist, `_search/` is
+absent), `check_research_spans.py` (it audits `../others/research/`, which
+does not exist — `others/` holds content bundles, no `research/`), and the
+search/install PowerShell helpers `configure-search.ps1`,
+`refresh-search.ps1`, `search-wiki.ps1`, `verify-install.ps1` (`_search/`
+absent).
+
+The `*.ps1` table row therefore SPLITS into two rows: `create-backup.ps1`
+(operational) and the remaining helpers (available, unexercised). A single
+bundled row carrying one status would itself be the overselling this rung
+exists to correct.
 
 **Steps.**
 
@@ -580,8 +595,13 @@ list), `tests/test_validator_mutations.py`.
 - (b) Deleting a status cell in a scratch copy makes that test fail by name
   (paste the negative check).
 - (c) `python scripts/validate_repo.py --full` prints `PASS`.
-- (d) `grep -n "available (unexercised)" SYSTEM_DESIGN.md` shows exactly three
-  rows.
+- (d) `grep -c "available (unexercised)" SYSTEM_DESIGN.md` prints **5**
+  (export_interchange, export_public, run-semantic-benchmark,
+  check_research_spans, and the search/install `.ps1` row). This number was
+  3 when the spec was written, from an evidence set that classified only 9
+  of the table's 11 rows; a D1 executor stopped rather than guess, and the
+  two unclassified rows were then measured (2026-09-18). Corrected here
+  rather than rounded off in the implementation.
 
 **Negative.** Do not delete or implement any unexercised script. Relabelling
 is the whole rung.

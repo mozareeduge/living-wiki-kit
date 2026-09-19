@@ -25,6 +25,7 @@ MANIFEST = ROOT / "00-system/registers/MATERIALS_INDEX.jsonl"
 STATE = ROOT / "00-system/registers/CORPUS_STATE.json"
 IGNORED_PREFIXES = (
     ".git/",
+    ".harness-worktrees/",
     ".pytest_cache/",
     "_search/",
     "02-sources/provenance/",
@@ -87,6 +88,43 @@ def load_manifest() -> list[dict]:
         rows.append(row)
     return rows
 
+def load_holdings_policy(root: Path) -> dict:
+    """Load and validate 00-system/policies/HOLDINGS_POLICY.json.
+
+    Declares the holdings-tier vocabulary (design.md section 3): which
+    tiers exist, whether each is a manifest row, and which corpus-state
+    count it feeds. Parsing only — not yet wired into validate(); a later
+    task adds the census check that consumes this policy.
+    """
+    path = root / "00-system/policies/HOLDINGS_POLICY.json"
+    if not path.exists():
+        raise ValueError(
+            f"holdings policy not found: {path} — every instance of this "
+            f"kit must ship 00-system/policies/HOLDINGS_POLICY.json "
+            f"(design.md section 3)"
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path}: invalid JSON: {exc}") from exc
+    tiers = data.get("tiers")
+    if not isinstance(tiers, dict) or not tiers:
+        raise ValueError(f"{path}: 'tiers' must be a non-empty object")
+    default_tier = data.get("default_tier_for_unregistered")
+    if default_tier not in tiers:
+        raise ValueError(
+            f"{path}: default_tier_for_unregistered names unknown tier "
+            f"{default_tier!r}; declared tiers are {sorted(tiers)}"
+        )
+    for family, tier_name in (data.get("family_tier_overrides") or {}).items():
+        if tier_name not in tiers:
+            raise ValueError(
+                f"{path}: family_tier_overrides[{family!r}] names unknown "
+                f"tier {tier_name!r}; declared tiers are {sorted(tiers)}"
+            )
+    return data
+
+
 def looks_double_encoded(s: str) -> bool:
     """Detect the classic UTF-8-bytes-read-as-cp1252 mojibake round-trip.
 
@@ -105,6 +143,40 @@ def looks_double_encoded(s: str) -> bool:
     except (UnicodeEncodeError, UnicodeDecodeError):
         return False
     return fixed != s
+
+
+def check_source_record_mojibake(rel: str, fm: dict, errors: list[str]) -> None:
+    """Mojibake guard, extended from manifest rows to every source record
+    (design.md section 6; tasks.md C1).
+
+    looks_double_encoded() previously ran only over MATERIALS_INDEX.jsonl
+    rows, so a record that was never registered in the manifest could carry
+    corrupted text undetected. This applies the same check to every record
+    under 02-sources/records/, on aliases (each element), original_path,
+    filename and title, from inside the existing frontmatter walk in
+    validate(). Reuses the manifest-row check's error wording.
+    """
+    if not rel.startswith("02-sources/records/"):
+        return
+    for key in ("original_path", "filename", "title"):
+        value = fm.get(key)
+        if isinstance(value, str) and value and looks_double_encoded(value):
+            errors.append(
+                f"{rel}: field '{key}' looks double-encoded (mojibake): "
+                f"{value!r} — a tool likely wrote this with the wrong "
+                f"text encoding; re-derive it from the actual filesystem "
+                f"name, do not hand-patch the garbled string"
+            )
+    aliases = fm.get("aliases")
+    if isinstance(aliases, list):
+        for alias in aliases:
+            if isinstance(alias, str) and alias and looks_double_encoded(alias):
+                errors.append(
+                    f"{rel}: field 'aliases' looks double-encoded (mojibake): "
+                    f"{alias!r} — a tool likely wrote this with the "
+                    f"wrong text encoding; re-derive it from the actual "
+                    f"filesystem name, do not hand-patch the garbled string"
+                )
 
 
 def is_ignored_rel(rel: str) -> bool:
@@ -238,9 +310,17 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
       2. no visible-prose `\d+ object(s)/relation(s)/claim(s)/index(es)`
          declaration contradicts the recursive .md count of its layer
          directory; fenced/inline code is exempt; every occurrence checks.
+      3. every entry page also carries the exact labelled marker
+         `Artifacts held: <held_artifact_count>` (design.md section 5: a
+         second independent labelled marker, not folded into a compound
+         string, so the check stays exact-string-match). Skipped entirely
+         when `held_artifact_count` is absent from state, so an instance
+         that has not adopted the holdings-census change (tasks.md A3) is
+         not broken by a kit upgrade.
     """
     snapshot_id = str(state.get("id", "") or "")
     count = state.get("source_material_count")
+    held_count = state.get("held_artifact_count")
 
     layer_actual = {}
     for layer, rel_dir in ENTRY_LAYER_DIRS.items():
@@ -281,6 +361,19 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
                     f"'{marker}'{observed} (from CORPUS_STATE.json) not "
                     f"found; {REFRESH_HINT}"
                 )
+        if held_count is not None:
+            marker = f"Artifacts held: {held_count}"
+            if marker not in prose and marker not in raw:
+                # Search the RAW text, same reason as the source-count
+                # marker above: _visible_prose() strips code spans, which
+                # is where a stale value can live (1.1.0 precedent).
+                obs = re.search(r"Artifacts held:[^\n]*", raw)
+                observed = f" (observed: '{obs.group(0).strip()}')" if obs else ""
+                errors.append(
+                    f"{entry_rel}: stale entry page: held-count marker "
+                    f"'{marker}'{observed} (from CORPUS_STATE.json) not "
+                    f"found; {REFRESH_HINT}"
+                )
         for m in layer_re.finditer(prose):
             num = int(m.group(1))
             word = m.group(2).lower()
@@ -294,6 +387,314 @@ def check_entry_pages(root: Path, state: dict, errors: list[str]) -> None:
                     f"{entry_rel}: entry page states {m.group(1)} "
                     f"{m.group(2)} but {ENTRY_LAYER_DIRS[layer]} holds "
                     f"{actual}; {REFRESH_HINT}"
+                )
+
+
+HOLDINGS_TIER_REGISTERED = "registered"
+
+
+def check_holdings_census(root: Path, state: dict, errors: list[str]) -> None:
+    """Holdings census gate (design.md sections 3-4; tasks.md A2).
+
+    "Registered" (MATERIALS_INDEX.jsonl) and "held" (_originals/) are
+    different claims and this enforces both stay honest, using the tier
+    vocabulary from 00-system/policies/HOLDINGS_POLICY.json (never
+    hardcoded here):
+      1. Biconditional: a source record carries `status: registered` iff
+         its repo-relative path is a `source_record_path` in the manifest.
+         Both directions are errors, naming the record and which side
+         disagrees.
+      2. Coverage: every file under `_originals/` is either a manifest
+         `original_path`, or is named by a source record whose
+         `holdings_tier` is a declared non-'registered' tier.
+      3. Tier legality: `holdings_tier: registered` implies a manifest row;
+         a manifest row's record must not carry a different declared tier.
+      4. Counts: `held_artifact_count` (files under `_originals/`),
+         `holdings_by_tier` (must sum to it), and `source_material_count`
+         (manifest row count, and must equal
+         `holdings_by_tier["registered"]`) all agree. Skipped entirely,
+         invariants 1-3 still run, when `held_artifact_count` is absent from
+         state (an instance that has not adopted this change yet).
+
+    Not wired into validate() — tasks.md A4 wires it.
+    """
+    try:
+        policy = load_holdings_policy(root)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return
+    declared_tiers = policy["tiers"]
+
+    manifest_rel = "00-system/registers/MATERIALS_INDEX.jsonl"
+    manifest_path = root / manifest_rel
+    rows: list[dict] = []
+    if manifest_path.exists():
+        had_parse_error = False
+        for number, line in enumerate(
+            manifest_path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                errors.append(f"{manifest_rel}: line {number}: {exc}")
+                had_parse_error = True
+        if had_parse_error:
+            return
+
+    registered_record_paths = {
+        row["source_record_path"] for row in rows if row.get("source_record_path")
+    }
+    manifest_original_paths = {
+        row["original_path"] for row in rows if row.get("original_path")
+    }
+
+    records_dir = root / "02-sources" / "records"
+    records: dict[str, dict] = {}
+    if records_dir.exists():
+        for path in sorted(records_dir.rglob("*.md")):
+            rel = path.relative_to(root).as_posix()
+            try:
+                records[rel] = parse_frontmatter(path)
+            except Exception as exc:
+                errors.append(f"{rel}: {exc}")
+
+    # 1. Biconditional: status: registered <=> named as source_record_path.
+    #
+    # Scoped to `type: source-record`. 02-sources/records/ also holds
+    # `capture-record` files, whose `status` belongs to the capture
+    # pipeline's own state machine (received -> processing -> transcribed
+    # -> reviewed -> promoted); "registered" there means the capture was
+    # registered by that pipeline, not that an artifact was adjudicated
+    # into the corpus of record. Reading those 12 records (measured in
+    # mozare-wiki, 2026-09-18) as adjudication claims would demand the
+    # operator "fix" records that were never wrong.
+    for rel, fm in records.items():
+        record_type = fm.get("type")
+        is_manifest_row = rel in registered_record_paths
+        if record_type != "source-record":
+            # A manifest row must point at a source record; anything else
+            # is a genuine registry error and is reported as such.
+            if is_manifest_row:
+                errors.append(
+                    f"{rel}: a row in {manifest_rel} names this record as "
+                    f"source_record_path, but its type is "
+                    f"{record_type!r}, not 'source-record'"
+                )
+            continue
+        claims_registered = fm.get("status") == HOLDINGS_TIER_REGISTERED
+        if claims_registered and not is_manifest_row:
+            errors.append(
+                f"{rel}: status is 'registered' but no row in "
+                f"{manifest_rel} names it as source_record_path — either "
+                f"register it there or correct this record's status"
+            )
+        if is_manifest_row and not claims_registered:
+            errors.append(
+                f"{rel}: a row in {manifest_rel} names this record as "
+                f"source_record_path but its status is "
+                f"{fm.get('status')!r}, not 'registered'"
+            )
+
+    # 3. Tier legality.
+    for rel, fm in records.items():
+        tier = fm.get("holdings_tier")
+        is_manifest_row = rel in registered_record_paths
+        if tier is None:
+            continue
+        if tier not in declared_tiers:
+            errors.append(
+                f"{rel}: holdings_tier {tier!r} is not a declared tier in "
+                f"HOLDINGS_POLICY.json; legal tiers are "
+                f"{sorted(declared_tiers)}"
+            )
+            continue
+        if tier == HOLDINGS_TIER_REGISTERED and not is_manifest_row:
+            errors.append(
+                f"{rel}: holdings_tier is 'registered' but no row in "
+                f"{manifest_rel} names it as source_record_path"
+            )
+        if is_manifest_row and tier != HOLDINGS_TIER_REGISTERED:
+            errors.append(
+                f"{rel}: is named as source_record_path in {manifest_rel} "
+                f"but holdings_tier is {tier!r}, not 'registered'"
+            )
+
+    # 2. Coverage: every file under _originals/ is accounted for.
+    originals_dir = root / "_originals"
+    originals_files = (
+        sorted(p for p in originals_dir.rglob("*") if p.is_file())
+        if originals_dir.exists() else []
+    )
+    covering_records = {
+        fm["original_path"]: rel
+        for rel, fm in records.items()
+        if fm.get("original_path")
+        and fm.get("holdings_tier") in declared_tiers
+        and fm.get("holdings_tier") != HOLDINGS_TIER_REGISTERED
+    }
+    for path in originals_files:
+        rel = path.relative_to(root).as_posix()
+        if rel in manifest_original_paths or rel in covering_records:
+            continue
+        errors.append(
+            f"{rel}: held under _originals/ but undeclared — it is neither "
+            f"a manifest original_path in {manifest_rel} nor named by a "
+            f"source record with a non-'registered' holdings_tier"
+        )
+
+    # 4. Counts — skipped entirely (invariants 1-3 still run above) if
+    # held_artifact_count is absent from state.
+    if "held_artifact_count" not in state:
+        return
+
+    held_declared = state.get("held_artifact_count")
+    held_actual = len(originals_files)
+    if held_declared != held_actual:
+        errors.append(
+            f"CORPUS_STATE.json: held_artifact_count is {held_declared} "
+            f"but _originals/ holds {held_actual} files"
+        )
+
+    by_tier = state.get("holdings_by_tier") or {}
+    tier_sum = sum(by_tier.values())
+    if tier_sum != held_declared:
+        errors.append(
+            f"CORPUS_STATE.json: holdings_by_tier sums to {tier_sum} but "
+            f"held_artifact_count is {held_declared}"
+        )
+
+    source_count = state.get("source_material_count")
+    manifest_count = len(rows)
+    if manifest_count != source_count:
+        errors.append(
+            f"CORPUS_STATE.json: source_material_count is {source_count} "
+            f"but {manifest_rel} has {manifest_count} rows"
+        )
+
+    registered_tier_count = by_tier.get(HOLDINGS_TIER_REGISTERED)
+    if registered_tier_count != source_count:
+        errors.append(
+            f"CORPUS_STATE.json: holdings_by_tier['registered'] is "
+            f"{registered_tier_count} but source_material_count is "
+            f"{source_count}"
+        )
+
+
+REGISTER_LEGAL_POLICIES = {"per-intake", "per-release", "static"}
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+CORPUS_STATE_REL = "00-system/registers/CORPUS_STATE.json"
+CONTENT_RELEASE_REL = "00-system/configuration/content-release.json"
+
+
+def check_register_policies(root: Path, state: dict, errors: list[str]) -> None:
+    """Register refresh-policy gate (design.md section 7; tasks.md C2).
+
+    Every register .md under 00-system/registers/ declares how often it
+    must be refreshed:
+      - `per-intake`  — fails when its `updated` predates CORPUS_STATE.updated
+      - `per-release` — fails when its `updated` predates the `updated` of
+        00-system/configuration/content-release.json
+      - `static`      — never fails on freshness
+    A missing or unknown `refresh_policy` value is an error naming the file
+    and listing the legal values. Dates are compared as ISO YYYY-MM-DD
+    strings after validating the shape; an unparseable date is its own
+    error, never a silent pass (design.md section 7 explicitly rejects a
+    day-count/timezone window — a comparison against the register that
+    *causes* the staleness is deterministic and correct on a repo nobody
+    has touched for a year).
+
+    Files under 00-system/registers/archive/ are exempt entirely.
+
+    CORPUS_STATE.json may not carry an `updated` key in every instance of
+    this kit. When absent, the per-intake freshness comparison has no
+    basis and is skipped for that check only — same "absent key skips only
+    its own check" pattern check_holdings_census uses for
+    held_artifact_count. The same applies if content-release.json is
+    missing its `updated` key for a per-release register.
+    """
+    registers_dir = root / "00-system" / "registers"
+    if not registers_dir.exists():
+        return
+
+    corpus_updated = state.get("updated")
+
+    release_cfg_path = root / CONTENT_RELEASE_REL
+    release_updated = None
+    release_cfg_error = None
+    if release_cfg_path.exists():
+        try:
+            release_cfg = json.loads(release_cfg_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            release_cfg_error = f"{CONTENT_RELEASE_REL}: invalid JSON: {exc}"
+        else:
+            release_updated = release_cfg.get("updated")
+
+    for path in sorted(registers_dir.rglob("*.md")):
+        rel = path.relative_to(root).as_posix()
+        if rel.startswith("00-system/registers/archive/"):
+            continue
+
+        try:
+            fm = parse_frontmatter(path)
+        except Exception as exc:
+            errors.append(f"{rel}: {exc}")
+            continue
+
+        policy = fm.get("refresh_policy")
+        if policy not in REGISTER_LEGAL_POLICIES:
+            errors.append(
+                f"{rel}: refresh_policy must be one of "
+                f"{sorted(REGISTER_LEGAL_POLICIES)}, got {policy!r}"
+            )
+            continue
+
+        updated = fm.get("updated")
+        if not isinstance(updated, str) or not ISO_DATE_RE.match(updated):
+            errors.append(
+                f"{rel}: 'updated' must be an ISO YYYY-MM-DD date string, "
+                f"got {updated!r}"
+            )
+            continue
+
+        if policy == "static":
+            continue
+
+        if policy == "per-intake":
+            if corpus_updated is None:
+                continue
+            if not isinstance(corpus_updated, str) or not ISO_DATE_RE.match(corpus_updated):
+                errors.append(
+                    f"{CORPUS_STATE_REL}: 'updated' must be an ISO "
+                    f"YYYY-MM-DD date string, got {corpus_updated!r}"
+                )
+                continue
+            if updated < corpus_updated:
+                errors.append(
+                    f"{rel}: refresh_policy 'per-intake' is stale: updated "
+                    f"{updated} predates {CORPUS_STATE_REL} updated "
+                    f"{corpus_updated}"
+                )
+            continue
+
+        if policy == "per-release":
+            if release_cfg_error is not None:
+                errors.append(release_cfg_error)
+                continue
+            if release_updated is None:
+                continue
+            if not isinstance(release_updated, str) or not ISO_DATE_RE.match(release_updated):
+                errors.append(
+                    f"{CONTENT_RELEASE_REL}: 'updated' must be an ISO "
+                    f"YYYY-MM-DD date string, got {release_updated!r}"
+                )
+                continue
+            if updated < release_updated:
+                errors.append(
+                    f"{rel}: refresh_policy 'per-release' is stale: "
+                    f"updated {updated} predates {CONTENT_RELEASE_REL} "
+                    f"updated {release_updated}"
                 )
 
 
@@ -330,6 +731,15 @@ def validate(full: bool) -> list[str]:
     # for human readers, so they must never lag CORPUS_STATE.json.
     check_entry_pages(ROOT, state, errors)
 
+    # Holdings census gate (design.md sections 3-4; tasks.md A2/A4):
+    # "registered" and "held" are different claims and must stay honest.
+    check_holdings_census(ROOT, state, errors)
+
+    # Register refresh-policy gate (design.md section 7; tasks.md C2): every
+    # register declares how often it must be refreshed, and a stale
+    # per-intake/per-release register fails.
+    check_register_policies(ROOT, state, errors)
+
     ids: dict[str, str] = {}
     md_files = [
         p for p in ROOT.rglob("*.md")
@@ -353,6 +763,7 @@ def validate(full: bool) -> list[str]:
         if rel.startswith(".claude/") or rel.startswith("00-system/templates/"):
             continue
         validate_live_record_schema(rel, fm, errors)
+        check_source_record_mojibake(rel, fm, errors)
         for key in ("id", "type", "title"):
             if key not in fm or fm[key] in ("", None):
                 errors.append(f"{rel}: missing frontmatter field '{key}'")

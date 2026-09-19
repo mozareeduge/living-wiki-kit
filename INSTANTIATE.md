@@ -49,25 +49,36 @@ committing.
 ### 3.5 Keep entry docs pointer-true (enforced)
 
 Every entry page (HOME.md, README.md, SYSTEM_DESIGN.md, CLAUDE.md) carries
-two labelled markers:
+three labelled markers:
 
 ```text
 Current corpus snapshot: `<id from CORPUS_STATE.json>`
 Registered source artifacts: <count from CORPUS_STATE.json>
+Artifacts held: <held_artifact_count from CORPUS_STATE.json>
 ```
+
+The third marker counts files under `_originals/` — a different claim from
+"registered" (see `SYSTEM_DESIGN.md` / holdings-census docs): a file can be
+held before it is registered. `held_artifact_count` must be set from the
+filesystem (the actual count of files under `_originals/`), never typed by
+hand — a hand-typed number is exactly the kind of drift this marker exists
+to catch.
 
 These are pointers, not copies: whenever an intake or adjudication round
 changes CORPUS_STATE.json (or the counted record layers), refresh the
 markers — and any layer-count prose — on all four pages **in the same
 change**. `scripts/validate_repo.py` enforces this (entry-page freshness
 gate): the pre-commit hook and CI fail any commit whose entry pages lag or
-contradict the registers, so drift cannot happen silently again.
+contradict the registers, so drift cannot happen silently again. The
+`Artifacts held:` check is skipped cleanly when `held_artifact_count` is
+absent from an instance's `CORPUS_STATE.json` (an instance that has not yet
+adopted it is not broken by a kit upgrade).
 
 Exceptions: a governed capture resting unregistered in `01-inbox/captures/`
 changes no register and no counted layer — no marker refresh needed.
 
 Adopting this system in an EXISTING instance: do NOT rerun
-`instantiate.py`. In one change, add the four markers from the instance's
+`instantiate.py`. In one change, add the three markers from the instance's
 current registers, take the validator/skill/template updates, run both
 validators, and commit.
 

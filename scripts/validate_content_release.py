@@ -21,6 +21,7 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED_PREFIXES = (
     ".git/",
+    ".harness-worktrees/",
     ".pytest_cache/",
     "_search/",
     "02-sources/provenance/",

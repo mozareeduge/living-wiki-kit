@@ -1,5 +1,6 @@
 {
-  "system_version": "1.1.0",
+  "system_version": "1.2.0",
+  "updated": "2026-09-18",
   "required_paths": [
     "00-system/registers/RELEASE_READINESS_REGISTER.md"
   ],

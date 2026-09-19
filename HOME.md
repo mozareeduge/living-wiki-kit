@@ -24,6 +24,7 @@ its routes, its current state.
 
 Current corpus snapshot: `wiki-corpus-empty`
 Registered source artifacts: 0
+Artifacts held: 0
 
 Live truth: `00-system/registers/CORPUS_STATE.json` and
 `MATERIALS_INDEX.jsonl` — refresh these anchors in the same change as the

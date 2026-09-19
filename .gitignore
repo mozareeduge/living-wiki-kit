@@ -18,6 +18,7 @@ scripts/capture/fixtures/
 .claude/sessions/
 .claude/memory/
 .harness-mem/
+.harness-worktrees/
 **/.claude/state/
 
 # Secrets and machine-specific config

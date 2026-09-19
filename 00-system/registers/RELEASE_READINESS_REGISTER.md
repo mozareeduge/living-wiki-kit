@@ -1,3 +1,11 @@
+---
+id: release-readiness-register
+type: register
+title: Release Readiness Register
+refresh_policy: per-release
+updated: '2026-09-18'
+---
+
 # Release Readiness Register
 
 | Gate | State | Evidence |
