@@ -1,0 +1,47 @@
+{
+  "_comment": "Proposal schema for the candidate layer (Phase 3). Every model-produced proposal is candidate-tier (authority level 7) by construction. The queue (_proposals/proposals.jsonl) is inert until a human moves it. evidence_audit.py validates each record against this schema; a proposal missing its required evidence fields is AUTO-REJECTED in the audit report (never auto-deleted - the human decides from the report).",
+  "version": "1.0.0",
+  "common_required": ["id", "received", "kind", "authority_tier", "status", "body"],
+  "common_enums": {
+    "authority_tier": ["candidate"],
+    "status": ["new", "audited", "rejected-audit", "accepted", "rejected", "deferred"]
+  },
+  "source_passage": {
+    "_desc": "Required evidence anchor for all kinds except intake-registration. Quote must be verbatim text that exists in the file at path.",
+    "required": ["quote", "path"],
+    "quote_min_chars": 20,
+    "path_must_exist": true,
+    "path_must_be_canonical": true
+  },
+  "kinds": {
+    "relation-edge": {
+      "required": ["target_id", "proposed_type", "why", "source_passage"]
+    },
+    "claim-amendment": {
+      "required": ["claim_id", "amendment", "why", "source_passage"]
+    },
+    "object-note": {
+      "required": ["object_id", "note", "why", "source_passage"]
+    },
+    "intake-registration": {
+      "_desc": "Register a new original + derivative. Evidence = the artifact itself: original_path must exist and sha256 must be 64 hex chars.",
+      "required": ["original_path", "sha256", "why"],
+      "sha256_hex64": true,
+      "original_path_must_exist": true
+    },
+    "tier-change": {
+      "required": ["target_id", "from_tier", "to_tier", "why", "source_passage"],
+      "to_tier_enum": ["pending-registration", "registered", "held"]
+    },
+    "record-correction": {
+      "required": ["target_id", "field", "old_value", "new_value", "why", "source_passage"]
+    },
+    "link-repair": {
+      "required": ["target_id", "broken_link", "repaired_link", "why", "source_passage"]
+    },
+    "retirement-request": {
+      "_desc": "Request to retire/supersede a record. Requires stronger evidence: passage + explicit superseded_by or error documentation.",
+      "required": ["target_id", "why", "source_passage", "superseded_by"]
+    }
+  }
+}
