@@ -685,19 +685,19 @@ finished — open the follow-up rows rather than declaring completion.
 
 ## Checklist
 
-- [ ] A1 holdings tier vocabulary
-- [ ] A2 `check_holdings_census` helper (RED/GREEN)
-- [ ] A3 `CORPUS_STATE.json` census keys
-- [ ] A4 enable the census gate
-- [ ] A5 `retier_holdings.py`
-- [ ] B1 entry gate learns `Artifacts held:`
-- [ ] B2 seed the marker in kit + instantiator
-- [ ] B3 kit 1.2.0 release
-- [ ] B4 adopt the census in mozare-wiki (operator-gated)
-- [ ] C1 mojibake guard across every source record
-- [ ] C2 register refresh-policy gate
-- [ ] C3 apply register policy in mozare-wiki (operator-gated)
-- [ ] D1 tier the SYSTEM_DESIGN script table
-- [ ] E1 `report_holdings.py`
-- [ ] Z1 archive the change
-- [ ] Z2 horizon check
+- [x] A1 holdings tier vocabulary
+- [x] A2 `check_holdings_census` helper (RED/GREEN)
+- [x] A3 `CORPUS_STATE.json` census keys
+- [x] A4 enable the census gate
+- [x] A5 `retier_holdings.py`
+- [x] B1 entry gate learns `Artifacts held:`
+- [x] B2 seed the marker in kit + instantiator
+- [x] B3 kit 1.2.0 release
+- [x] B4 adopt the census in mozare-wiki (operator-gated)
+- [x] C1 mojibake guard across every source record
+- [x] C2 register refresh-policy gate
+- [x] C3 apply register policy in mozare-wiki (operator-gated)
+- [x] D1 tier the SYSTEM_DESIGN script table
+- [x] E1 `report_holdings.py`
+- [x] Z1 archive the change
+- [x] Z2 horizon check
