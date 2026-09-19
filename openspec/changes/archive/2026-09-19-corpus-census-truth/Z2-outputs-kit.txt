@@ -1,0 +1,29 @@
+# Z2 horizon check - kit side - 2026-09-19
+
+1. Registered / held / unregistered, and tier breakdown
+   registered: 0
+   held: 0
+   unregistered: 0
+   pending-registration: 0
+   reference-shelf: 0
+   registered: 0
+   undeclared: 0
+
+2. Records whose status contradicts the manifest
+   count: 0
+
+3. Proposals by status (_proposals/proposals.jsonl)
+   total: 0
+   new (adjudication backlog): 0
+
+4. Claims by current_claim_permission (05-claims/)
+   total: 0
+   blocked: 0
+
+5. Registers: refresh_policy and STALE flag
+   00-system/registers/RELEASE_READINESS_REGISTER.md: refresh_policy='per-release' updated='2026-09-18' fresh
+
+6. Mojibake hits by field
+   (none)
+
+7. Verdict: CENSUS CLEAN
