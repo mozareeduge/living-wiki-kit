@@ -7,11 +7,13 @@ from datetime import datetime
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "00-system/configuration/semantic-benchmark-v1.1.0.json"
+QMD = shutil.which("qmd") or "qmd"
 
 
 def normalize(value: str) -> str:
@@ -53,7 +55,7 @@ def parse_qmd_json(stdout: str):
 
 
 def run_case(case: dict, top_k: int, timeout: int) -> dict:
-    command = ["qmd", "query", case["question"], "--json", "-n", str(top_k)]
+    command = [QMD, "query", case["question"], "--no-rerank", "--json", "-n", str(top_k)]
     if case.get("collection"):
         command.extend(["-c", case["collection"]])
     proc = subprocess.run(
