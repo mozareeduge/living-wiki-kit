@@ -64,7 +64,9 @@ def test_verify_claim_unsupported_when_nothing_overlaps():
 def test_verify_claim_reordered_words_are_not_supported():
     chunk = "artifact original every preserves archive"
     r = fb.verify_claim("archive preserves every original artifact", [chunk])
-    assert r["support"] != "supported"
+    # every content word is present (overlap 1.0) but out of order: the ordered
+    # floor must demote it to partial, never supported
+    assert r["support"] == "partial" and r["overlap"] == 1.0 and r["ordered"] is False
 
 
 def test_verify_claim_is_degenerate_for_stopword_only_claims():
@@ -135,4 +137,5 @@ def test_cli_resuming_an_unknown_run_exits_nonzero_without_creating_it():
     stamp = "does-not-exist-smoke"
     r = _cli("--run", stamp, "report")
     assert r.returncode != 0
+    assert "cannot resume" in (r.stdout + r.stderr)  # the intended refusal, not just any crash
     assert not (KIT_ROOT / "_audits" / "runtime" / "faithfulness" / stamp).exists()

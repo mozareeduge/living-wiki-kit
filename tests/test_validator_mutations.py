@@ -1995,6 +1995,9 @@ def test_section6_does_not_claim_the_census_gate_is_unwired():
     still say otherwise."""
     text = SYSTEM_DESIGN.read_text(encoding="utf-8")
     assert "not yet wired" not in text
+    # ...and the row must positively say the gate is enforced, so deleting the
+    # census description cannot satisfy the guard
+    assert "enforced in `validate()`" in text
 
 
 # ------------------------------------------------------- E1: report_holdings.py
