@@ -6,7 +6,7 @@
 - **Phase:** `execute`
 - **Last host:** `claude`
 - **Handoff target:** `none`
-- **Updated:** `2026-09-20T19:45:08Z`
+- **Updated:** `2026-09-20T19:54:33Z`
 
 ## Objective
 
@@ -14,7 +14,7 @@ Take living-wiki-kit from 1.2.0 to 1.3.0: wire the built P1-P5 parts (context pa
 
 ## Current state
 
-S1,S2,S3 done. PR #7 (draft) CI green, 172 passed on Linux = local. W2 now wip (wiki_context_pack MCP tool). Awaiting Sonnet 5 test-wiring audit of S1-S3.
+W2 done: MCP tool wiki_context_pack (read-only, clamped 30 records/16k tokens/2 hops, errors as JSON, SystemExit contained, writes nothing). W1 blocked on H0 (operator: proposal-kind vocabulary). W3 next.
 
 ## Decisions
 
@@ -26,7 +26,7 @@ S1,S2,S3 done. PR #7 (draft) CI green, 172 passed on Linux = local. W2 now wip (
 
 ## Next operations
 
-- W2: RED test for wiki_context_pack in tools/list + dispatch, then implement in scripts/wiki_mcp_server.py
+- Sonnet 5 wiring audit of W2, then W3 (reconcile skills --mode)
 
 ## Artifacts
 
@@ -39,6 +39,7 @@ S1,S2,S3 done. PR #7 (draft) CI green, 172 passed on Linux = local. W2 now wip (
 - test:pass — pytest tests -q — S3: 172/172; 43 new tests; mutation RED demo 8/8 caught (after adding the pinned dir->kind test)
 - ci:pass — PR #7 validate run 35533135212 — S2: ubuntu-latest py3.12 '172 passed' == local 172
 - review:pass — test-wiring-auditor (Sonnet 5) on 71807d9,4ddb8c7,77f43b4 — PASS-WITH-GAPS: CI collects all 6 test files, no vacuous S1 coverage test, no CLAUDE.md conflicts; 3 weak assertions tightened; F3/F4 recorded
+- test:pass — pytest tests -q — W2: 185/185; RED = 13 named failures before implementation; 7/7 mutations caught; live stdio JSON-RPC tools/list shows wiki_context_pack
 
 ## Graph
 

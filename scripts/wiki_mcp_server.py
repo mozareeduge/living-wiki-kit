@@ -5,8 +5,13 @@ Minimal MCP server (newline-delimited JSON-RPC 2.0 on stdio) exposing the
 wiki to ANY AI harness under the house authority model:
 
   wiki_read(path)          - read one repository file text (read-only)
-  wiki_search(query, n)    - deterministic BM25 retrieval via `qmd search`
+  wiki_search(query, n)    - hybrid lexical retrieval via typed `qmd query`
+                             (BM25 `qmd search` fallback)
+  wiki_exact(text, limit)  - deterministic substring search over canonical zones
+  wiki_context_pack(seed)  - read-only governed context pack (<=30 records,
+                             <=16k tokens, a reason per record)
   wiki_propose(kind, body) - submit a CANDIDATE-TIER proposal
+  (+ the governed capture tools, see TOOLS)
 
 Authority semantics (SYSTEM_DESIGN.md §3, §5.6; CLAUDE.md #4/#6):
   - Everything a model produces here is level-7 candidate material.
@@ -88,6 +93,34 @@ TOOLS = [
                 "limit": {"type": "integer", "minimum": 1, "maximum": 50},
             },
             "required": ["text"],
+        },
+    },
+    {
+        "name": "wiki_context_pack",
+        "description": (
+            "Read-only governed context pack around ONE seed record id: the "
+            "seed, its graph neighbours (0-2 hops over resolved wikilink / "
+            "relation / claim edges) and optional lexical hits, each with a "
+            "reason, under hard caps (30 records, 16k estimated tokens). Find "
+            "the seed id first with wiki_search / wiki_exact / wiki_read. "
+            "Needs _search/graph.db (python scripts/build_graph_index.py). "
+            "A navigation and production aid; inclusion reasons and scores "
+            "are never evidence and output built from a pack stays "
+            "candidate-tier."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "seed": {"type": "string",
+                         "description": "record id, e.g. mw-src-1111111111"},
+                "hops": {"type": "integer", "minimum": 0, "maximum": 2,
+                         "description": "graph expansion depth (default 1)"},
+                "query": {"type": "string",
+                          "description": "optional lexical query to add hits"},
+                "records": {"type": "integer", "minimum": 1, "maximum": 30},
+                "budget": {"type": "integer", "minimum": 1, "maximum": 16000,
+                           "description": "estimated-token budget"},
+            },
+            "required": ["seed"],
         },
     },
     {
@@ -333,6 +366,46 @@ def tool_wiki_exact(args: dict) -> str:
                       ensure_ascii=False)
 
 
+CONTEXT_PACK_MAX_RECORDS = 30
+CONTEXT_PACK_MAX_BUDGET = 16000
+CONTEXT_PACK_MAX_HOPS = 2
+
+
+def _clamped_int(value, lo: int, hi: int, default: int) -> int:
+    """int(value) clamped to [lo, hi]; only None falls back to the default
+    (0 is a real answer, e.g. hops=0). A non-numeric value raises, which
+    handle() reports as a JSON error."""
+    if value is None:
+        return default
+    return max(lo, min(int(value), hi))
+
+
+def tool_wiki_context_pack(args: dict) -> str:
+    """Read-only wrapper over context_pack.build_pack. Writes nothing (the CLI
+    stores packs under _search/packs/; this tool returns the pack inline)."""
+    seed = str(args.get("seed", "")).strip()
+    if not seed:
+        return json.dumps({"error": "empty seed"})
+    hops = _clamped_int(args.get("hops"), 0, CONTEXT_PACK_MAX_HOPS, 1)
+    records = _clamped_int(args.get("records"), 1, CONTEXT_PACK_MAX_RECORDS,
+                           CONTEXT_PACK_MAX_RECORDS)
+    budget = _clamped_int(args.get("budget"), 1, CONTEXT_PACK_MAX_BUDGET,
+                          CONTEXT_PACK_MAX_BUDGET)
+    query = str(args.get("query") or "").strip() or None
+    if not (ROOT / "_search" / "graph.db").exists():
+        return json.dumps({"error": "no graph index; run "
+                                    "`python scripts/build_graph_index.py` first"})
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import context_pack as _context_pack
+    try:
+        pack = _context_pack.build_pack(ROOT, seed, hops, query, records, budget)
+    except SystemExit:
+        # build_pack signals an unknown seed with SystemExit; that must never
+        # take the whole MCP server down
+        return json.dumps({"error": f"seed id {seed!r} not in graph index"})
+    return json.dumps(pack, ensure_ascii=False)
+
+
 def tool_wiki_propose(args: dict) -> str:
     kind = str(args.get("kind", ""))
     body = str(args.get("body", "")).strip()
@@ -516,6 +589,7 @@ DISPATCH = {
     "wiki_read": tool_wiki_read,
     "wiki_search": tool_wiki_search,
     "wiki_exact": tool_wiki_exact,
+    "wiki_context_pack": tool_wiki_context_pack,
     "wiki_propose": tool_wiki_propose,
     "wiki_capture_text": tool_wiki_capture_text,
     "wiki_list_captures": tool_wiki_list_captures,

@@ -137,12 +137,12 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `report_holdings.py` | read-only 7-section census audit (counts, contradictions, proposals, claims, register staleness, mojibake, verdict); prints `CENSUS CLEAN` or `CENSUS DRIFT`; writes only to `_audits/runtime/` | operational |
 | `retier_holdings.py` | migration tool for adopting the census: dry-run by default, `--apply` only on a clean tree and refuses on manifest/state disagreement | operational |
 | `build_graph_index.py` | deterministic graph index (nodes, edges, resolved aliases) over frontmatter, wikilinks and relation participants into `_search/graph.db` — disposable, rebuildable | operational |
-| `context_pack.py` | governed context packer (CLI): hybrid hits plus graph neighbourhood into ≤ 30 records / ≤ 16k tokens, each with a selection reason; no model in retrieval | operational |
+| `context_pack.py` | governed context packer (CLI, also served read-only as the MCP tool `wiki_context_pack`): lexical hits plus graph neighbourhood into ≤ 30 records / ≤ 16k tokens, each with a selection reason; no model in retrieval | operational |
 | `reconcile_runner.py` | incremental-reconciliation core: full vs incremental plan (escalates on loss or > 30% drift), exact-once verify, human gate above 3 conflicts; not yet called by the reconcile skills | available (unexercised) |
 | `evidence_audit.py` | candidate-layer audit against `proposal_schema.json`: a proposal whose `source_passage` cannot be verified is reported `rejected-audit`; never edits the queue | operational |
 | `schema_drift_fixer.py` | derives path-derivable frontmatter fixes (filename, type/kind) as a `PATCH_MANIFEST`; leaves semantic fields for human adjudication | operational |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine | operational |
-| `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search` (hybrid `qmd query`, lexical fallback), `wiki_exact` (deterministic text match), `wiki_propose`, plus the capture tools — writes go only to `_proposals/` and the governed capture store | operational |
+| `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search` (hybrid `qmd query`, lexical fallback), `wiki_exact` (deterministic text match), `wiki_context_pack` (read-only governed neighbourhood pack), `wiki_propose`, plus the capture tools — writes go only to `_proposals/` and the governed capture store | operational |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
 | `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); baseline 3/30 lexical-only recorded in `mozare-wiki` 2026-09-20 | operational |
