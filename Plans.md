@@ -4,7 +4,7 @@
 > **Last updated**: 2026-09-20
 > **Spec (1.3.0)**: `../living-wiki-kit next-phase spec DRAFT.md` (phases 0–5) and
 > `../workbench-ui-spec.md` (G-series) — verified against the repos 2026-09-20;
-> current-state evidence in `_captures/HANDOFF--2026-09-20--kit-rollout-state.md`
+> current-state evidence in `07-genesis/handoffs/HANDOFF--2026-09-20--kit-rollout-state.md`
 > **Spec (1.2.0, closed)**: `openspec/specs/holdings-census/spec.md`
 > (archived change: `openspec/changes/archive/2026-09-19-corpus-census-truth/`)
 > **Continuity**: portable MAWS thread `.maws/` (see "Continuity" below)
@@ -50,7 +50,7 @@ Measured 2026-09-17. Full evidence in `proposal.md`.
 B4 and C3 were operator-gated and ran in `mozare-wiki` (instance commits
 `13a0175` B4, `140a043` C3, `6102114` Z2; census merged as `e892fae`;
 Z2 CENSUS CLEAN 97/447/544 recorded in
-`_captures/HANDOFF--2026-09-20--kit-rollout-state.md`). Their rows below are
+`07-genesis/handoffs/HANDOFF--2026-09-20--kit-rollout-state.md`). Their rows below are
 updated to match; they were not re-run from this repo.
 
 | ID | Task | Acceptance (all must be pasted, from commands actually run) | Depends | Status |
@@ -86,7 +86,7 @@ tagged `[lane:operator]` are never executed by an agent.
 |---|---|---|---|---|
 | S1 | `[lane:doc] [size:S]` Doc truth: SYSTEM_DESIGN §6 lists every `scripts/*.py` with a tier (`operational` / `available (unexercised)`) and drops the stale "not yet wired" clause; move `_captures/HANDOFF--2026-09-20--kit-rollout-state.md` to `07-genesis/handoffs/` with frontmatter | (a) kit `validate_repo.py --full` PASS with no no-frontmatter warning for the handoff, (b) a new test fails by name when a `scripts/*.py` file is absent from §6, (c) suite `N/N passed` | — | cc:done |
 | S2 | `[lane:gate] [size:S]` CI runs the whole test suite (`pytest tests`), not only the mutation file | (a) `validate.yml` diff shows the step, (b) local `pytest tests -q` count equals the count CI logs, (c) CI green on the PR | — | cc:wip |
-| S3 | `[lane:gate] [tdd:required] [size:M]` Tests for `schema_drift_fixer.py` (path-derivable fix applied, bracket-path guard, semantic fields refused) and a smoke test for `run_faithfulness_benchmark.py` | (a) RED pasted, named failures, (b) GREEN `N/N passed`, (c) kit PASS | — | cc:todo |
+| S3 | `[lane:gate] [tdd:required] [size:M]` Tests for `schema_drift_fixer.py` (path-derivable fix applied, bracket-path guard, semantic fields refused) and a smoke test for `run_faithfulness_benchmark.py` | (a) RED pasted, named failures, (b) GREEN `N/N passed`, (c) kit PASS | — | cc:done |
 | H0 | `[lane:operator] [size:S]` Decide the proposal-kind vocabulary: keep the schema's 8 (`relation-edge`, `claim-amendment`, `object-note`, `intake-registration`, `tier-change`, `record-correction`, `link-repair`, `retirement-request`), adopt the spec's 8 (`object-create`, `object-update`, `relation-create`, `relation-amend`, `claim-create`, `claim-amend`, `lineage-link`, `research-question`), or union | (a) decision recorded in `07-genesis/handoffs/`, (b) `proposal_schema.json` `version` bumped in W1 | — | cc:todo |
 | W1 | `[lane:gate] [tdd:required] [size:M]` `wiki_propose` validates against `proposal_schema.json`: unknown kind refused, `source_passage` (quote ≥ 20 chars verbatim in a canonical path) required, authority stays `candidate` | (a) RED pasted, (b) GREEN, (c) a proposal without a resolvable passage is refused at the door, (d) kit PASS | H0, S3 | cc:todo |
 | W2 | `[lane:gate] [tdd:required] [size:S]` MCP tool `wiki_context_pack` wrapping `context_pack.py` (≤ 30 records, ≤ 16k tokens, reason per record) | (a) tool listed in `tools/list`, (b) dispatch test returns records with reasons, (c) suite `N/N passed` | S3 | cc:todo |
@@ -122,6 +122,11 @@ Rules that come with the setup: the parent owns `.maws/` writes and the
 evidence, and never write shared state; `.maws/` is continuity, not proof —
 a rung flips to `cc:done` only with its acceptance output pasted. Rungs run
 sequentially because they share the register/CI surfaces (operating rule 1).
+
+**Findings recorded while running the ladder** (not fixed here; each is a candidate rung):
+
+- **F1** `schema_drift_fixer.py` reads and writes in text mode, so a CRLF file comes back LF-normalised although its docstring says "format-preserving". Git's `* text=auto` hides it. Pinned by a characterisation test in `tests/test_schema_drift_fixer.py`; fix only if an instance turns off `text=auto`.
+- **F2** `run_faithfulness_benchmark.py` reads `00-system/configuration/semantic-benchmark-v1.1.0.json`, which the kit does not ship (the empty kit has no benchmark set), so its `retrieve` stage cannot run from a fresh instance until one is supplied.
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → W1 (after H0) → W3 → W4 → M2 → R1 → R2.
 `H*`, `M1`, `U*` are outside the agent loop: they wait for the operator or
