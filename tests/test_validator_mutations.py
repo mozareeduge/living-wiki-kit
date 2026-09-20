@@ -1,6 +1,7 @@
 import importlib.util
 import inspect
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -1945,6 +1946,55 @@ def test_section6_table_status_completeness():
     text = SYSTEM_DESIGN.read_text(encoding="utf-8")
     errors = check_section6_table_status(text)
     assert not errors, _safe("\n".join(errors))
+
+
+def _section6_documented_scripts(text):
+    """Basenames named in backticks in the first cell of every section-6 row."""
+    names = set()
+    for row in _section6_table_rows(text):
+        cells = _split_row_cells(row)
+        if cells:
+            names.update(Path(tok).name for tok in re.findall(r"`([^`]+)`", cells[0]))
+    return names
+
+
+def check_section6_script_coverage(text, shipped):
+    """One error per shipped script that no section-6 row names.
+
+    Companion to check_section6_table_status: that check proves every listed
+    row is tiered; this one proves no shipped script is left off the table, so
+    an unlisted script cannot be mistaken for a non-existent one.
+    """
+    documented = _section6_documented_scripts(text)
+    return [f"scripts/{name} ships but has no section 6 row"
+            for name in sorted(shipped) if name not in documented]
+
+
+def _shipped_top_level_scripts():
+    return {p.name for p in (ROOT / "scripts").glob("*.py")}
+
+
+def test_section6_lists_every_shipped_script():
+    """S1: every scripts/*.py appears in the section-6 table."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    errors = check_section6_script_coverage(text, _shipped_top_level_scripts())
+    assert not errors, _safe("\n".join(errors))
+
+
+def test_section6_coverage_check_fails_by_name_when_a_row_is_removed():
+    """S1 negative check: dropping the context_pack row must fail naming it."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    mutated = "\n".join(
+        ln for ln in text.splitlines() if "`context_pack.py`" not in ln)
+    errors = check_section6_script_coverage(mutated, _shipped_top_level_scripts())
+    assert any("context_pack.py" in e for e in errors), _safe("\n".join(errors))
+
+
+def test_section6_does_not_claim_the_census_gate_is_unwired():
+    """S1: A4 wired check_holdings_census into validate(); the prose must not
+    still say otherwise."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    assert "not yet wired" not in text
 
 
 # ------------------------------------------------------- E1: report_holdings.py

@@ -84,8 +84,8 @@ tagged `[lane:operator]` are never executed by an agent.
 
 | ID | Task | Acceptance (all pasted from commands actually run) | Depends | Status |
 |---|---|---|---|---|
-| S1 | `[lane:doc] [size:S]` Doc truth: SYSTEM_DESIGN §6 lists every `scripts/*.py` with a tier (`operational` / `available (unexercised)`) and drops the stale "not yet wired" clause; move `_captures/HANDOFF--2026-09-20--kit-rollout-state.md` to `07-genesis/handoffs/` with frontmatter | (a) kit `validate_repo.py --full` PASS with no no-frontmatter warning for the handoff, (b) a new test fails by name when a `scripts/*.py` file is absent from §6, (c) suite `N/N passed` | — | cc:todo |
-| S2 | `[lane:gate] [size:S]` CI runs the whole test suite (`pytest tests`), not only the mutation file | (a) `validate.yml` diff shows the step, (b) local `pytest tests -q` count equals the count CI logs, (c) CI green on the PR | — | cc:todo |
+| S1 | `[lane:doc] [size:S]` Doc truth: SYSTEM_DESIGN §6 lists every `scripts/*.py` with a tier (`operational` / `available (unexercised)`) and drops the stale "not yet wired" clause; move `_captures/HANDOFF--2026-09-20--kit-rollout-state.md` to `07-genesis/handoffs/` with frontmatter | (a) kit `validate_repo.py --full` PASS with no no-frontmatter warning for the handoff, (b) a new test fails by name when a `scripts/*.py` file is absent from §6, (c) suite `N/N passed` | — | cc:done |
+| S2 | `[lane:gate] [size:S]` CI runs the whole test suite (`pytest tests`), not only the mutation file | (a) `validate.yml` diff shows the step, (b) local `pytest tests -q` count equals the count CI logs, (c) CI green on the PR | — | cc:wip |
 | S3 | `[lane:gate] [tdd:required] [size:M]` Tests for `schema_drift_fixer.py` (path-derivable fix applied, bracket-path guard, semantic fields refused) and a smoke test for `run_faithfulness_benchmark.py` | (a) RED pasted, named failures, (b) GREEN `N/N passed`, (c) kit PASS | — | cc:todo |
 | H0 | `[lane:operator] [size:S]` Decide the proposal-kind vocabulary: keep the schema's 8 (`relation-edge`, `claim-amendment`, `object-note`, `intake-registration`, `tier-change`, `record-correction`, `link-repair`, `retirement-request`), adopt the spec's 8 (`object-create`, `object-update`, `relation-create`, `relation-amend`, `claim-create`, `claim-amend`, `lineage-link`, `research-question`), or union | (a) decision recorded in `07-genesis/handoffs/`, (b) `proposal_schema.json` `version` bumped in W1 | — | cc:todo |
 | W1 | `[lane:gate] [tdd:required] [size:M]` `wiki_propose` validates against `proposal_schema.json`: unknown kind refused, `source_passage` (quote ≥ 20 chars verbatim in a canonical path) required, authority stays `candidate` | (a) RED pasted, (b) GREEN, (c) a proposal without a resolvable passage is refused at the door, (d) kit PASS | H0, S3 | cc:todo |
@@ -101,6 +101,27 @@ tagged `[lane:operator]` are never executed by an agent.
 | U2 | `[lane:instance] [size:L]` G-series workbench UI cards (G-01…G-07 per `workbench-ui-spec.md`) | per-card evidence in the spec | H3; P08-02 lane free | blocked |
 | R1 | `[lane:doc] [size:S]` Kit 1.3.0: bump SYSTEM_DESIGN `system_version`, `content-release.json`, `instantiate.py` `created_from`, CLAUDE.md, README — atomically; add `CHANGELOG.md` and `QUICKSTART.md` | (a) no stray `1.2.0` outside `schema_version`/openspec/archive, (b) both validators PASS, (c) PR + CI green, (d) local main SHA == remote main SHA | S1, S2, S3, W1–W4 | cc:todo |
 | R2 | `[lane:gate] [size:M]` Release gate: fresh-clone `instantiate.py --name smoke --prefix sm` in a temp dir passes both validators; `report_holdings.py` prints `CENSUS CLEAN` in kit and `mozare-wiki`; handoff in `07-genesis/handoffs/` | (a) instantiate transcript, (b) both CENSUS CLEAN lines, (c) handoff exists | R1 | cc:todo |
+
+### Routing under MAWS (model policy: Sonnet 5 everywhere)
+
+One model policy for the whole 1.3.0 ladder: **every executor, subagent and
+reviewer runs Sonnet 5** (`model: "sonnet"` on any Agent/Workflow call). No
+haiku on a `gate` rung; no other model unless the operator changes this line.
+Route by work shape (`mozare-work`), one writer per mutable scope:
+
+| Rungs | Shape | Executor | Verifier (fresh context) | Checkpoint into `.maws/` |
+|---|---|---|---|---|
+| S1, S2, R1 | DIRECT | parent (Sonnet 5) | validators + suite output | phase change + evidence line |
+| S3, W1, W2, W4 | STAGED (`[tdd:required]`: RED → GREEN) | parent (Sonnet 5) | `test-wiring-auditor` (Sonnet 5) verdict pasted | RED evidence, GREEN evidence |
+| W3, M2, R2 | STAGED | parent (Sonnet 5) | `reviewer` (Sonnet 5) | decisions + evidence |
+| H0–H3, M1 | operator / instance lane | never an agent | — | recorded only after the operator decides |
+| U1, U2 | STAGED, later PARALLEL | Sonnet 5 workers in isolated worktrees | `reviewer` (Sonnet 5) | per-card |
+
+Rules that come with the setup: the parent owns `.maws/` writes and the
+`Plans.md` status column; workers get a bounded contract, return artifacts and
+evidence, and never write shared state; `.maws/` is continuity, not proof —
+a rung flips to `cc:done` only with its acceptance output pasted. Rungs run
+sequentially because they share the register/CI surfaces (operating rule 1).
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → W1 (after H0) → W3 → W4 → M2 → R1 → R2.
 `H*`, `M1`, `U*` are outside the agent loop: they wait for the operator or

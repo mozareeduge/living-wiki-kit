@@ -3,10 +3,10 @@
 - **Thread:** `20260920-174600-living-wiki-kit-1.3.0` — Living Wiki Kit 1.3.0
 - **Status:** `active`
 - **Shape:** `long-horizon`
-- **Phase:** `plan`
+- **Phase:** `execute`
 - **Last host:** `claude`
 - **Handoff target:** `none`
-- **Updated:** `2026-09-20T17:46:00Z`
+- **Updated:** `2026-09-20T19:32:00Z`
 
 ## Objective
 
@@ -14,7 +14,7 @@ Take living-wiki-kit from 1.2.0 to 1.3.0: wire the built P1-P5 parts (context pa
 
 ## Current state
 
-Repo evaluated 2026-09-20; ladder 1.3.0 written into Plans.md (S1-S3, H0, W1-W4, M1-M2, H1-H3, U1-U2, R1-R2). Kit healthy: validators PASS, 126/126 tests, CENSUS CLEAN. Built-but-unwired: wiki_context_pack MCP tool, reconcile skills --mode, wiki_propose schema check; CI runs 1 of 4 test files; SYSTEM_DESIGN s6 omits 8 scripts.
+S1 done: SYSTEM_DESIGN s6 lists all 25 shipped scripts with tiers, stale 'not yet wired' removed, handoff moved to 07-genesis/handoffs with frontmatter, 3 new tests (coverage + negative + stale-claim). S2 now wip.
 
 ## Decisions
 
@@ -26,8 +26,7 @@ Repo evaluated 2026-09-20; ladder 1.3.0 written into Plans.md (S1-S3, H0, W1-W4,
 
 ## Next operations
 
-- S1: doc truth (SYSTEM_DESIGN s6 + move handoff to 07-genesis/handoffs with frontmatter)
-- S2: CI runs full pytest
+- S2: CI runs full pytest (add pytest install + replace single-file step)
 
 ## Artifacts
 
@@ -35,7 +34,8 @@ Repo evaluated 2026-09-20; ladder 1.3.0 written into Plans.md (S1-S3, H0, W1-W4,
 
 ## Evidence references
 
-- none
+- test:pass — pytest tests -q — S1: 129/129 (126 + 3 new section6 tests); RED was 2 named failures (9 scripts missing from s6; stale 'not yet wired')
+- validator:pass — validate_repo.py --full; validate_content_release.py; check_against_baseline.py — S1: PASS/PASS/OK; 0 warnings for the moved handoff
 
 ## Graph
 
