@@ -132,7 +132,14 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 |---|---|---|
 | `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, enforced in `validate()`), mojibake guard on every source record, register refresh-policy gate | operational |
 | `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark | operational |
-| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` | operational |
+| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt`; fails closed on validator timeout, launch failure or unparseable output | operational |
+| `wiki_validate.py` | authoritative governance gate (kernel): runs the validators in `00-system/configuration/validators.json` with structured findings; fails closed | operational |
+| `wiki_state.py` | kernel state: `rebuild` regenerates `SYSTEM_STATE.json`, the manifest and the accepted-evidence index from source records; `check` fails on drift; `set-axis` changes an authored axis only through `state-transitions.json` | operational |
+| `wiki_evidence.py` | accepted-evidence universe (`ACCEPTED_EVIDENCE_INDEX.jsonl`): registered sources plus durably promoted captures; `check` fails on drift | operational |
+| `wiki_proposals.py` | durable candidate proposals (`_proposals/records/`) and separate immutable adjudications (`_proposals/adjudications/`); lists pending | available (unexercised) |
+| `wiki_release.py` | release controller: a release manifest from a passing release profile and receipts | available (unexercised) |
+| `sync_intake_registers.py` | after `wiki_state.py rebuild`: refreshes holdings counts, the three entry-page markers and (with `--accept-corpus-change`) the content-release corpus pin; dry run by default | operational |
+| `repair_truncated_filenames.py` | restores source-record `filename` values cut at the first space to `basename(original_path)`; dry run by default, lists anything needing a human | operational |
 | `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers; refuses to reseed a populated instance | operational |
 | `report_holdings.py` | read-only 7-section census audit (counts, contradictions, proposals, claims, register staleness, mojibake, verdict); prints `CENSUS CLEAN` or `CENSUS DRIFT`; writes only to `_audits/runtime/` | operational |
 | `retier_holdings.py` | migration tool for adopting the census: dry-run by default, `--apply` only on a clean tree and refuses on manifest/state disagreement | operational |

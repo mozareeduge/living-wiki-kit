@@ -1,0 +1,78 @@
+{
+  "profiles": {
+    "accepted-evidence": {
+      "exclude_globs": [],
+      "include_globs": [
+        "00-system/registers/ACCEPTED_EVIDENCE_INDEX.jsonl"
+      ]
+    },
+    "all-governed": {
+      "exclude_globs": [
+        ".git/**",
+        "_search/**",
+        "node_modules/**",
+        ".venv/**"
+      ],
+      "include_globs": [
+        "**/*.md",
+        "**/*.json",
+        "**/*.jsonl",
+        "**/*.yaml",
+        "**/*.yml",
+        "**/*.txt",
+        "**/*.base"
+      ]
+    },
+    "candidate": {
+      "exclude_globs": [],
+      "include_globs": [
+        "_proposals/**"
+      ]
+    },
+    "canonical": {
+      "exclude_globs": [
+        "_proposals/**",
+        "00-system/**",
+        "02-sources/**"
+      ],
+      "include_globs": [
+        "03-objects/**",
+        "04-notes/**",
+        "05-claims/**",
+        "06-relations/**",
+        "07-genesis/**"
+      ]
+    },
+    "captures": {
+      "exclude_globs": [],
+      "include_globs": [
+        "01-inbox/captures/**",
+        "_captures/**"
+      ]
+    },
+    "evidence-text": {
+      "exclude_globs": [],
+      "include_globs": [
+        "02-sources/text/**"
+      ]
+    },
+    "provenance": {
+      "exclude_globs": [],
+      "include_globs": [
+        "02-sources/records/**"
+      ]
+    },
+    "system": {
+      "exclude_globs": [
+        "00-system/releases/manifests/**"
+      ],
+      "include_globs": [
+        "00-system/**",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GPT_WORKFLOW.md"
+      ]
+    }
+  },
+  "version": 2
+}

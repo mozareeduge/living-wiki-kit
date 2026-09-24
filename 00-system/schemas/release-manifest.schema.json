@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "release-manifest.schema.json",
+  "type": "object",
+  "required": ["type", "release", "commit", "tree", "source_corpus", "accepted_evidence", "receipt_ids"],
+  "properties": {
+    "type": {"const": "release-manifest"},
+    "release": {"type": "string", "minLength": 1},
+    "commit": {"type": "string", "minLength": 7},
+    "tree": {"type": "string", "minLength": 7},
+    "source_corpus": {"type": "object"},
+    "accepted_evidence": {"type": "object"},
+    "receipt_ids": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

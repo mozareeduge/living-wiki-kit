@@ -595,6 +595,16 @@ def test_instantiate_seeds_gate_clean_empty_instance():
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace")
             assert v.returncode == 0, _safe(v.stdout) + _safe(v.stderr)
+        # Governance kernel: the generated state follows the renamed corpus,
+        # and the evidence snapshot id carries the instance prefix.
+        s = subprocess.run([sys.executable, "scripts/wiki_state.py", "--repo", ".", "check"],
+                           cwd=kit, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace")
+        assert s.returncode == 0, _safe(s.stdout) + _safe(s.stderr)
+        system = json.loads((kit / "00-system/registers/SYSTEM_STATE.json")
+                            .read_text(encoding="utf-8"))
+        assert system["source_corpus"]["snapshot_id"] == "swk-corpus-empty", system
+        assert system["accepted_evidence"]["snapshot_id"].startswith("swk-evidence-"), system
 
 
 def test_instantiate_is_idempotent_on_same_empty_instance():

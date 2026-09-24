@@ -1,0 +1,15 @@
+{
+  "autodiscovered_by": "mozare-fast-install/1.2.0",
+  "validators": [
+    {
+      "authority": "repository CI-equivalent accepted-debt gate",
+      "autodiscovered": false,
+      "check_id": "accepted_baseline_integrity",
+      "command": [
+        "python",
+        "scripts/check_against_baseline.py"
+      ],
+      "output_format": "text"
+    }
+  ]
+}

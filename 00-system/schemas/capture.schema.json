@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mozare Wiki capture record front matter (1.2.0, schema 1.0.0)",
+  "description": "Reference shape for mw-cap-* front matter. The enforcing validator is validate_record() in scripts/capture/wiki_capture.py; this file documents the contract for clients.",
+  "type": "object",
+  "required": ["id", "type", "title", "status", "capture_kind", "captured_at", "capture_channel", "language_hint", "raw_media_available", "sha256", "bytes", "duplicate_of", "transcription_state", "transcription_reviewed", "quality_flags", "promoted_to", "schema_version"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^mw-cap-[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$"},
+    "type": {"const": "capture"},
+    "title": {"type": "string", "pattern": "^Capture mw-cap-"},
+    "status": {"enum": ["received", "processing", "transcribed", "described", "needs-review", "processing-failed", "reviewed", "parked", "promoted"]},
+    "capture_kind": {"enum": ["text", "voice", "handwriting", "drawing", "image", "file", "mixed"]},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "capture_channel": {"enum": ["telegram-hermes", "claude-mobile", "obsidian", "mcp", "filesystem"]},
+    "language_hint": {"enum": ["fa", "en", "mixed", "unknown"]},
+    "raw_media": {"type": ["string", "null"]},
+    "raw_media_available": {"type": "boolean"},
+    "sha256": {"type": ["string", "null"], "pattern": "^([0-9a-f]{64})$"},
+    "bytes": {"type": ["integer", "null"], "minimum": 0},
+    "duplicate_of": {"type": ["string", "null"]},
+    "transcription_state": {"enum": ["not-requested", "pending", "complete", "needs-review", "failed"]},
+    "transcription_method": {"type": ["string", "null"]},
+    "transcription_version": {"type": ["string", "null"]},
+    "transcription_reviewed": {"type": "boolean"},
+    "quality_flags": {"type": "array", "items": {"type": "string"}},
+    "promoted_to": {"type": ["string", "null"]},
+    "schema_version": {"const": "1.0.0"}
+  },
+  "note": "Forward-compatible migration: unknown fields are ignored by readers; schema_version bumps only on breaking change; validators reject unknown schema_version."
+}
