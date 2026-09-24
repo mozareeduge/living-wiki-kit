@@ -100,6 +100,10 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                 continue
             used.add(nid)
             row = con.execute("SELECT path, title FROM nodes WHERE id=?", (nid,)).fetchone()
+            if not row:
+                # resolved to a page outside the canonical zones (register,
+                # audit, entry page): resolvable for links, never a node
+                continue
             entries.append({"id": nid, "path": row[0], "title": row[1],
                             "reason": reason, "depth": int(depth)})
 
@@ -124,14 +128,14 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
 
     # Attach content under the global token budget.
     spent = 0
-    per_cap = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
+    per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
     for e in entries:
         p = root / e["path"]
         try:
             text = p.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             text = ""
-        body = text[: per_cap * CHARS_PER_TOKEN]
+        body = text[:per_cap_chars]
         est = len(body) // CHARS_PER_TOKEN
         e["content"] = body
         e["content_truncated"] = len(text) > len(body)

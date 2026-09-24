@@ -172,3 +172,32 @@ def test_tool_writes_nothing(wiki, monkeypatch):
     before = _tree(wiki)
     _call(seed=SEED, hops=2, query="grave")
     assert _tree(wiki) == before  # no _search/packs, no _proposals, nothing
+
+
+def test_link_to_a_non_canonical_page_is_skipped_not_a_crash(wiki):
+    """build_graph_index resolves wikilinks to pages outside the canonical
+    zones (registers, audits) without making them nodes. Found on the real
+    mozare-wiki graph (98 such edges): the pack must skip them, not raise
+    TypeError on the missing node row."""
+    (wiki / "00-system" / "registers").mkdir(parents=True)
+    (wiki / "00-system" / "registers" / "REG.md").write_text(
+        "---\nid: mw-register-probe\ntype: register\ntitle: Probe\n---\n", encoding="utf-8")
+    seed_file = wiki / "02-sources" / "records" / "mw-src-1111111111--essay-grave-machine.md"
+    seed_file.write_text(seed_file.read_text(encoding="utf-8") + "Also [[REG]].\n", encoding="utf-8")
+    bgi.build(wiki)
+    out = _call(seed=SEED, hops=2)
+    ids = [r["id"] for r in out["records"]]
+    assert ids[0] == SEED and "mw-con-2222222222" in ids
+    assert "mw-register-probe" not in ids
+
+
+def test_token_budget_holds_when_records_are_long(wiki):
+    """The per-record cap is already in characters; slicing by cap *
+    CHARS_PER_TOKEN again let a pack reach ~4x its budget. Seen live on
+    mozare-wiki: 16,776 estimated tokens against a 16,000 budget."""
+    for f in (wiki / "02-sources" / "records").glob("*.md"):
+        f.write_text(f.read_text(encoding="utf-8") + ("lorem ipsum " * 20000), encoding="utf-8")
+    bgi.build(wiki)
+    out = _call(seed=SEED, hops=2, budget=1000)
+    assert out["meta"]["tokens_est"] <= out["meta"]["budget_tokens"] == 1000
+    assert any(r["content_truncated"] for r in out["records"])
