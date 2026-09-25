@@ -5,8 +5,8 @@
 - **Shape:** `long-horizon`
 - **Phase:** `execute`
 - **Last host:** `claude`
-- **Handoff target:** `none`
-- **Updated:** `2026-09-20T19:54:33Z`
+- **Handoff target:** `any host (owner's choice)`
+- **Updated:** `2026-09-25T11:00:00Z`
 
 ## Objective
 
@@ -14,19 +14,21 @@ Take living-wiki-kit from 1.2.0 to 1.3.0: wire the built P1-P5 parts (context pa
 
 ## Current state
 
-W2 done: MCP tool wiki_context_pack (read-only, clamped 30 records/16k tokens/2 hops, errors as JSON, SystemExit contained, writes nothing). W1 blocked on H0 (operator: proposal-kind vocabulary). W3 next.
+K1a + K1b done (e651c11, 18423f3, b5272cb): governance kernel core and kernel MCP server ported from mozare-wiki; 213 tests pass; validate_repo, wiki_validate, wiki_state check, wiki_evidence check all green. Hand-off for another host: 07-genesis/handoffs/HANDOFF--2026-09-25--k1-kernel-port.md.
 
 ## Decisions
 
-- none
+- Owner 2026-09-25: finish K1 (K1c, K1d) first; then the owner decides H0 (proposal kinds); then W1 -> W3 -> W4 -> M2 -> R1 -> R2.
+- W3 becomes staged reconciliation (classes RC-0..RC-4, batched reconcile_runner, receipts).
 
 ## Blockers
 
-- none
+- W1/W4 wait on H0 (owner).
 
 ## Next operations
 
-- Sonnet 5 wiring audit of W2, then W3 (reconcile skills --mode)
+- K1c: capture tests + fixtures into the kit; CI runs kernel gates and all test dirs.
+- K1d: intake skill, 2 agents, role contract, stale proposals.jsonl/wiki_exact docs.
 
 ## Artifacts
 
@@ -34,6 +36,8 @@ W2 done: MCP tool wiki_context_pack (read-only, clamped 30 records/16k tokens/2 
 
 ## Evidence references
 
+- test:pass — pytest tests scripts/tests — K1a/K1b: 213 passed, 2 xfailed; RED first for instantiate state drift and 5 kernel-server tests
+- validator:pass — validate_repo --full PASS; wiki_validate/wiki_state check/wiki_evidence check exit 0; fresh Windows clone wiki_state check exit 0 after LF pin
 - test:pass — pytest tests -q — S1: 129/129 (126 + 3 new section6 tests); RED was 2 named failures (9 scripts missing from s6; stale 'not yet wired')
 - validator:pass — validate_repo.py --full; validate_content_release.py; check_against_baseline.py — S1: PASS/PASS/OK; 0 warnings for the moved handoff
 - test:pass — pytest tests -q — S3: 172/172; 43 new tests; mutation RED demo 8/8 caught (after adding the pinned dir->kind test)

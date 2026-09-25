@@ -5,11 +5,13 @@ title: "Kit rollout state: done, remaining, embed recipe (P0-P5)"
 branch: main
 commit: 9e4fca4
 corpus_snapshot: wiki-corpus-empty
-status: active
+status: superseded
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-25
 schema_version: 1.0.0
 ---
+
+> Superseded for the kit by `HANDOFF--2026-09-25--k1-kernel-port.md`.
 
 # HANDOFF — 2026-09-20 — living-wiki-kit rollout state
 
