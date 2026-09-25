@@ -1,0 +1,15 @@
+{
+  "governed_original_extensions": [
+    ".docx",
+    ".epub",
+    ".html",
+    ".md",
+    ".pdf",
+    ".png",
+    ".pptx",
+    ".txt",
+    ".xlsx"
+  ],
+  "originals_dir": "_originals",
+  "source_records_dir": "02-sources/records"
+}

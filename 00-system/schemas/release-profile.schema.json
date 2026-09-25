@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "release-profile.schema.json",
+  "type": "object",
+  "required": ["release", "required_checks", "retrieval_benchmark_thresholds", "required_manual_receipts"],
+  "properties": {
+    "type": {"enum": ["release-profile", null]},
+    "release": {"type": "string", "minLength": 1},
+    "system_mechanism_version": {"type": ["string", "null"]},
+    "content_release": {"type": ["string", "null"]},
+    "capture_version": {"type": ["string", "null"]},
+    "schema_version": {"type": ["string", "null"]},
+    "required_source_snapshot": {"type": ["string", "null"]},
+    "required_evidence_snapshot": {"type": ["string", "null"]},
+    "required_checks": {"type": "array", "items": {"type": "string"}},
+    "retrieval_benchmark_thresholds": {"type": "object"},
+    "required_manual_receipts": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

@@ -5,6 +5,14 @@
       "args": [
         "mcp"
       ]
+    },
+    "mozare-governance": {
+      "command": "python",
+      "args": [
+        "scripts/wiki_mcp_server.py",
+        "--profile",
+        "read"
+      ]
     }
   }
 }

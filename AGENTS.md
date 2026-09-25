@@ -25,6 +25,10 @@ those remain canonical.
 
 - **Read** any file in the repository.
 - **Search** via qmd (`qmd search`, deterministic BM25) for orientation.
+- **Context**: MCP tool `wiki_context_pack` (seed record id) returns a
+  read-only neighbourhood pack (<= 30 records, <= 16k tokens, a reason per
+  record). Needs `_search/graph.db` from `python scripts/build_graph_index.py`.
+  A navigation aid, never evidence.
 - **Propose**: append a JSONL record to `_proposals/proposals.jsonl`
   (`{id, received, kind, authority_tier: "candidate", status: "new", body}`),
   or use MCP tool `wiki_propose` (server: `scripts/wiki_mcp_server.py`).

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adjudication.schema.json",
+  "type": "object",
+  "required": ["id", "type", "proposal_id", "decision", "by", "date", "decision_note", "applied_to"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^adj-[A-Za-z0-9._:-]+$"},
+    "type": {"const": "adjudication"},
+    "proposal_id": {"type": "string", "pattern": "^prop-[A-Za-z0-9._:-]+$"},
+    "decision": {"enum": ["accepted", "rejected", "deferred"]},
+    "by": {"type": "string", "minLength": 1},
+    "date": {"type": "string", "minLength": 1},
+    "decision_note": {"type": "string"},
+    "applied_to": {"type": "array"},
+    "evidence_scope": {}
+  },
+  "additionalProperties": true
+}

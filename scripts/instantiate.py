@@ -23,7 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET_GLOBS = [
     "scripts/*.py",
     "scripts/capture/*.py",
+    "scripts/gov_kernel/*.py",
+    "scripts/retrieval/*.py",
+    "scripts/tests/*.py",
     "scripts/*.ps1",
+    "00-system/configuration/*.json",
+    ".claude/agents/*.md",
     "00-system/schemas/*.json",
     "00-system/templates/*.md",
     "00-system/policies/*.md",
@@ -41,7 +46,7 @@ TARGET_GLOBS = [
     ".mcp.json",
 ]
 
-MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-)")
+MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-)")
 MOZARE_WORDS = [
     ("mozare-wiki", "this-wiki"),
     ("Mozare Wiki", "This Wiki"),
@@ -148,6 +153,18 @@ def main() -> int:
     }
     out = ROOT / "00-system/registers/INSTANCE.json"
     out.write_text(json.dumps(instance, indent=2) + "\n", encoding="utf-8")
+
+    # Governance kernel: regenerate SYSTEM_STATE.json (and the stable-bytes
+    # corpus/evidence registers) so the renamed corpus id and the prefixed
+    # evidence snapshot id are the state the instance starts from.
+    import subprocess
+    rebuilt = subprocess.run(
+        [sys.executable, "scripts/wiki_state.py", "--repo", ".", "rebuild"],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if rebuilt.returncode != 0:
+        print("ERROR: wiki_state.py rebuild failed after instantiation:\n"
+              + rebuilt.stdout + rebuilt.stderr, file=sys.stderr)
+        return 1
 
     print(f"Instance: {args.name} (prefix '{prefix}')")
     print(f"Rewrote {len(changed)} files:")

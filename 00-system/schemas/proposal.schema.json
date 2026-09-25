@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "proposal.schema.json",
+  "type": "object",
+  "required": ["id", "type", "received", "kind", "authority_tier", "submitted_by", "body", "body_sha256", "evidence_refs", "target_refs"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^prop-[A-Za-z0-9._:-]+$"},
+    "type": {"const": "proposal"},
+    "received": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "minLength": 1},
+    "authority_tier": {"const": "candidate"},
+    "submitted_by": {"type": "object", "required": ["actor_type", "tool"], "properties": {"actor_type": {"enum": ["agent", "human"]}, "tool": {"type": "string", "minLength": 1}, "session_ref": {"type": ["string", "null"]}}, "additionalProperties": true},
+    "body": {"type": "string"},
+    "body_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "evidence_refs": {"type": "array"},
+    "target_refs": {"type": "array"}
+  },
+  "additionalProperties": true
+}
