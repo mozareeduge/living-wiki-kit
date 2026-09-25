@@ -38,6 +38,7 @@ Do not start W1 before the owner has recorded H0.
 | Kit tests | `pytest tests scripts/tests` → 213 passed, 2 xfailed | run it |
 | Gates | `validate_repo.py --full` PASS; `wiki_validate.py --format json`, `wiki_state.py --repo . check`, `wiki_evidence.py --repo . check` all exit 0 | run them |
 | Instance repo | `mozareeduge/mozare-wiki` (**private**), `main` = `630a998`, CI green | owner access needed |
+| Kit CI | **Not running.** Since 2026-09-25 GitHub refuses to start jobs: "recent account payments have failed or your spending limit needs to be increased" (owner's GitHub billing, not code). The two runs before that (K1a) failed on a real defect — CI did not install `jsonschema` — fixed in the commit after this hand-off was written; a clean venv with CI's install line runs `pytest tests scripts/tests` 213 passed, 2 xfailed | `gh run list --branch system/2026-09-20--next-version-plan` |
 
 Commits on the branch since `main` (oldest first): S1, S2, S3 (docs, CI, tests),
 W2 (`wiki_context_pack`), `c0dc845` (three bug fixes ported from mozare-wiki),
@@ -72,14 +73,16 @@ state, kernel MCP server with QMD collection names read from
 2. `test_mcp_hook.py` uses the tool name `wiki_get_capture_media` and sets
    `mcp.ROOT` / `wc.CAPTURES_ROOT` to a temp dir; confirm it passes against the
    kit's `scripts/wiki_mcp_server.py` and `scripts/capture/wiki_capture.py`.
-3. `.github/workflows/validate.yml`: keep `check_against_baseline.py`; add
-   `pip install -r requirements-governance.txt`, then
+3. `.github/workflows/validate.yml`: already installs `requirements-governance.txt`
+   and runs `pytest tests scripts/tests`; add
    `python scripts/wiki_validate.py --repo . --format json`,
    `python scripts/wiki_state.py --repo . check`,
    `python scripts/wiki_evidence.py --repo . check`, and
    `python -m pytest tests scripts/tests scripts/capture/tests -q`.
 4. Acceptance: `git status --porcelain` empty after the test run (tests must
-   not write into the repo); CI green on the exact pushed head.
+   not write into the repo); CI green on the exact pushed head — once the
+   owner has cleared the GitHub billing block. Until then, reproduce CI
+   locally in a fresh venv with the workflow's exact install line.
 5. No SYSTEM_DESIGN §6 row is needed for test files: the §6 coverage test
    checks top-level `scripts/*.py` only.
 
