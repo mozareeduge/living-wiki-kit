@@ -69,9 +69,12 @@ when the tip appears; check `qmd status` before benchmark claims.
 
 Register `scripts/wiki_mcp_server.py` in your harness's local config
 (`.mcp.json` for Claude Code; per-machine paths — never commit interpreter
-paths). The server exposes read, search (`wiki_search`, `wiki_exact`), the read-only
-`wiki_context_pack`, and propose; writes exist only into `_proposals/` and the
-governed capture store.
+paths). The server exposes read, search (`wiki_search`, `wiki_resolve_id` —
+`wiki_exact` remains as an unadvertised alias), the read-only
+`wiki_context_pack`, and propose (`wiki_propose`, `wiki_propose_from_capture`
+in the `capture` profile only); writes exist only into `_proposals/records/`
+and the governed capture store. `wiki_read` remains as an alias of
+`wiki_read_text`.
 
 ## 7. Backups
 

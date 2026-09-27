@@ -80,7 +80,8 @@ are both required before reporting a release-state change.
 
 - Pre-commit hook + CI run the same baseline gate (`check_against_baseline.py`).
 - QMD scores organize attention, never evidence.
-- All AI output stays candidate-tier; promotion runs through
-  `_proposals/proposals.jsonl` + human adjudication.
+- All AI output stays candidate-tier; promotion runs through durable proposal
+  records (`_proposals/records/`) + separate adjudication records
+  (`_proposals/adjudications/`) + human adjudication.
 - Backups: local clone + private remote + dated external ZIP
   (`scripts/create-backup.ps1`).

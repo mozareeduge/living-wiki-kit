@@ -27,8 +27,11 @@ to every wiki instantiated from this kit.
    caches, local indexes, backups, or machine-specific paths.
 10. Before claiming success, show exact commands and decisive results. At
     minimum run:
-    - `python scripts/validate_repo.py --full`
-    - `python scripts/validate_content_release.py` (once populated)
+    - `python scripts/wiki_validate.py --format json`
+    - `python scripts/wiki_state.py --repo . check`
+    These are the governance gates. Raw validators (`validate_repo.py`,
+    `validate_content_release.py`) are diagnostic and remain subject to the
+    repository's reviewed known-baseline debt policy.
 11. End consequential work with a handoff containing changed files,
     decisions, validation output, unresolved findings, negative constraints,
     and the next exact operation.

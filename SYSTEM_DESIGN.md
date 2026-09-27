@@ -116,13 +116,15 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 ## 5. Governance invariants (unchanged from the source system)
 
 - `_originals/` is immutable. No exception, no tool privilege.
-- Model output is always candidate-tier. Proposals land in
-  `_proposals/proposals.jsonl` and stay inert until a human moves them.
+- Model output is always candidate-tier. Proposals land as durable records in
+  `_proposals/records/` (adjudications in `_proposals/adjudications/`) and
+  stay inert until a human moves them.
 - Search scores organize attention; they are never evidence.
 - Work on branches (`intake/`, `wiki/`, `system/`, `audit/`, `output/`,
   `migration/`); no force-push; no `--no-verify`; no credentials.
-- Before claiming success: `python scripts/validate_repo.py --full` (+ the
-  content validator once populated) and show the decisive output.
+- Before claiming success: `python scripts/wiki_validate.py --format json` +
+  `python scripts/wiki_state.py --repo . check` (the governance gates) and
+  show the decisive output.
 - End consequential work with a handoff in `07-genesis/handoffs/`.
 - `main` is the last accepted state. Static pass ≠ local operational pass.
 
