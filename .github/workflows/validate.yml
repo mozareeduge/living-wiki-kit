@@ -20,5 +20,10 @@ jobs:
       - run: python -m pip install -r requirements.txt -r requirements-governance.txt pytest
       - name: Validate against the accepted baseline
         run: python scripts/check_against_baseline.py
-      - name: Test suite (validators, gates, context compiler, candidate layer, reconciliation)
-        run: python -m pytest tests scripts/tests -q
+      - name: Kernel gates (validate, state, evidence)
+        run: |
+          python scripts/wiki_validate.py --repo . --format json
+          python scripts/wiki_state.py --repo . check
+          python scripts/wiki_evidence.py --repo . check
+      - name: Test suite (validators, gates, context compiler, candidate layer, reconciliation, capture)
+        run: python -m pytest tests scripts/tests scripts/capture/tests -q

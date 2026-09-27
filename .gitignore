@@ -6,8 +6,6 @@ _proposals/generated/
 .pytest_cache/
 scripts/__pycache__/
 scripts/capture/__pycache__/
-scripts/capture/tests/
-scripts/capture/fixtures/
 *.pyc
 
 # Proposals log is a runtime queue (durable state lives in adjudicated records)
