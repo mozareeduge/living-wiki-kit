@@ -52,11 +52,23 @@ list): `capture-promotion`.
 - Noted for W1: `tier-change`'s `to_tier_enum` in `proposal_schema.json`
   lists `held`, but the holdings vocabulary is `registered` /
   `pending-registration` / `reference-shelf`. W1 aligns the enum.
-- Object kinds already exist: `00-system/schemas/object-record.schema.json`
-  fixes 8 (`work`, `project`, `person`, `institution`, `concept`, `method`,
-  `collection`, `reference`). W1's `object-create` / `object-update` required
-  fields must carry `kind` from that enum, so every object made after audit
-  and reconciliation arrives pre-typed.
+- Object kinds are NOT decided here. `00-system/schemas/object-record.schema.json`
+  carries an 8-value `kind` enum (`work`, `project`, `person`, `institution`,
+  `concept`, `method`, `collection`, `reference`), but the owner is researching
+  an open design (default list + a method for new kinds, per personas and
+  contexts) and will return with it. W1 must NOT close the object vocabulary:
+  no new enum enforcement, no template changes, no "must carry kind" rule
+  until the owner's object-kinds decision lands. Proposals keep their fixed
+  kinds (auditability requires it); objects stay open.
+- Owner-stated governance constraint, carried forward (not implemented here):
+  owner adjudication must not gate the pipeline or suppress retrieval. The
+  full ingestion run (audit → reconciliation → creation of AI-proposed
+  objects) must be able to complete without per-step owner approval, and
+  non-adjudicated objects must stand visible alongside adjudicated ones in
+  retrieval and in later intakes — never ignored or ranked down for lacking
+  adjudication — unless the user explicitly asks for adjudicated-only (or it
+  is otherwise obvious). Adjudication promotes authority; it does not grant
+  visibility.
 
 ## Next
 
