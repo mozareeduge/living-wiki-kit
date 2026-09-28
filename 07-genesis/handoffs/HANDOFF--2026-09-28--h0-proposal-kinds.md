@@ -52,6 +52,11 @@ list): `capture-promotion`.
 - Noted for W1: `tier-change`'s `to_tier_enum` in `proposal_schema.json`
   lists `held`, but the holdings vocabulary is `registered` /
   `pending-registration` / `reference-shelf`. W1 aligns the enum.
+- Object kinds already exist: `00-system/schemas/object-record.schema.json`
+  fixes 8 (`work`, `project`, `person`, `institution`, `concept`, `method`,
+  `collection`, `reference`). W1's `object-create` / `object-update` required
+  fields must carry `kind` from that enum, so every object made after audit
+  and reconciliation arrives pre-typed.
 
 ## Next
 
