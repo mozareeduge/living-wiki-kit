@@ -51,16 +51,26 @@ def normalize_label(raw: str) -> str:
 
 
 def parse_labels(text: str) -> list[str]:
-    """Raw `labels:` list items from a record's frontmatter block."""
+    """Raw `labels:` items from a record's frontmatter block.
+
+    Accepts block style (`labels:` + `- item` lines) and flow style
+    (`labels: [a, b]`). Returns items verbatim; normalization is a
+    separate indexing-only step.
+    """
     m = FM_BLOCK.match(text)
     if not m:
         return []
     out: list[str] = []
     in_labels = False
     for line in m.group(1).splitlines():
-        if re.match(r"^labels:\s*(#.*)?$", line):
+        head = re.match(r"^labels:\s*(#.*)?$", line)
+        if head:
             in_labels = True
             continue
+        flow = re.match(r"^labels:\s*\[(.*)\]\s*(#.*)?$", line)
+        if flow:
+            return [i.strip().strip("\"'") for i in flow.group(1).split(",")
+                    if i.strip().strip("\"'")]
         if in_labels:
             item = re.match(r"^\s*-\s+(.*)$", line)
             if item:
@@ -91,10 +101,12 @@ def build(root: Path) -> tuple[int, int]:
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE labels (
             node_id TEXT NOT NULL, label_raw TEXT NOT NULL,
-            label_norm TEXT NOT NULL,
+            label_norm TEXT NOT NULL, label_source TEXT NOT NULL DEFAULT 'frontmatter',
             PRIMARY KEY (node_id, label_norm));
         -- Labels are discovery metadata, never evidence: they live in this
         -- dedicated table and MUST NOT appear as rows in edges.
+        -- label_source is 'frontmatter' or 'legacy-kind' (compatibility: a
+        -- retired kind value surfaced for search, visibly marked).
         CREATE INDEX labels_norm ON labels(label_norm);
         """
     )
@@ -179,8 +191,14 @@ def build(root: Path) -> tuple[int, int]:
             if not norm:
                 continue
             cur = con.execute(
-                "INSERT OR IGNORE INTO labels VALUES (?,?,?)",
-                (rid, raw, norm))
+                "INSERT OR IGNORE INTO labels VALUES (?,?,?,?)",
+                (rid, raw, norm, "frontmatter"))
+            label_rows += cur.rowcount
+        legacy_kind = str(fm.get("kind", "")).strip()
+        if legacy_kind:
+            cur = con.execute(
+                "INSERT OR IGNORE INTO labels VALUES (?,?,?,?)",
+                (rid, legacy_kind, normalize_label(legacy_kind), "legacy-kind"))
             label_rows += cur.rowcount
 
         def add_edge(field: str, target: str, tkind: str) -> None:

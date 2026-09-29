@@ -119,10 +119,10 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
         qtokens.discard("")
         try:
             label_rows = con.execute(
-                "SELECT node_id, label_raw, label_norm FROM labels").fetchall()
+                "SELECT node_id, label_raw, label_norm, label_source FROM labels").fetchall()
         except Exception:  # index built before labels existed; rebuild it
             label_rows = []
-        for nid, raw, norm in sorted(label_rows, key=lambda r: (r[0], r[2])):
+        for nid, raw, norm, source in sorted(label_rows, key=lambda r: (r[0], r[2])):
             if nid in used or len(entries) >= max_records:
                 continue
             if norm in qtokens:
@@ -130,9 +130,12 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                 row = con.execute("SELECT path, title FROM nodes WHERE id=?", (nid,)).fetchone()
                 if not row:
                     continue
+                reason = f"label: `{raw}` matched query context"
+                if source == "legacy-kind":
+                    reason += " (legacy kind compatibility)"
                 entries.append({"id": nid, "path": row[0], "title": row[1],
-                                "reason": f"label: `{raw}` matched query context",
-                                "depth": None})
+                                "reason": reason, "depth": None,
+                                "label_source": source})
                 if len(entries) >= max_records:
                     break
 
