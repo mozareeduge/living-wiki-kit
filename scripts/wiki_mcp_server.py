@@ -375,15 +375,19 @@ def tool_wiki_context_pack(args: dict[str, Any]) -> str:
     records = _clamped_int(args.get("records"), 1, CONTEXT_PACK_MAX_RECORDS, CONTEXT_PACK_MAX_RECORDS)
     budget = _clamped_int(args.get("budget"), 1, CONTEXT_PACK_MAX_BUDGET, CONTEXT_PACK_MAX_BUDGET)
     query = str(args.get("query") or "").strip() or None
+    lens = str(args.get("lens") or "").strip() or None
+    accepted_only = bool(args.get("accepted_only"))
     if not (ROOT / "_search" / "graph.db").exists():
         return json.dumps({"error": "no graph index; run `python scripts/build_graph_index.py` first"})
     import context_pack as _context_pack
     try:
-        pack = _context_pack.build_pack(ROOT, seed, hops, query, records, budget)
-    except SystemExit:
-        # build_pack signals an unknown seed with SystemExit; that must never
+        pack = _context_pack.build_pack(ROOT, seed, hops, query, records, budget,
+                                        lens=lens, accepted_only=accepted_only)
+    except SystemExit as exc:
+        # build_pack signals unknown seed/lens with SystemExit; that must never
         # take the whole MCP server down
-        return json.dumps({"error": f"seed id {seed!r} not in graph index"})
+        msg = str(exc) or f"seed id {seed!r} not in graph index"
+        return json.dumps({"error": msg})
     return json.dumps(pack, ensure_ascii=False)
 
 
@@ -432,9 +436,11 @@ READ_TOOLS = [
          "seed": {"type": "string", "description": "record id, e.g. mw-src-1111111111"},
          "hops": {"type": "integer", "minimum": 0, "maximum": 2, "description": "graph expansion depth (default 1)"},
          "query": {"type": "string", "description": "optional lexical query to add hits"},
-         "records": {"type": "integer", "minimum": 1, "maximum": 30},
-         "budget": {"type": "integer", "minimum": 1, "maximum": 16000, "description": "estimated-token budget"}},
-         "required": ["seed"]}},
+          "records": {"type": "integer", "minimum": 1, "maximum": 30},
+          "budget": {"type": "integer", "minimum": 1, "maximum": 16000, "description": "estimated-token budget"},
+          "lens": {"type": "string", "description": "optional lens id: foregrounds labels/relations, never filters silently"},
+          "accepted_only": {"type": "boolean", "description": "explicit accepted-only view: drops candidate-authority entries"}},
+          "required": ["seed"]}},
 ]
 CAPTURE_TOOLS = [
     {"name": "wiki_capture_text", "description": "Create a noncanonical text capture.", "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}, "channel": {"type": "string"}, "language_hint": {"type": "string"}}, "required": ["text"]}},

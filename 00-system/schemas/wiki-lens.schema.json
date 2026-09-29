@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wiki-lens.schema.json",
+  "title": "Living Wiki Kit lens (foregrounding only)",
+  "description": "A lens configures retrieval/presentation for a persona or task over one shared corpus. It foregrounds; it never filters truth silently and never changes authority. candidate_visibility include = candidates visible and marked (default); exclude = explicit accepted-only view.",
+  "type": "object",
+  "required": ["id", "type", "title", "version", "status"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,60}$"},
+    "type": {"const": "wiki-lens"},
+    "title": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["example", "active", "retired"]},
+    "candidate_visibility": {"enum": ["include", "exclude"], "default": "include"},
+    "authority_mode": {"enum": ["annotate", "accepted-only"], "default": "annotate"},
+    "foreground_labels": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "foreground_relations": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "foreground_sections": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "output_preferences": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []}
+  },
+  "additionalProperties": false
+}

@@ -27,6 +27,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_graph_index as bgi  # noqa: E402
+import wiki_profiles as wp  # noqa: E402  (frontmatter parser only; lenses are advisory)
+from gov_kernel.schemas import validate_record  # noqa: E402
 
 MAX_RECORDS_DEFAULT = 30
 TOKEN_BUDGET_DEFAULT = 16000
@@ -80,7 +82,8 @@ def _neighborhood(con, seed: str, hops: int) -> list[tuple[str, str, str]]:
 def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                max_records: int = MAX_RECORDS_DEFAULT,
                budget_tokens: int = TOKEN_BUDGET_DEFAULT,
-               search_fn=None) -> dict:
+               search_fn=None, lens: str | dict | None = None,
+               accepted_only: bool = False) -> dict:
     db = root / "_search" / "graph.db"
     if not db.exists():
         raise SystemExit(f"no graph index at {db}; run build_graph_index.py first")
@@ -166,12 +169,35 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
         e["tokens_est"] = est
         spent += est
 
+    lens_id: str | None = None
+    lens_record: dict | None = None
+    if lens is not None or accepted_only:
+        if isinstance(lens, dict):
+            lens_record = lens
+            lens_id = str(lens.get("id", "inline"))
+        elif isinstance(lens, str) and lens:
+            try:
+                lens_record = resolve_lens(root, lens)
+            except ValueError as exc:
+                raise SystemExit(str(exc))
+            lens_id = lens
+        else:
+            lens_record = {"candidate_visibility": "include",
+                           "authority_mode": "annotate",
+                           "foreground_labels": []}
+        if accepted_only:
+            lens_record = dict(lens_record)
+            lens_record["candidate_visibility"] = "exclude"
+            lens_record["authority_mode"] = "accepted-only"
+        entries = apply_lens(entries, lens_record, lens_id or "accepted-only")
+
     return {
         "meta": {
             "generated_by": "context_pack.py",
             "seed": seed, "hops": hops, "query": query,
             "records": len(entries), "tokens_est": spent,
             "budget_tokens": budget_tokens, "max_records": max_records,
+            "lens": lens_id, "accepted_only": bool(accepted_only),
             "authority_note": ("Pack is a navigation/production mechanism; "
                                "scores and inclusion reasons are never evidence; "
                                "model output from it stays candidate-tier."),
@@ -186,6 +212,56 @@ def sqlite3_connect(db: Path):
     return sqlite3.connect(db)
 
 
+LENSES_DIRNAME = Path("00-system/configuration/lenses")
+
+
+def resolve_lens(root: Path, lens_id: str) -> dict:
+    """Load + schema-validate a lens doc. Raises ValueError naming the problem."""
+    doc = root / LENSES_DIRNAME / f"{lens_id}.md"
+    if not doc.is_file():
+        return _raise_unknown_lens(root, lens_id)
+    record = wp.parse_profile(doc.read_text(encoding="utf-8"))
+    findings = validate_record(record, root / "00-system/schemas",
+                               explicit_schema="wiki-lens.schema.json")
+    if findings:
+        raise ValueError(f"lens {lens_id!r} invalid: " +
+                         "; ".join(f.message for f in findings))
+    if record.get("status") == "retired":
+        raise ValueError(f"lens {lens_id!r} is retired")
+    return record
+
+
+def _raise_unknown_lens(root: Path, lens_id: str):
+    known = sorted(p.stem for p in (root / LENSES_DIRNAME).glob("*.md")) \
+        if (root / LENSES_DIRNAME).is_dir() else []
+    raise ValueError(f"unknown lens {lens_id!r}"
+                     + (f" (known: {', '.join(known)})" if known else ""))
+
+
+def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
+    """Foreground per a lens; never alters authority, never silently drops.
+
+    Entries carrying authority == "candidate" are dropped ONLY when the lens
+    explicitly says candidate_visibility == "exclude" (the accepted-only
+    view, always explicit). Everything else passes through annotated.
+    """
+    exclude = lens.get("candidate_visibility") == "exclude"
+    fg = {bgi.normalize_label(str(x)) for x in (lens.get("foreground_labels") or [])}
+    fg.discard("")
+    out: list[dict] = []
+    for e in entries:
+        if exclude and e.get("authority") == "candidate":
+            continue
+        e = dict(e)
+        reason = str(e.get("reason", ""))
+        m = re.search(r"label:\s*`([^`]+)`", reason)
+        if fg and m and bgi.normalize_label(m.group(1)) in fg:
+            e["reason"] = reason + f" (foregrounded by lens {lens_id})"
+            e["foregrounded"] = True
+        out.append(e)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", default=None)
@@ -194,10 +270,15 @@ def main() -> int:
     ap.add_argument("--query", default=None)
     ap.add_argument("--records", type=int, default=MAX_RECORDS_DEFAULT)
     ap.add_argument("--budget", type=int, default=TOKEN_BUDGET_DEFAULT)
+    ap.add_argument("--lens", default=None,
+                    help="lens id from 00-system/configuration/lenses/ (foregrounding only)")
+    ap.add_argument("--accepted-only", action="store_true",
+                    help="explicit accepted-only view: drop candidate-authority entries")
     args = ap.parse_args()
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[1]
     pack = build_pack(root, args.seed, args.hops, args.query,
-                      args.records, args.budget)
+                      args.records, args.budget, lens=args.lens,
+                      accepted_only=args.accepted_only)
     out_dir = root / "_search" / "packs"
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"pack-{args.seed}-{int(time.time())}.json"
