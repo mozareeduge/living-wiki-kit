@@ -20,6 +20,7 @@ import argparse
 import re
 import sqlite3
 import sys
+import unicodedata
 from pathlib import Path
 
 CANONICAL_ZONES = ("02-sources", "03-objects", "04-notes", "05-claims", "06-relations")
@@ -37,6 +38,36 @@ def parse_frontmatter(text: str) -> dict:
     if not m:
         return {}
     return dict(FM_FIELD.findall(m.group(1)))
+
+
+def normalize_label(raw: str) -> str:
+    """Indexing-only key: NFKC, trim, collapse whitespace, case-fold.
+
+    The written label is never rewritten; this key exists so retrieval can
+    meet user vocabulary halfway. No synonym merging happens here.
+    """
+    s = unicodedata.normalize("NFKC", raw).strip()
+    return re.sub(r"\s+", " ", s).casefold()
+
+
+def parse_labels(text: str) -> list[str]:
+    """Raw `labels:` list items from a record's frontmatter block."""
+    m = FM_BLOCK.match(text)
+    if not m:
+        return []
+    out: list[str] = []
+    in_labels = False
+    for line in m.group(1).splitlines():
+        if re.match(r"^labels:\s*(#.*)?$", line):
+            in_labels = True
+            continue
+        if in_labels:
+            item = re.match(r"^\s*-\s+(.*)$", line)
+            if item:
+                out.append(item.group(1))
+            else:
+                break
+    return out
 
 
 def build(root: Path) -> tuple[int, int]:
@@ -58,6 +89,13 @@ def build(root: Path) -> tuple[int, int]:
         CREATE INDEX edges_src ON edges(src_id);
         CREATE INDEX edges_res ON edges(resolved_id);
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE labels (
+            node_id TEXT NOT NULL, label_raw TEXT NOT NULL,
+            label_norm TEXT NOT NULL,
+            PRIMARY KEY (node_id, label_norm));
+        -- Labels are discovery metadata, never evidence: they live in this
+        -- dedicated table and MUST NOT appear as rows in edges.
+        CREATE INDEX labels_norm ON labels(label_norm);
         """
     )
     id_to_path: dict[str, Path] = {}
@@ -122,6 +160,7 @@ def build(root: Path) -> tuple[int, int]:
         stem_aliases.pop(k, None)
 
     nodes = edges = 0
+    label_rows = 0
     for rid, md, zone, fm, body in records:
         rel = md.relative_to(root).as_posix()
         con.execute(
@@ -131,6 +170,18 @@ def build(root: Path) -> tuple[int, int]:
              str(fm.get("status", fm.get("relation_status", "")))),
         )
         nodes += 1
+        try:
+            raw_text = md.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            raw_text = ""
+        for raw in parse_labels(raw_text):
+            norm = normalize_label(raw)
+            if not norm:
+                continue
+            cur = con.execute(
+                "INSERT OR IGNORE INTO labels VALUES (?,?,?)",
+                (rid, raw, norm))
+            label_rows += cur.rowcount
 
         def add_edge(field: str, target: str, tkind: str) -> None:
             nonlocal edges
@@ -166,6 +217,7 @@ def build(root: Path) -> tuple[int, int]:
         "INSERT INTO meta VALUES (?,?)",
         [("built_at_source", "build_graph_index.py"),
          ("nodes", str(nodes)), ("edges", str(edges)),
+         ("label_rows", str(label_rows)),
          ("zones", ",".join(CANONICAL_ZONES))],
     )
     con.commit()

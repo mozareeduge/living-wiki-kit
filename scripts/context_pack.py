@@ -108,6 +108,30 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                             "reason": reason, "depth": int(depth)})
 
     if query and len(entries) < max_records:
+        # Label match first: local, deterministic, inspectable. A label is a
+        # retrieval aid, never evidence — the reason says MATCHED, never IS.
+        qtokens = {bgi.normalize_label(t) for t in query.split()} | {bgi.normalize_label(query)}
+        qtokens.discard("")
+        try:
+            label_rows = con.execute(
+                "SELECT node_id, label_raw, label_norm FROM labels").fetchall()
+        except Exception:  # index built before labels existed; rebuild it
+            label_rows = []
+        for nid, raw, norm in sorted(label_rows, key=lambda r: (r[0], r[2])):
+            if nid in used or len(entries) >= max_records:
+                continue
+            if norm in qtokens:
+                used.add(nid)
+                row = con.execute("SELECT path, title FROM nodes WHERE id=?", (nid,)).fetchone()
+                if not row:
+                    continue
+                entries.append({"id": nid, "path": row[0], "title": row[1],
+                                "reason": f"label: `{raw}` matched query context",
+                                "depth": None})
+                if len(entries) >= max_records:
+                    break
+
+    if query and len(entries) < max_records:
         fn = search_fn or (lambda q, n: default_search(q, n, root))
         want = min(12, max_records - len(entries))
         for hit in fn(query, want):
