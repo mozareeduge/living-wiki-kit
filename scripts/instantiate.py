@@ -150,6 +150,7 @@ def main() -> int:
         "created_from": "living-wiki-kit 1.2.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
+        "active_profiles": [],
     }
     out = ROOT / "00-system/registers/INSTANCE.json"
     out.write_text(json.dumps(instance, indent=2) + "\n", encoding="utf-8")
