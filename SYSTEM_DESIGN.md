@@ -156,7 +156,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `candidate_projection.py` | candidate object projection: eligible `object-create` proposals project into disposable `_search/candidate_projections.json` (visible + marked candidate in packs/search); never writes canonical zones; adjudication decides projection fate | operational |
 | `report_labels.py` | read-only label audit over the graph index + projections (distinct counts, variants, namespaces, legacy-kind-derived, unlabeled, candidate usage); attention tool, never repairs | operational |
 | `migrate_object_kinds.py` | legacy-`kind` migration toward labels + `legacy_kind`: dry-run default, `--apply` only on a clean tree, never automatic on populated instances | operational |
-| `reconcile_runner.py` | incremental-reconciliation core: full vs incremental plan (escalates on loss or > 30% drift), exact-once verify, human gate above 3 conflicts; not yet called by the reconcile skills | available (unexercised) |
+| `reconcile_runner.py` | incremental-reconciliation core: `plan --mode full|incremental --class RC-0…RC-4`, class-carrying `run-receipt.json`, exact-once verify, escalation to full on loss/>30% drift and to human above 3 conflicts; called by the reconcile/intake skills | operational |
 | `evidence_audit.py` | candidate-layer audit against `proposal_schema.json`: a proposal whose `source_passage` cannot be verified is reported `rejected-audit`; never edits the queue | operational |
 | `schema_drift_fixer.py` | derives path-derivable frontmatter fixes (filename, type/kind) as a `PATCH_MANIFEST`; leaves semantic fields for human adjudication | operational |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine | operational |

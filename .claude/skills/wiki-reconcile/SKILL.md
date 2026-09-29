@@ -12,6 +12,31 @@ missing, malformed, or lacks a non-empty `id` and `source_material_count`.
 (Never hardcode an instance baseline in this skill. Behavior verified
 2026-09-16.)
 
+## Step 0 — declare the run class and mode
+
+Every run first declares one class:
+
+- **RC-0** mechanism (tooling/shakedown, no corpus judgment);
+- **RC-1** candidate intake (gates only, no batch reading);
+- **RC-2** correction on accepted evidence (graph-impact scan, no full reread);
+- **RC-3** new accepted evidence (batched corpus-reader runs);
+- **RC-4** ontology change (batched runs + exact-once verify).
+
+Then plan with the matching mode (full mode is unchanged behavior):
+
+```bash
+python scripts/reconcile_runner.py plan --mode incremental --class RC-1
+python scripts/reconcile_runner.py plan --mode full --class RC-3
+```
+
+The plan freezes `expected.jsonl` + 8–12-item batches and writes
+`run-receipt.json` carrying the class. Each completed run updates that
+receipt with its verdict — a run without a classed receipt is not a run.
+Incremental escalates to full automatically on any removed row, a decreased
+corpus count (loss), or >30% rows changed; >3 verify conflicts escalate to a
+human. Resume an interrupted run from its `_audits/<run-id>/` scaffold
+across sessions; never re-freeze mid-run.
+
 ## Completion criterion
 
 The run is complete only when every manifest row appears in exactly one batch receipt or named exception. Semantic search, prior summaries, and the materials index do not count as rereading.
