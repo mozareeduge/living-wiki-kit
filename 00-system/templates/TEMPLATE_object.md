@@ -3,6 +3,7 @@ id:
 type: object
 title:
 aliases: []
+labels: []
 status: active-record
 visibility: private
 created:
