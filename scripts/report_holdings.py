@@ -139,17 +139,39 @@ def _load_records(root: Path) -> tuple[dict[str, dict], list[str]]:
 
 def _load_proposals(root: Path) -> tuple[list[dict], int]:
     path = root / PROPOSALS_REL
-    if not path.exists():
-        return [], 0
     proposals: list[dict] = []
     malformed = 0
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            proposals.append(json.loads(line))
-        except json.JSONDecodeError:
-            malformed += 1
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                proposals.append(json.loads(line))
+            except json.JSONDecodeError:
+                malformed += 1
+    # Durable kernel queue: live proposals; terminal adjudications resolve status.
+    rec_dir = root / "_proposals" / "records"
+    if rec_dir.exists():
+        for p in sorted(rec_dir.rglob("*.json")):
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+                d.setdefault("status", "new (durable)")
+                proposals.append(d)
+            except json.JSONDecodeError:
+                malformed += 1
+    adj_dir = root / "_proposals" / "adjudications"
+    if adj_dir.exists():
+        decided: dict[str, str] = {}
+        for p in sorted(adj_dir.rglob("*.json")):
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if d.get("decision") in ("accepted", "rejected") and d.get("proposal_id"):
+                decided[str(d["proposal_id"])] = str(d["decision"])
+        for prop in proposals:
+            if str(prop.get("id")) in decided:
+                prop["status"] = f"adjudicated: {decided[str(prop['id'])]}"
     return proposals, malformed
 
 
@@ -251,7 +273,7 @@ def _section3_proposals(root: Path) -> dict:
     return {
         "total": len(proposals),
         "by_status": dict(sorted(by_status.items())),
-        "new": by_status.get("new", 0),
+        "new": sum(c for s, c in by_status.items() if s == "new" or s.startswith("new ")),
         "malformed_lines": malformed,
     }
 
@@ -428,7 +450,7 @@ def render_report(report: dict) -> str:
         lines.append(f"   - {path}")
 
     lines.append("")
-    lines.append("3. Proposals by status (_proposals/proposals.jsonl)")
+    lines.append("3. Proposals by status (_proposals/records/ + adjudications/; legacy proposals.jsonl read-only)")
     pr = report["proposals_by_status"]
     lines.append(f"   total: {pr['total']}")
     for status, count in pr["by_status"].items():

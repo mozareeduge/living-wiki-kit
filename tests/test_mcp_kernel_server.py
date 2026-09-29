@@ -67,14 +67,31 @@ def test_kit_config_names_are_generic():
 
 def test_capture_profile_proposal_is_a_durable_candidate_record(tmp_path: Path, monkeypatch):
     shutil.copytree(ROOT / "00-system" / "schemas", tmp_path / "00-system" / "schemas")
+    rec = tmp_path / "02-sources" / "records" / "mw-src-1--n.md"
+    rec.parent.mkdir(parents=True, exist_ok=True)
+    rec.write_text("The grave machine organizes absence into citation.\n", encoding="utf-8")
     monkeypatch.setattr(srv, "ROOT", tmp_path)
     monkeypatch.setattr(srv, "ACTIVE_PROFILE", "capture")
+    body = json.dumps({"target_id": "mw-x", "proposed_type": "supports", "why": "parallel",
+                       "source_passage": {"path": "02-sources/records/mw-src-1--n.md",
+                                          "quote": "The grave machine organizes absence into citation."}})
     resp = _rpc("tools/call", {"name": "wiki_propose",
-                               "arguments": {"kind": "relation-edge", "body": "A relates to B"}})
+                               "arguments": {"kind": "relation-edge", "body": body}})
     out = json.loads(resp["result"]["content"][0]["text"])
     assert out["accepted"] is True and out["authority_tier"] == "candidate"
     rec = json.loads((tmp_path / out["proposal_path"]).read_text(encoding="utf-8"))
     assert out["proposal_path"].startswith("_proposals/records/")
     assert rec["authority_tier"] == "candidate" and rec["type"] == "proposal"
     written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()}
-    assert all(w.startswith(("00-system/schemas/", "_proposals/records/")) for w in written)
+    assert all(w.startswith(("00-system/schemas/", "_proposals/records/",
+                             "02-sources/records/")) for w in written)
+
+
+def test_capture_profile_proposal_without_passage_is_refused(tmp_path: Path, monkeypatch):
+    shutil.copytree(ROOT / "00-system" / "schemas", tmp_path / "00-system" / "schemas")
+    monkeypatch.setattr(srv, "ROOT", tmp_path)
+    monkeypatch.setattr(srv, "ACTIVE_PROFILE", "capture")
+    resp = _rpc("tools/call", {"name": "wiki_propose",
+                               "arguments": {"kind": "relation-edge", "body": "A relates to B"}})
+    out = json.loads(resp["result"]["content"][0]["text"])
+    assert "error" in out and "assage" in out["error"]

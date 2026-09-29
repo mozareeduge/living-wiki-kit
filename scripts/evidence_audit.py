@@ -28,8 +28,11 @@ from pathlib import Path
 
 SCHEMA_REL = Path("00-system/policies/proposal_schema.json")
 QUEUE_REL = Path("_proposals/proposals.jsonl")
+RECORDS_REL = Path("_proposals/records")
+ADJUDICATIONS_REL = Path("_proposals/adjudications")
 CANONICAL_ZONES = ("02-sources", "03-objects", "04-notes", "05-claims", "06-relations")
 SHA256_RE = re.compile(r"\b[0-9a-f]{64}\b", re.IGNORECASE)
+TERMINAL_DECISIONS = {"accepted", "rejected"}
 
 
 def _load_proposals(root: Path) -> list[dict]:
@@ -47,6 +50,35 @@ def _load_proposals(root: Path) -> list[dict]:
                             "received": None, "status": "new",
                             "_malformed": True})
     return out
+
+
+def _load_durable(root: Path) -> tuple[list[dict], dict[str, str]]:
+    """Durable kernel proposals (_proposals/records/) + terminal adjudications.
+
+    Legacy proposals.jsonl stays read-only history; the durable queue is the
+    live one. Returns (records, {proposal_id: terminal decision}).
+    """
+    records: list[dict] = []
+    rec_dir = root / RECORDS_REL
+    if rec_dir.exists():
+        for p in sorted(rec_dir.rglob("*.json")):
+            try:
+                records.append(json.loads(p.read_text(encoding="utf-8")))
+            except json.JSONDecodeError:
+                records.append({"id": None, "kind": None, "body": p.read_text(),
+                                "received": None, "status": "new",
+                                "_malformed": True})
+    terminal: dict[str, str] = {}
+    adj_dir = root / ADJUDICATIONS_REL
+    if adj_dir.exists():
+        for p in sorted(adj_dir.rglob("*.json")):
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if d.get("decision") in TERMINAL_DECISIONS and d.get("proposal_id"):
+                terminal[str(d["proposal_id"])] = str(d["decision"])
+    return records, terminal
 
 
 def _body_struct(body) -> dict | None:
@@ -97,6 +129,8 @@ def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
     kinds = schema["kinds"]
     sp_rule = schema["source_passage"]
     proposals = _load_proposals(root)
+    durable, terminal = _load_durable(root)
+    proposals = proposals + durable
 
     results: list[dict] = []
     accepted = rejected = skipped = 0
@@ -116,7 +150,8 @@ def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
                 struct = _extract_passage_from_prose(rec.get("body", "")) or {}
             if kind in kinds:
                 missing = [f for f in kinds[kind]["required"] if f not in struct
-                           and f != "source_passage"]
+                           and f != "source_passage"
+                           and not (f == "capture_refs" and rec.get("evidence_refs"))]
                 if missing:
                     errs.append(f"missing body fields: {missing}")
                 sp = struct.get("source_passage")
@@ -137,9 +172,16 @@ def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
                     allowed = kinds[kind].get("to_tier_enum", [])
                     if struct.get("to_tier") not in allowed:
                         errs.append(f"to_tier {struct.get('to_tier')!r} not in {allowed}")
+                if kind == "capture-promotion":
+                    refs = list(rec.get("evidence_refs") or []) or struct.get("capture_ids") or []
+                    if not refs or not all(str(r).startswith("capture:") for r in refs):
+                        errs.append("capture_refs missing: capture-promotion needs capture: evidence_refs")
         verdict = "rejected-audit" if errs else "audited"
         if errs:
             rejected += 1
+        elif pid in terminal:
+            skipped += 1
+            verdict = f"skipped (adjudicated: {terminal[pid]})"
         elif rec.get("status") not in (None, "new"):
             skipped += 1
             verdict = f"skipped (status={rec.get('status')})"
@@ -155,8 +197,9 @@ def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
         "totals": {"audited": accepted, "rejected-audit": rejected,
                    "skipped": skipped, "total": len(proposals)},
         "authority_note": ("Audit is deterministic tooling; its verdicts are "
-                           "advisory to the human adjudicator. Proposals stay "
-                           "inert in _proposals/proposals.jsonl."),
+                            "advisory to the human adjudicator. Durable proposals stay "
+                            "inert in _proposals/records/; legacy proposals.jsonl is "
+                            "read-only history."),
         "results": results,
     }
     out_dir = root / "_audits"
