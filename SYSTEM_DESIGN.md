@@ -2,7 +2,7 @@
 id: kit-system-design
 type: system-document
 title: "Living Wiki Kit — Operational System Design"
-system_version: "1.2.0"
+system_version: "1.3.0"
 schema_version: "1.0.0"
 status: operational-release
 created: 2026-09-10
@@ -59,9 +59,13 @@ pointer-true restatements refreshed in the same change as the registers.
    Everything a model produces is level 7. Fluency never upgrades evidence;
    only human adjudication or recorded evidence does.
 3. **Record grammar.** Markdown + YAML frontmatter. Source records prove
-   provenance; objects persist across profiles; relations are recorded
-   *before* they are classified ("relation before type"); claims carry
-   explicit permission (`may-note` … `blocked`); residue records why a route
+   provenance; objects persist across profiles. Relations are recorded
+   *before* they are classified ("relation before type"); objects may be
+   recorded before any semantic classification is known ("object before
+   kind" — see `00-system/policies/SEMANTIC_MODEL.md`). Objects carry open
+   `labels` for discovery, never as evidence; consequential classifications
+   belong in evidence-bearing relations or claims. Claims carry explicit
+   permission (`may-note` … `blocked`); residue records why a route
    stopped.
 4. **Search is a route, never evidence.** Canonical page → claim/relation →
    source record → derivative → original. A retrieval score organizes
@@ -86,8 +90,9 @@ registered.
 ├── 00-system/          governance: policies, schemas, templates, registers
 ├── 01-inbox/           raw arrivals (incl. governed captures/)
 ├── 02-sources/         records/ (provenance) + text/ (derivatives)
-├── 03-objects/         works, projects, people, institutions, concepts,
-│                       methods, collections, references
+├── 03-objects/         open semantic objects (identity first, labels for
+│                       discovery, relations/claims for consequential
+│                       classification — never a closed kind list)
 ├── 04-notes/           research notes
 ├── 05-claims/          claim-objects with permission levels
 ├── 06-relations/       relation-objects (before classification)
@@ -116,13 +121,15 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 ## 5. Governance invariants (unchanged from the source system)
 
 - `_originals/` is immutable. No exception, no tool privilege.
-- Model output is always candidate-tier. Proposals land in
-  `_proposals/proposals.jsonl` and stay inert until a human moves them.
+- Model output is always candidate-tier. Proposals land as durable records in
+  `_proposals/records/` (adjudications in `_proposals/adjudications/`) and
+  stay inert until a human moves them.
 - Search scores organize attention; they are never evidence.
 - Work on branches (`intake/`, `wiki/`, `system/`, `audit/`, `output/`,
   `migration/`); no force-push; no `--no-verify`; no credentials.
-- Before claiming success: `python scripts/validate_repo.py --full` (+ the
-  content validator once populated) and show the decisive output.
+- Before claiming success: `python scripts/wiki_validate.py --format json` +
+  `python scripts/wiki_state.py --repo . check` (the governance gates) and
+  show the decisive output.
 - End consequential work with a handoff in `07-genesis/handoffs/`.
 - `main` is the last accepted state. Static pass ≠ local operational pass.
 
@@ -130,14 +137,34 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 
 | Script | Role | Status |
 |---|---|---|
-| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, not yet wired into `validate()`) | operational |
+| `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, enforced in `validate()`), mojibake guard on every source record, register refresh-policy gate | operational |
 | `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark | operational |
-| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt` | operational |
+| `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt`; fails closed on validator timeout, launch failure or unparseable output | operational |
+| `wiki_validate.py` | authoritative governance gate (kernel): runs the validators in `00-system/configuration/validators.json` with structured findings; fails closed | operational |
+| `wiki_state.py` | kernel state: `rebuild` regenerates `SYSTEM_STATE.json`, the manifest and the accepted-evidence index from source records; `check` fails on drift; `set-axis` changes an authored axis only through `state-transitions.json` | operational |
+| `wiki_evidence.py` | accepted-evidence universe (`ACCEPTED_EVIDENCE_INDEX.jsonl`): registered sources plus durably promoted captures; `check` fails on drift | operational |
+| `wiki_proposals.py` | durable candidate proposals (`_proposals/records/`) and separate immutable adjudications (`_proposals/adjudications/`); lists pending | available (unexercised) |
+| `wiki_profiles.py` | instance profiles: `check` validates the active stack (unknown/retired profiles, weakening keys, slot conflicts), `compose` prints the additive composition; profiles configure attention, never truth | operational |
+| `wiki_release.py` | release controller: a release manifest from a passing release profile and receipts | available (unexercised) |
+| `sync_intake_registers.py` | after `wiki_state.py rebuild`: refreshes holdings counts, the three entry-page markers and (with `--accept-corpus-change`) the content-release corpus pin; dry run by default | operational |
+| `repair_truncated_filenames.py` | restores source-record `filename` values cut at the first space to `basename(original_path)`; dry run by default, lists anything needing a human | operational |
+| `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers; refuses to reseed a populated instance | operational |
+| `report_holdings.py` | read-only 7-section census audit (counts, contradictions, proposals, claims, register staleness, mojibake, verdict); prints `CENSUS CLEAN` or `CENSUS DRIFT`; writes only to `_audits/runtime/` | operational |
+| `retier_holdings.py` | migration tool for adopting the census: dry-run by default, `--apply` only on a clean tree and refuses on manifest/state disagreement | operational |
+| `build_graph_index.py` | deterministic graph index (nodes, edges, resolved aliases) over frontmatter, wikilinks and relation participants into `_search/graph.db` — disposable, rebuildable; object labels indexed raw + normalized in a dedicated non-evidence table | operational |
+| `context_pack.py` | governed context packer (CLI, also served read-only as the MCP tool `wiki_context_pack`): lexical hits plus label matches plus graph neighbourhood into ≤ 30 records / ≤ 16k tokens, each with a selection reason; no model in retrieval | operational |
+| `candidate_projection.py` | candidate object projection: eligible `object-create` proposals project into disposable `_search/candidate_projections.json` (visible + marked candidate in packs/search); never writes canonical zones; adjudication decides projection fate | operational |
+| `report_labels.py` | read-only label audit over the graph index + projections (distinct counts, variants, namespaces, legacy-kind-derived, unlabeled, candidate usage); attention tool, never repairs | operational |
+| `migrate_object_kinds.py` | legacy-`kind` migration toward labels + `legacy_kind`: dry-run default, `--apply` only on a clean tree, never automatic on populated instances | operational |
+| `reconcile_runner.py` | incremental-reconciliation core: `plan --mode full|incremental --class RC-0…RC-4`, class-carrying `run-receipt.json`, exact-once verify, escalation to full on loss/>30% drift and to human above 3 conflicts; called by the reconcile/intake skills | operational |
+| `evidence_audit.py` | candidate-layer audit against `proposal_schema.json`: a proposal whose `source_passage` cannot be verified is reported `rejected-audit`; never edits the queue | operational |
+| `schema_drift_fixer.py` | derives path-derivable frontmatter fixes (filename, type/kind) as a `PATCH_MANIFEST`; leaves semantic fields for human adjudication | operational |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine | operational |
-| `wiki_mcp_server.py` | MCP: `wiki_read`, `wiki_search`, `wiki_propose` — writes go only to `_proposals/` | operational |
+| `wiki_mcp_server.py` | governance MCP (stdio, UTF-8), profile-scoped: `--profile read` (default) = `wiki_read_text`, `wiki_get_record`, `wiki_search` (portable FTS5 floor + optional QMD over the collections in `qmd-collections-v1.1.0.json`), `wiki_resolve_id`, `wiki_get_source`, `wiki_state`, `wiki_context_pack`; `--profile capture` adds the capture tools and `wiki_propose` / `wiki_propose_from_capture` (immutable candidate records in `_proposals/records/`). No profile writes canonical records | operational |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
-| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set | available (unexercised) |
+| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); baseline 3/30 lexical-only recorded in `mozare-wiki` 2026-09-20 | operational |
+| `run_faithfulness_benchmark.py` | faithfulness evaluation loop: answer from retrieved records, then entailment-check each claim against the sources | available (unexercised) |
 | `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` | operational |
 | `check_research_spans.py` | citation-span audit over an external research quarantine | available (unexercised) |
 | `create-backup.ps1` | Windows helper: zip backup of the repo to `_wiki_backups/` | operational |

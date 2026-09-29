@@ -1,0 +1,8 @@
+{
+ "traversal": "E_TRAVERSAL",
+ "missing-hash": "E_BAD_HASH",
+ "bad-transition": "E_BAD_TRANSITION",
+ "media-mismatch": "E_MEDIA_MISMATCH",
+ "bad-schema": "E_BAD_SCHEMA",
+ "missing-section": "E_MISSING_SECTION"
+}

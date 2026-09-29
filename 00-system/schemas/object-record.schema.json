@@ -7,7 +7,6 @@
     "id",
     "type",
     "title",
-    "kind",
     "status"
   ],
   "properties": {
@@ -23,16 +22,20 @@
       "minLength": 1
     },
     "kind": {
-      "enum": [
-        "collection",
-        "concept",
-        "institution",
-        "method",
-        "person",
-        "project",
-        "reference",
-        "work"
-      ]
+      "type": "string",
+      "deprecated": true,
+      "description": "Legacy semantic classification. New records should use labels and, where semantically necessary, relations or claims."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120,
+        "pattern": "^[^\\r\\n\\u0000-\\u001f]*$"
+      },
+      "uniqueItems": true,
+      "default": []
     },
     "status": {
       "type": "string",

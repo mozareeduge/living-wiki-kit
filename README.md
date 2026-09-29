@@ -5,7 +5,7 @@ Git-versioned, Obsidian-readable wikis that preserve sources immutably and
 record how works, concepts, claims, and relations change over time, under a
 strict evidence-authority governance model.
 
-Extracted and generalized from the operational mozare-wiki system (v1.2.0),
+Extracted and generalized from the operational mozare-wiki system (v1.2.1),
 so new wikis can be instantiated in minutes with the same guarantees.
 
 ## Start here
@@ -35,19 +35,15 @@ registers.
 
 ## Kit version
 
-`1.2.0` — holdings census gate. A source record carries `status: registered`
-if and only if the manifest names it, and every file under `_originals/`
-now carries a declared holdings tier — so a file can no longer sit
-uncounted and undeclared. The four entry pages carry a third labelled
-marker, `Artifacts held:`, alongside the existing
-`Current corpus snapshot:` / `Registered source artifacts:` pair (the
-1.1.0 entry-page freshness gate that keeps those pages from lagging
-`CORPUS_STATE.json`). `scripts/retier_holdings.py` is the migration tool
-for an existing instance adopting the census: read-only by default
-(`--dry-run`), it only writes with `--apply` and only on a clean tree.
-`scripts/instantiate.py` seeds all three markers and refuses to reseed a
-populated instance. Adopting this in an existing instance is a manual
-step — see INSTANTIATE.md §3.5.
+`1.3.0` — governance kernel + adaptive semantics. The kernel port (fail-closed
+`wiki_validate` gate, `SYSTEM_STATE.json`, accepted-evidence index, durable
+proposal/adjudication records, intake sync, profile-scoped MCP server) and the
+adaptive semantic layer (open objects with labels instead of a closed kind
+enum, composable profiles, persona lenses, candidate projections visible by
+default) land in the kit. Proposals validate at the door against a 17-kind
+vocabulary with mandatory evidence passages; reconciliation runs staged
+(RC-0…RC-4) with class-carrying receipts. See `CHANGELOG.md` for the full
+release history.
 
 ## The authority rule
 

@@ -1,9 +1,9 @@
 ---
 id: wiki-handoff-2026-09-29-cloud-workload
 type: handoff
-title: "Remaining work triaged into a cloud-finishable ladder (K1-K9)"
+title: "Cloud follow-up ladder Q1-Q6, stacked on PR #7 (1.3.0)"
 branch: claude/remaining-tasks-workload-w9wft4
-commit: 02399e7
+commit: 2df7db2
 corpus_snapshot: wiki-corpus-empty
 status: active
 created: 2026-09-29
@@ -11,79 +11,73 @@ updated: 2026-09-29
 schema_version: 1.0.0
 ---
 
-# Remaining work triaged into a cloud-finishable ladder (K1-K9)
+# Cloud follow-up ladder Q1-Q6, stacked on PR #7 (1.3.0)
 
 ## Task and intended result
 
-Find what is still open after the 2026-09-20 rollout and turn it into a
-workload that a Claude Code cloud session (this repo only; no `qmd`, no
-Obsidian, no Windows, no instance) can finish. No code or content was changed.
+Find what is still open and turn it into a workload that a Claude Code cloud
+session can finish. That session has only this repo: no `qmd`, no Obsidian,
+no Windows machine, no instance. No code or content was changed.
 
 ## Files changed
 
-- `Plans.md`: new active ladder K1-K9 plus a carried-items table (R1-R6);
-  census ladder retitled "Completed"; B4/C3 marked `cc:done` with their
-  instance-side evidence pointer.
+- `Plans.md` (PR #7's version, merged in): findings F11-F13 added and a new
+  "Ladder 1.3.x — cloud follow-ups (Q)" with Q1-Q6.
 - `07-genesis/handoffs/HANDOFF--2026-09-29--cloud-workload.md` (this file).
 
 ## Files read
 
-`Plans.md`, `_captures/HANDOFF--2026-09-20--kit-rollout-state.md`,
+`Plans.md` on `main` and on `system/2026-09-20--next-version-plan` (PR #7),
+`07-genesis/handoffs/HANDOFF--2026-09-20--kit-rollout-state.md`,
 `SYSTEM_DESIGN.md` §6, `scripts/instantiate.py`, `scripts/schema_drift_fixer.py`,
-`.github/workflows/*.yml`, `requirements.txt`, `00-system/templates/TEMPLATE_handoff.md`.
+`.github/workflows/validate.yml`, `INSTANTIATE.md`, `QUICKSTART.md`.
 
 ## Decisions accepted
 
-- Only rungs that finish without an instance, `qmd`, Obsidian or Windows go in
-  ladder K. Everything else is carried as R1-R6 with its reason.
-- K2 adds missing §6 rows without re-tiering any status; re-tiering and the
-  version question are operator-gated in K9.
+- A first draft (ladder K1-K9, built from `main`) duplicated work that is
+  already code-complete on PR #7 (S1-S3, R1, R2). It was replaced by a merge
+  of PR #7's branch, adding only the residual Q rungs. The first draft remains
+  in history, with no force-push.
+- Q rungs wait for PR #7 to merge because they touch files it changes.
 
 ## Decisions not made
 
-- Whether the post-1.2.0 work ships as 1.2.1 or 1.3.0 (K9).
-- Whether to add `pyproject.toml` (K9).
-- Whether to attach `mozare-wiki` to a cloud session for R3.
+- Whether to attach `mozare-wiki` to a cloud session so F10 (flaky capture
+  fixture port) and the F9/Q4 instance sync can become Q rungs.
 
 ## Validation commands and outcomes
 
-Run on `02399e7`, 2026-09-29:
+On this branch after the merge (2026-09-29):
 
 ```
-python scripts/validate_repo.py --full        -> PASS (only openspec-archive "no frontmatter" warnings)
-python scripts/validate_content_release.py    -> PASS
-python scripts/check_against_baseline.py      -> OK: validators clean.
-python tests/test_validator_mutations.py      -> 102/102 passed
-python -m unittest discover -s tests          -> 3 errors: No module named 'pytest'
-pip install pytest; python -m pytest -q       -> 126 passed
-throwaway clone: instantiate.py --name "Smoke Wiki" --prefix smk
-  -> validate_repo.py --full PASS; report_holdings.py "7. Verdict: CENSUS CLEAN"
+python scripts/validate_repo.py --full   -> see PR #8 body for the pasted run
+python -m pytest tests scripts/tests scripts/capture/tests -q
 ```
+
+CI: the `validate` job on PR #8 (run 36572654232) and every PR #7 run since
+2026-09-29 08:04 end within seconds, before any step runs. PR #7 attributes
+this to a GitHub billing block. The cause is at the account level, not in the
+diff.
 
 ## Unresolved findings
 
-1. CI never runs the 24 pytest tests; `pytest` is in no requirements file (K1).
-2. Nine scripts are missing from SYSTEM_DESIGN §6; the D1 test cannot see an
-   absent row. Two existing cells are stale (K2).
-3. `schema_drift_fixer.py` hardcodes `mw-patch-`, which `instantiate.py` does
-   not rewrite (K3).
-4. `schema_drift_fixer.py` and `wiki_mcp_server.py` have no tests (K4).
-5. `instantiate.py` tells new users to `git add -A` (K6).
+F11 `mw-patch-` prefix not rewritten by `instantiate.py`; F12 `git add -A`
+in the bootstrap path (three places); F13 `setup-after-clone.ps1` missing
+from §6. Earlier findings F3/F4/F8/F10 are still open and are routed in `Plans.md`.
 
 ## Negative constraints
 
-- Do not touch `_originals/` or any register in a K rung.
+- Do not start a Q rung before PR #7 merges.
+- Do not touch `_originals/` or any register in a Q rung.
 - Do not add lines to `.githooks/known-baseline-errors.txt`.
-- Do not re-tier §6 statuses or bump the version outside K9.
-- Do not claim R1-R6 from a cloud session.
+- Do not claim M1, M2, H1-H3, U1, U2 from a cloud session.
 
 ## Next exact operation
 
-Set K1 to `cc:wip` in `Plans.md`, add `requirements-dev.txt`
-(`-r requirements.txt`, `pytest`), add `python -m pytest -q` to the CI
-workflow, and paste `126 passed` from a fresh venv.
+Owner: clear the GitHub billing block, review and merge PR #7, then PR #8.
+Agent, after that: set Q1 to `cc:wip` and paste the RED
+`grep -n "mw-patch"` hit from a throwaway `--prefix smk` instantiate.
 
 ## Rollback
 
-`git revert` the commit that added this file; it touches only `Plans.md` and
-this handoff.
+`git revert -m 1` the merge commit and revert the commit that added this file.

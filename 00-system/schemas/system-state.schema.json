@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "system-state.schema.json",
+  "type": "object",
+  "required": ["state_schema_version", "system", "content", "capture", "source_corpus", "accepted_evidence", "reconciliation", "release"],
+  "properties": {
+    "type": {"enum": ["system-state", null]},
+    "state_schema_version": {"type": "string", "minLength": 1},
+    "generated_at": {"type": ["string", "null"]},
+    "system": {"type": "object", "required": ["mechanism_version", "schema_version", "status"], "additionalProperties": true},
+    "content": {"type": "object", "required": ["release", "status"], "additionalProperties": true},
+    "capture": {"type": "object", "required": ["version", "status"], "additionalProperties": true},
+    "source_corpus": {"type": "object", "required": ["snapshot_id", "snapshot_sha256", "source_material_count", "manifest_sha256"], "additionalProperties": true},
+    "accepted_evidence": {"type": "object", "required": ["snapshot_id", "snapshot_sha256", "evidence_object_count"], "additionalProperties": true},
+    "reconciliation": {"type": "object", "additionalProperties": true},
+    "release": {"type": "object", "additionalProperties": true}
+  },
+  "additionalProperties": true
+}

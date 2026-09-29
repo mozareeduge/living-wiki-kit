@@ -579,7 +579,7 @@ def validate_record(capture_id_or_path: str) -> list[str]:
     # media integrity: recompute hash from bytes
     raw = fm.get("raw_media")
     if raw:
-        if ".." in str(raw) or str(raw).startswith("/"):
+        if ".." in str(raw):  # containment below is the rule on every OS; a leading "/" check rejected valid Linux paths
             errors.append("E_TRAVERSAL: raw_media escapes roots")
         else:
             mp = _resolve_media(str(raw))

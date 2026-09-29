@@ -15,6 +15,9 @@ import reconcile_runner as rr  # noqa: E402
 
 @pytest.fixture()
 def wiki(tmp_path: Path) -> Path:
+    import shutil
+    shutil.copytree(KIT_ROOT / "00-system" / "schemas",
+                    tmp_path / "00-system" / "schemas")
     reg = tmp_path / "00-system" / "registers"
     reg.mkdir(parents=True)
     (tmp_path / "_audits").mkdir()

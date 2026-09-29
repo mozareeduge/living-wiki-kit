@@ -49,11 +49,14 @@ evidence status, unresolved points. Search scores are never proof.
 ## Stage 4 — Creation of objects, relations, claims (manual skill: wiki-write)
 
 Canonical pages are created from approved evidence with explicit target,
-genre, and authority level. Objects characterize before contrast; relations
-are recorded before classification (relation-objects); claims carry
-permission levels (`may-note` … `blocked`) with support, counter-evidence,
-and responsible language. Every consequential statement links to source or
-claim records.
+genre, and authority level. Objects characterize before contrast — and
+characterize before classifying: objects are created when stable identity is
+useful, labels may be added as lightweight retrieval descriptors, and
+semantically consequential classifications are expressed as evidence-bearing
+relations or claims when needed. Relations are recorded before
+classification (relation-objects); claims carry permission levels
+(`may-note` … `blocked`) with support, counter-evidence, and responsible
+language. Every consequential statement links to source or claim records.
 
 ## Stage 5 — Genesis tracking (07-genesis/)
 
@@ -80,7 +83,8 @@ are both required before reporting a release-state change.
 
 - Pre-commit hook + CI run the same baseline gate (`check_against_baseline.py`).
 - QMD scores organize attention, never evidence.
-- All AI output stays candidate-tier; promotion runs through
-  `_proposals/proposals.jsonl` + human adjudication.
+- All AI output stays candidate-tier; promotion runs through durable proposal
+  records (`_proposals/records/`) + separate adjudication records
+  (`_proposals/adjudications/`) + human adjudication.
 - Backups: local clone + private remote + dated external ZIP
   (`scripts/create-backup.ps1`).
