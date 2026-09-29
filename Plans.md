@@ -154,28 +154,55 @@ sequentially because they share the register/CI surfaces (operating rule 1).
 - **F11** (2026-09-29, cloud triage) `schema_drift_fixer.py` builds patch IDs as `mw-patch-{run_id}` (line 174); `instantiate.py`'s `MW_ID` rewrites only `mw-(src-|cap-|corpus-|evidence-)`, so an instance with `--prefix smk` still emits `mw-patch-…`.
 - **F12** (2026-09-29, cloud triage) The bootstrap path tells new users `git add -A` in `scripts/instantiate.py:179`, `INSTANTIATE.md:97` and `QUICKSTART.md:14`, against the house rule "never `git add -A`".
 - **F13** (2026-09-29, cloud triage) `scripts/setup-after-clone.ps1` is absent from SYSTEM_DESIGN §6; S1's test covers `scripts/*.py` only.
+- **F14** (2026-09-29, dossier audit) Lens `foreground_relations` and `foreground_sections` are declared in `wiki-lens.schema.json` and set in both shipped lenses, but no script reads them (`context_pack.py:279` reads only `foreground_labels`). Dossier O5 acceptance 2 ("lens can foreground relation language") is unmet; the fields are inert.
+- **F15** (2026-09-29, dossier audit) Active profiles are composed (`wiki_profiles.py`) but never reach retrieval: `seed_labels` and `suggested_lenses` are unused by `context_pack.py`, although dossier §39 lists "profile/lens foregrounding" as a selection reason.
+- **F16** (2026-09-29, dossier audit) §69.13 / D30 ("six heterogeneous examples expressed without changing the kernel") has no executable proof: O8 exercises only `practice-research` + `practice-creative`; the other four shipped profiles are validated as files, never used.
+- **F17** (2026-09-29, dossier audit) Doc residue: `object-record.schema.json` and `claim-object.schema.json` titles still say "Ref Wiki" (§38.1); §29's distinction between object-page `## Profiles` and instance profiles is written nowhere; `evidence_audit.py:4` docstring still says it reads `proposals.jsonl` (the code reads `_proposals/records/`, legacy file read-only).
+- **F18** (2026-09-29, dossier audit) `wiki_profiles.py` docstring says profiles "may tighten kernel rules", but no mechanism exists for tightening; only weakening is rejected. The compliance class is schema-only.
 
-### Ladder 1.3.x — cloud follow-ups (Q)
+### Ladder 1.3.x — dossier closure + cloud follow-ups
 
-Agent-executable rungs taken from F3/F4/F8/F10–F13. Each finishes inside a
-Claude Code cloud session with only this repo attached: no `qmd`, no Obsidian,
-no Windows machine, no populated instance. They stack on PR #7 and must not
-start before it merges (they touch files it changes). Same operating rules;
-no rung here bumps the version.
+Source: an audit of `LIVING-WIKI-KIT-ADAPTIVE-SEMANTIC-DESIGN-DOSSIER-v1.0-2026-09-28.md`
+(§§27–69, D01–D30, §56 matrix) against this tree on 2026-09-29, plus the
+cloud triage findings. Most of the dossier landed in W1 + O1–O8 (see
+`07-genesis/handoffs/HANDOFF--2026-09-28--adaptive-semantic-model.md`); the §56 matrix
+rows map to named tests in `tests/test_o1…o8_*.py`, except lens relation
+foregrounding (F14). This ladder closes the rest.
+Every rung finishes inside a Claude Code cloud session with only this repo
+attached (no `qmd`, Obsidian, Windows, or instance). All start after PR #7
+merges, one `cc:wip` at a time. Binding owner decisions stay binding: object
+vocabulary open, candidates visible by default, relevance ≠ authority,
+accepted-only always explicit, 17 proposal kinds unchanged.
+
+**Order:** O9 → O10 → O11 → O12 → Q1 → Q2 → Q3 → Q4 → Q6. The O rungs come
+first because they finish the design, and Q are hygiene.
 
 | ID | Task | Acceptance (all pasted from commands actually run) | Depends | Status |
 |---|---|---|---|---|
+| O9 | `[lane:gate] [tdd:required] [size:M]` F14: lenses foreground relation language and sections. `context_pack.py` reads `foreground_relations` (a record joined by a relation whose type is listed gets reason ``lens `<id>` foregrounds relation `<type>` ``) and `foreground_sections` (presentation order only). Reasons change; authority, membership under the default lens, and candidate visibility do not | (a) RED: `test_lens_foregrounds_relation_language` + a sections test fail by name, (b) GREEN, (c) `test_lens_changes_reasons_not_authority` untouched and green, (d) the same pack without a lens is byte-identical before and after, (e) suite + 4 kernel gates green | R1 merged | cc:todo |
+| O10 | `[lane:gate] [tdd:required] [size:M]` F15: profile-driven attention (§39, D19, D21). The union of active profiles' `seed_labels` adds an inspectable reason ``profile `<id>` seed label `<label>` `` and never filters. `suggested_lenses` are listed in pack `meta` as offers, never applied implicitly. Empty `active_profiles` gives output identical to today | (a) RED named, (b) GREEN, (c) empty-actives pack byte-identical to the pre-change pack, (d) test: a profile never removes a record or changes an authority tier, (e) suite + gates green | O9 | cc:todo |
+| O11 | `[lane:gate] [tdd:required] [size:M]` F16: six-context acceptance (§36, §59, §69.13, D30). One fixture per shipped example profile (research, creative, product-discovery, investigation, experimental, community-archive): object with no `kind`, labels (one fixture in Persian, §46), one relation and one claim, the profile activated. A candidate `object-create` proposal is visible in the pack and marked candidate | (a) RED pasted first, (b) GREEN, (c) pasted `git diff --stat -- 00-system/schemas scripts/gov_kernel` for the rung is empty, i.e. no kernel change was needed, (d) suite + gates green | O10 | cc:todo |
+| O12 | `[lane:doc] [size:S]` F17 doc residue: neutral schema titles (check `instantiate.py` rewrite rules first so instances stay correct); a §29 paragraph in `SEMANTIC_MODEL.md` separating object-page `## Profiles` from instance profiles; correct the `evidence_audit.py` docstring; F18 docstring states what exists (weakening rejected; tightening not yet implemented) | (a) `grep -rn "Ref Wiki" 00-system/` empty, (b) O2 doc tests green (+ one asserting the §29 sentence), (c) fresh instantiate still passes gates, (d) kit PASS | R1 merged | cc:todo |
 | Q1 | `[lane:gate] [tdd:required] [size:S]` F11: patch IDs follow the instance prefix (extend `MW_ID` to `patch-`, or derive the prefix at runtime); extend `test_instantiate_*` | (a) RED: throwaway-clone `instantiate.py --prefix smk`, `grep -n "mw-patch" scripts/schema_drift_fixer.py` hits, (b) GREEN: no hit, `smk-patch` present, (c) idempotent rerun byte-identical, (d) suite + kernel gates green | R1 merged | cc:todo |
-| Q2 | `[lane:doc] [size:S]` F12: replace `git add -A` with `git status` + explicit paths in all three places | (a) `grep -rn "add -A" scripts/ *.md` returns only this Plans row, (b) suite green, (c) kit PASS | R1 merged | cc:todo |
+| Q2 | `[lane:doc] [size:S]` F12: replace `git add -A` with `git status` + explicit paths in all three places | (a) `grep -rn "add -A" scripts/ *.md` returns only Plans/handoff rows, (b) suite green, (c) kit PASS | R1 merged | cc:todo |
 | Q3 | `[lane:doc] [tdd:required] [size:S]` F13: S1's §6 completeness test also covers `scripts/*.ps1`; add the `setup-after-clone.ps1` row | (a) RED names `setup-after-clone.ps1`, (b) GREEN, (c) kit PASS | R1 merged | cc:todo |
-| Q4 | `[lane:gate] [tdd:required] [size:M]` S3b = F3 + F4: `schema_drift_fixer.py` merges several operations per file and quotes YAML-unsafe derived values; keep the text byte-identical to the `mozare-wiki` copy (hand the port to the instance lane) | (a) RED: two-errors-one-file test and `: `/` #` basename test fail by name, (b) GREEN, (c) F1 characterisation test unchanged | R1 merged | cc:todo |
-| Q5 | `[lane:gate] [tdd:required] [size:M]` F8: `evidence_audit.py`, `report_holdings.py` and `tests/test_evidence_audit.py` read the kernel's `_proposals/records/` (legacy `proposals.jsonl` read-only fallback, reported as legacy) | (a) RED against a `records/` fixture, (b) GREEN, (c) empty kit `report_holdings.py` still prints `CENSUS CLEAN`, (d) suite green | R1 merged | cc:todo |
+| Q4 | `[lane:gate] [tdd:required] [size:M]` S3b = F3 + F4: `schema_drift_fixer.py` merges several operations per file and quotes YAML-unsafe derived values. Keep the text byte-identical to the `mozare-wiki` copy (hand the port to the instance lane) | (a) RED: two-errors-one-file test and `: `/` #` basename test fail by name, (b) GREEN, (c) F1 characterisation test unchanged | R1 merged | cc:todo |
+| Q5 | ~~F8 proposals path~~ | Already fixed by W1: both readers use `_proposals/records/`; `proposals.jsonl` is read-only legacy. Only the docstring remains, folded into O12 | — | cc:withdrawn |
 | Q6 | `[lane:gate] [size:S]` The R2 release gate becomes a CI job: temp-dir clone → `instantiate.py --name "CI Wiki" --prefix ciw` → both validators + kernel gates → `report_holdings.py` `CENSUS CLEAN` → rerun byte-identical | (a) job green in CI log (needs the billing block cleared), (b) negative run: an injected validator error turns the job red, (c) until CI runs, the same script run locally with output pasted | Q1, billing | cc:todo |
 
-Not in Q, with the reason: F10 needs `mozare-wiki`'s fixture fix (attach that
-repo, then it becomes a Q rung); F9 and the Q4 port are instance-side; F1/F2
-wait on an instance need; M1, M2, H1–H3, U1, U2 stay where the 1.3.0 ladder
-routes them (owner machine, `qmd`, Obsidian, owner judgment).
+**Owner decisions the dossier deliberately deferred** (no agent executes these; each becomes a rung only after a decision is recorded):
+
+| ID | Decision | Dossier | Agent work it unlocks |
+|---|---|---|---|
+| D-a | Ship example profiles for the `domain` / `collaboration` / `compliance` classes, or keep practice-only examples | §15, §49 | example files + O11-style fixture |
+| D-b | What "a compliance profile may tighten" means mechanically (which kernel keys, what the validator enforces) | §15.4, §18, F18 | tightening mechanism + tests |
+| D-c | Optional `LABEL_ALIASES.json` (instance policy, never auto-merge) | §12, §45, §46 | loader + `report_labels.py` alias section |
+| D-d | `instantiate.py --profile …` CLI | §50 | CLI flag + smoke test |
+| D-e | `mozare-wiki` legacy-`kind` path: low-churn compat (§43, the current default) or migration | §42.3, §43 | dry-run `migrate_object_kinds.py` report in the instance (needs that repo attached); `--apply` only after the decision |
+
+**Outside this ladder:** M1, M2, H1–H3, U1, U2 stay where the 1.3.0 ladder
+routes them (owner machine, `qmd`, Obsidian, owner judgment). F9 and the Q4
+port are instance-side; F1/F2 wait on an instance need.
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → K1a → K1b → **K1c → K1d** → H0 (owner) → W1 → O1 → O2 → O3/O4 → O5 → O6 → O7 → O8 → W3 → W4 → M2 → R1 → R2.
 `H*`, `M1`, `U*` are outside the agent loop: they wait for the operator or
