@@ -288,6 +288,11 @@ def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
         if fg and m and bgi.normalize_label(m.group(1)) in fg:
             e["reason"] = reason + f" (foregrounded by lens {lens_id})"
             e["foregrounded"] = True
+        elif fg and e.get("candidate"):
+            cand_norms = {bgi.normalize_label(str(x)) for x in (e.get("candidate_labels") or [])}
+            if cand_norms & fg:
+                e["reason"] = reason + f" (foregrounded by lens {lens_id})"
+                e["foregrounded"] = True
         out.append(e)
     return out
 
