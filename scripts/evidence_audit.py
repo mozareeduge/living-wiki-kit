@@ -124,14 +124,15 @@ def _check_passage(root: Path, sp: dict) -> list[str]:
     return errs
 
 
-def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
+def assess_proposals(root: Path, proposals: list[dict],
+                     terminal: dict[str, str]) -> tuple[list[dict], int, int, int]:
+    """Pure per-record audit (no I/O besides reading cited files).
+
+    Returns (results, accepted, rejected, skipped). audit() writes the
+    report; candidate_projection.py reuses the verdicts without writing.
+    """
     schema = json.loads((root / SCHEMA_REL).read_text(encoding="utf-8-sig"))
     kinds = schema["kinds"]
-    sp_rule = schema["source_passage"]
-    proposals = _load_proposals(root)
-    durable, terminal = _load_durable(root)
-    proposals = proposals + durable
-
     results: list[dict] = []
     accepted = rejected = skipped = 0
     for rec in proposals:
@@ -189,6 +190,16 @@ def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
             accepted += 1
         results.append({"id": pid, "kind": kind, "verdict": verdict,
                         "errors": errs})
+    return results, accepted, rejected, skipped
+
+
+def audit(root: Path, verbose: bool = False) -> tuple[int, int, int]:
+    schema = json.loads((root / SCHEMA_REL).read_text(encoding="utf-8-sig"))
+    proposals = _load_proposals(root)
+    durable, terminal = _load_durable(root)
+    proposals = proposals + durable
+
+    results, accepted, rejected, skipped = assess_proposals(root, proposals, terminal)
 
     report = {
         "generated_by": "evidence_audit.py",

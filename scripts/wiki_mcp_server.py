@@ -194,11 +194,17 @@ def tool_wiki_search(args: dict[str, Any]) -> str:
     canonical_cols, provenance_cols = qmd_collections(ROOT)
     qmd_cols = provenance_cols if profile == "provenance" else canonical_cols if profile == "canonical" else ()
     qmd_hits = _qmd_search(query, qmd_cols, n, profile) if qmd_cols else []
+    try:
+        import candidate_projection as _cp
+        candidates = _cp.query_projections(ROOT, query)[:n]
+    except Exception:  # noqa: BLE001  (disposable index; never break search)
+        candidates = []
     return json.dumps({
         "profile": profile,
         "portable": portable,
         "qmd": {"available": bool(shutil.which("qmd")), "results": qmd_hits},
-        "authority_note": "Retrieval ranks attention only. Opened repository/source records carry authority.",
+        "candidates": candidates,
+        "authority_note": "Retrieval ranks attention only. Opened repository/source records carry authority. Candidates are marked candidate and never canonical.",
     }, ensure_ascii=False)
 
 

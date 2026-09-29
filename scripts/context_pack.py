@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_graph_index as bgi  # noqa: E402
 import wiki_profiles as wp  # noqa: E402  (frontmatter parser only; lenses are advisory)
+import candidate_projection as _cp  # noqa: E402  (disposable projections; never canonical)
 from gov_kernel.schemas import validate_record  # noqa: E402
 
 MAX_RECORDS_DEFAULT = 30
@@ -83,7 +84,8 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                max_records: int = MAX_RECORDS_DEFAULT,
                budget_tokens: int = TOKEN_BUDGET_DEFAULT,
                search_fn=None, lens: str | dict | None = None,
-               accepted_only: bool = False) -> dict:
+               accepted_only: bool = False,
+               include_candidates: bool = True) -> dict:
     db = root / "_search" / "graph.db"
     if not db.exists():
         raise SystemExit(f"no graph index at {db}; run build_graph_index.py first")
@@ -137,6 +139,26 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
     if query and len(entries) < max_records:
         fn = search_fn or (lambda q, n: default_search(q, n, root))
         want = min(12, max_records - len(entries))
+        if include_candidates:
+            # Candidate projections: same tier as label matches, never
+            # penalized for being candidate; marked so they cannot
+            # masquerade as canonical records.
+            for c in _cp.query_projections(root, query):
+                pid = c["proposal_id"]
+                if pid in used or len(entries) >= max_records:
+                    continue
+                used.add(pid)
+                entries.append({"id": pid, "path": None, "title": c["title"],
+                                "reason": f"candidate: proposal {pid} matched query context",
+                                "depth": None, "authority": "candidate",
+                                "proposal_status": c["proposal_status"],
+                                "proposal_id": pid,
+                                "candidate": True,
+                                "source_passage": c["source_passage"],
+                                "candidate_labels": c["labels"],
+                                "candidate_text": c["characterization"]})
+                if len(entries) >= max_records:
+                    break
         for hit in fn(query, want):
             # qmd hits carry file paths like qmd://wiki/<name> — map by stem
             f = str(hit.get("file", ""))
@@ -157,11 +179,16 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
     spent = 0
     per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
     for e in entries:
-        p = root / e["path"]
-        try:
-            text = p.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            text = ""
+        if e.get("candidate"):
+            sp = e.get("source_passage") or {}
+            text = (f"{e.get('title', '')}\n{e.get('candidate_text', '')}\n"
+                    f"passage: {sp.get('quote', '')} ({sp.get('path', '')})")
+        else:
+            p = root / e["path"]
+            try:
+                text = p.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                text = ""
         body = text[:per_cap_chars]
         est = len(body) // CHARS_PER_TOKEN
         e["content"] = body
