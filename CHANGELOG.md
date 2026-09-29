@@ -1,0 +1,51 @@
+# Changelog — living-wiki-kit
+
+Release history. The registers (`CORPUS_STATE.json`) stay live truth for
+counts; this file records what each kit version changed and why.
+
+## 1.3.0 — governance kernel + adaptive semantics
+
+- **Governance kernel port** (from mozare-wiki v1.2.1): fail-closed
+  `wiki_validate` gate, `SYSTEM_STATE.json`, accepted-evidence index,
+  durable proposal/adjudication records, `sync_intake_registers.py`,
+  `repair_truncated_filenames.py`, profile-scoped MCP server
+  (`--profile read` default, `capture` for captures/proposals), config-driven
+  QMD collection names.
+- **Proposal door (W1)**: 17-kind vocabulary enforced as a schema enum with
+  pair-wise usage notes; `source_passage` (quote ≥ 20 chars, verbatim in a
+  canonical path) required at creation; `evidence_audit.py` and
+  `report_holdings.py` read the durable queue (legacy `proposals.jsonl` is
+  read-only history). Policy `proposal_schema.json` v1.1.0.
+- **Adaptive semantics (O1–O8)**: mandatory object `kind` retired (optional
+  deprecated string); open `labels` with mechanical rules; `SEMANTIC_MODEL.md`
+  policy (object-before-kind, labels never evidence); labels indexed raw +
+  normalized as non-evidence edges with label-match pack reasons; composable
+  profiles (6 inactive examples) with `wiki_profiles check`; persona lenses
+  (2 examples, foreground-only, accepted-only explicit); candidate object
+  projections into disposable index space; legacy-kind compatibility
+  indexing, read-only label audit, dry-run migration tool.
+- **Staged reconciliation (W3)**: RC-0…RC-4 classes declared first,
+  `--mode incremental|full` in both skills, schema-validated class-carrying
+  run receipts, escalation to full on loss/>30% drift and to human above
+  3 conflicts.
+- **Phase 3 acceptance (W4)**: 50 proposals → 30 audited + 20 rejected-audit,
+  zero canonical change.
+- Governance invariants unchanged. Adjudication promotes authority; it never
+  gates the pipeline or grants visibility.
+
+## 1.2.0 — holdings census gate
+
+A source record carries `status: registered` if and only if the manifest
+names it, and every file under `_originals/` carries a declared holdings
+tier — so a file can no longer sit uncounted and undeclared. The four entry
+pages carry a third labelled marker, `Artifacts held:`, alongside
+`Current corpus snapshot:` / `Registered source artifacts:` (the 1.1.0
+entry-page freshness gate). `scripts/retier_holdings.py` migrates existing
+instances: dry-run default, `--apply` only on a clean tree.
+
+## 1.1.0 — entry-page freshness gate
+
+The four entry pages carry labelled `Current corpus snapshot:` /
+`Registered source artifacts:` markers; `validate_repo.py` fails any commit
+whose pages lag `CORPUS_STATE.json`. `instantiate.py` seeds the markers and
+refuses to reseed a populated instance.
