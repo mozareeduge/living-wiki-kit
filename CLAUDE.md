@@ -18,7 +18,9 @@ to every wiki instantiated from this kit.
    for an interpretive question; source-records collection for provenance;
    derivatives collection for candidate passages; original files for exact
    form.
-6. QMD scores organize attention and are never evidence.
+6. QMD scores organize attention and are never evidence. Object labels work
+   the same way: discovery aid, never proof, never a merge reason. Read
+   `00-system/policies/SEMANTIC_MODEL.md` before classifying anything.
 7. Side-effect workflows are manually invoked: `/wiki-intake`,
    `/wiki-reconcile`, `/wiki-write`, `/wiki-validate`, `/wiki-handoff`.
 8. Apply a supplied content change only through its `PATCH_MANIFEST.json`.

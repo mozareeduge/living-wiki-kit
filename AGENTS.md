@@ -14,7 +14,9 @@ those remain canonical.
    (authority level 7)**. Fluency, plausibility, or agreement never upgrades
    it. Only human adjudication or evidence recorded in canonical records does.
 3. Retrieval scores (qmd or any search layer) organize attention; they are
-   **never evidence**.
+   **never evidence**. Labels likewise organize discovery and are **never
+   evidence**: a shared label never justifies merging two object identities,
+   and candidate status never demotes topical relevance.
 4. The default agent/MCP profile is **read-only**. Do not write into governed
    canonical/system/source zones or `_originals/`. The explicit `capture` MCP
    profile may create noncanonical captures and durable proposals only; it does

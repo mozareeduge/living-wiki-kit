@@ -59,9 +59,13 @@ pointer-true restatements refreshed in the same change as the registers.
    Everything a model produces is level 7. Fluency never upgrades evidence;
    only human adjudication or recorded evidence does.
 3. **Record grammar.** Markdown + YAML frontmatter. Source records prove
-   provenance; objects persist across profiles; relations are recorded
-   *before* they are classified ("relation before type"); claims carry
-   explicit permission (`may-note` … `blocked`); residue records why a route
+   provenance; objects persist across profiles. Relations are recorded
+   *before* they are classified ("relation before type"); objects may be
+   recorded before any semantic classification is known ("object before
+   kind" — see `00-system/policies/SEMANTIC_MODEL.md`). Objects carry open
+   `labels` for discovery, never as evidence; consequential classifications
+   belong in evidence-bearing relations or claims. Claims carry explicit
+   permission (`may-note` … `blocked`); residue records why a route
    stopped.
 4. **Search is a route, never evidence.** Canonical page → claim/relation →
    source record → derivative → original. A retrieval score organizes
@@ -86,8 +90,9 @@ registered.
 ├── 00-system/          governance: policies, schemas, templates, registers
 ├── 01-inbox/           raw arrivals (incl. governed captures/)
 ├── 02-sources/         records/ (provenance) + text/ (derivatives)
-├── 03-objects/         works, projects, people, institutions, concepts,
-│                       methods, collections, references
+├── 03-objects/         open semantic objects (identity first, labels for
+│                       discovery, relations/claims for consequential
+│                       classification — never a closed kind list)
 ├── 04-notes/           research notes
 ├── 05-claims/          claim-objects with permission levels
 ├── 06-relations/       relation-objects (before classification)
