@@ -25,7 +25,7 @@ Verified 2026-10-02 01:22 local. Every number below was re-run, not recalled.
 | | |
 |---|---|
 | Kit repo (public) | `github.com/mozareeduge/living-wiki-kit` |
-| Branch | `system/2026-09-20--next-version-plan` @ **`8739a90`** (= origin, tree clean) |
+| Branch | `system/2026-09-20--next-version-plan` — pushed and in sync with origin (tip includes this handoff; verify with `git status -sb`; local `.maws/` runtime files may show as modified, that is not branch drift) |
 | PR | **#7**, `OPEN`, **`DRAFT`**, `MERGEABLE`, `mergeStateStatus: UNSTABLE` |
 | Base | `origin/main` @ `02399e7` |
 | Instance (private) | `github.com/mozareeduge/mozare-wiki`, local `Documents/Personal Formal Documents/mozare-wiki/mozare-wiki` |
@@ -61,7 +61,21 @@ loaded machine a 30 s cap can cut it off — that is load, not a hang.
 ## 3. What this session changed (7 commits, all pushed)
 
 | Commit | What |
----
+|---|---|
+| `73fc135` | **M2** — three metrics in `run-semantic-benchmark.py` (recall@K, rejection rate, evidence-trace completeness), JSON + markdown |
+| `82cc968` | **U1** — capture breadth: `capture_url` / `capture_photo` / `SingleFileAdapter`; `url` added to both capture schemas; write-isolated CLI tests; handoff |
+| `41d7b74` | `Plans.md` ledger reconciled to reality |
+| `6d2dca1` | **Bug fix** — Windows UTF-8 decode crash in the benchmark runner (§4.1) |
+| `b5a58f6` | **M2 acceptance (b)** — real 30-case score committed under `_audits/` |
+| `764a0bd` | Plans + CHANGELOG + first CI-block handoff |
+| `8739a90` | CI-block handoff rewritten after the control experiment (§5) |
+
+New files: `_audits/2026-10-01--semantic-benchmark/{README.md,report.json,report.md}`,
+`07-genesis/handoffs/HANDOFF--2026-10-01--m2-u1-landed.md`,
+`07-genesis/handoffs/HANDOFF--2026-10-01--ci-billing-block.md`,
+`scripts/capture/file_contract.py`,
+`scripts/capture/tests/test_url_photo_file.py`,
+`scripts/tests/test_semantic_benchmark_metrics.py`.
 
 ## 4. Two real defects found and fixed — read before "fixing" anything
 
@@ -311,23 +325,3 @@ the mid-flight 12/30 with the final number.
 `20261001-180932-lwk-1.3.0-close-out-ci-billing-m2-b-score-h3-rev` (all items
 `done`); earlier `20261001-172018-lwk-1.3.0-salvage-m2-metrics-u1-capture-breadth`.
 Resume with `python ~/.maws/runtime/maws.py --format human status`.
-
-It is derived from the same `expected`-vs-`matched` signal as `mean_recall_at_k`
-and tracks `1 - recall`. It is an *operational proxy* ("what fraction of
-questions would a reviewer send back?"), not a second quality axis. The
-docstring now says so. **Do not report it as corroborating evidence for recall.**
-|---|---|
-| `73fc135` | **M2** — three metrics in `run-semantic-benchmark.py` (recall@K, rejection rate, evidence-trace completeness), JSON + markdown |
-| `82cc968` | **U1** — capture breadth: `capture_url` / `capture_photo` / `SingleFileAdapter`; `url` added to both capture schemas; write-isolated CLI tests; handoff |
-| `41d7b74` | `Plans.md` ledger reconciled to reality |
-| `6d2dca1` | **Bug fix** — Windows UTF-8 decode crash in the benchmark runner (§4.1) |
-| `b5a58f6` | **M2 acceptance (b)** — real 30-case score committed under `_audits/` |
-| `764a0bd` | Plans + CHANGELOG + first CI-block handoff |
-| `8739a90` | CI-block handoff rewritten after the control experiment (§5) |
-
-New files: `_audits/2026-10-01--semantic-benchmark/{README.md,report.json,report.md}`,
-`07-genesis/handoffs/HANDOFF--2026-10-01--m2-u1-landed.md`,
-`07-genesis/handoffs/HANDOFF--2026-10-01--ci-billing-block.md`,
-`scripts/capture/file_contract.py`,
-`scripts/capture/tests/test_url_photo_file.py`,
-`scripts/tests/test_semantic_benchmark_metrics.py`.
