@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -58,32 +59,44 @@ def run_case(case: dict, top_k: int, timeout: int) -> dict:
     command = [QMD, "query", case["question"], "--no-rerank", "--json", "-n", str(top_k)]
     if case.get("collection"):
         command.extend(["-c", case["collection"]])
+    # qmd prints UTF-8 box-drawing glyphs on stderr/stdout. Without an explicit
+    # UTF-8 decode Windows uses cp1252, the reader thread raises
+    # UnicodeDecodeError, and proc.stdout silently becomes None - which used to
+    # crash this function's own error path instead of reporting a bad result.
+    env = dict(os.environ)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     proc = subprocess.run(
         command,
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=timeout,
         check=False,
+        env=env,
     )
+    stdout = proc.stdout or ""
+    stderr = proc.stderr or ""
     result = {
         "id": case["id"],
         "question": case["question"],
         "collection": case.get("collection", "canonical-default"),
         "command": command,
         "returncode": proc.returncode,
-        "stderr": proc.stderr.strip(),
+        "stderr": stderr.strip(),
     }
     if proc.returncode != 0:
         result.update({"passed": False, "error": "qmd command failed", "paths": []})
         return result
     try:
-        payload = parse_qmd_json(proc.stdout)
+        payload = parse_qmd_json(stdout)
     except Exception as exc:
         result.update({
             "passed": False,
             "error": str(exc),
-            "stdout_excerpt": proc.stdout[-2000:],
+            "stdout_excerpt": stdout[-2000:],
             "paths": [],
         })
         return result
@@ -150,10 +163,17 @@ def compute_neighborhood_recall(results: list[dict], k: int) -> dict:
 def compute_human_rejection_rate(results: list[dict]) -> dict:
     """Compute human rejection rate.
 
-    A case is considered "rejected" if a human reviewer would find the
-    retrieval inadequate — operationalized as: not all expected items
-    were found in the top-K results (recall@K < 1.0), or the case
-    errored out (no paths returned).
+    Scope note (read before trusting this number): this is a *proxy* for human
+    rejection, not a measurement of it. A case counts as rejected when the
+    retrieval was inadequate by the only signal available offline - some
+    expected item was not in the top-K, or the case errored / returned nothing.
+    That makes it a function of the same expected-vs-matched comparison as
+    neighborhood recall@K: with expected==matched everywhere, rejection_rate
+    tracks 1 - mean_recall_at_k exactly. It adds an operational reading
+    ("what fraction of questions would a reviewer send back?") and it also
+    counts hard errors that recall@K reports as None, so it is not redundant -
+    but it is NOT an independent axis of quality, and a real human-rejection
+    rate needs recorded reviewer decisions, not a heuristic.
 
     rejection_rate = rejected_cases / total_cases
     """
