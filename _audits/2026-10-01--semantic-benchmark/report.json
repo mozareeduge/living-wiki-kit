@@ -1,0 +1,1418 @@
+{
+  "benchmark_id": "mw-semantic-benchmark-1.1.0",
+  "run_at": "2026-10-01T22:13:16",
+  "total": 30,
+  "passed": 12,
+  "threshold": 27,
+  "result": "FAIL",
+  "metrics": {
+    "neighborhood_recall": {
+      "k": 5,
+      "mean_recall_at_k": 0.3067,
+      "cases_with_expected": 25,
+      "per_case": [
+        {
+          "id": "SR-01",
+          "expected_count": 1,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-02",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-03",
+          "expected_count": 1,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-07",
+          "expected_count": 1,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-08",
+          "expected_count": 1,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-10",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-12",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-16",
+          "expected_count": 0,
+          "matched_count": 0,
+          "recall_at_k": null
+        },
+        {
+          "id": "SR-17",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-20",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-21",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-23",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-24",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-25",
+          "expected_count": 2,
+          "matched_count": 2,
+          "recall_at_k": 1.0
+        },
+        {
+          "id": "SR-27",
+          "expected_count": 2,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-30",
+          "expected_count": 2,
+          "matched_count": 2,
+          "recall_at_k": 1.0
+        },
+        {
+          "id": "SR-31",
+          "expected_count": 3,
+          "matched_count": 1,
+          "recall_at_k": 0.3333
+        },
+        {
+          "id": "SR-34",
+          "expected_count": 3,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-36",
+          "expected_count": 3,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-37",
+          "expected_count": 3,
+          "matched_count": 0,
+          "recall_at_k": 0.0
+        },
+        {
+          "id": "SR-40",
+          "expected_count": 3,
+          "matched_count": 1,
+          "recall_at_k": 0.3333
+        },
+        {
+          "id": "SR-41",
+          "expected_count": 2,
+          "matched_count": 2,
+          "recall_at_k": 1.0
+        },
+        {
+          "id": "SR-44",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-45",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-48",
+          "expected_count": 2,
+          "matched_count": 1,
+          "recall_at_k": 0.5
+        },
+        {
+          "id": "SR-50",
+          "expected_count": 2,
+          "matched_count": 2,
+          "recall_at_k": 1.0
+        },
+        {
+          "id": "SRC-01",
+          "expected_count": 0,
+          "matched_count": 0,
+          "recall_at_k": null
+        },
+        {
+          "id": "SRC-02",
+          "expected_count": 0,
+          "matched_count": 0,
+          "recall_at_k": null
+        },
+        {
+          "id": "SRC-03",
+          "expected_count": 0,
+          "matched_count": 0,
+          "recall_at_k": null
+        },
+        {
+          "id": "SRC-04",
+          "expected_count": 0,
+          "matched_count": 0,
+          "recall_at_k": null
+        }
+      ]
+    },
+    "human_rejection_rate": {
+      "rejection_rate": 0.8667,
+      "rejected": 26,
+      "total": 30,
+      "per_case": [
+        {
+          "id": "SR-01",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-02",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-03",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-07",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-08",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-10",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-12",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-16",
+          "rejected": true,
+          "reason": "error"
+        },
+        {
+          "id": "SR-17",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-20",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-21",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-23",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-24",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-25",
+          "rejected": false,
+          "reason": null
+        },
+        {
+          "id": "SR-27",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-30",
+          "rejected": false,
+          "reason": null
+        },
+        {
+          "id": "SR-31",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-34",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-36",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-37",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-40",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-41",
+          "rejected": false,
+          "reason": null
+        },
+        {
+          "id": "SR-44",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-45",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-48",
+          "rejected": true,
+          "reason": "incomplete_recall"
+        },
+        {
+          "id": "SR-50",
+          "rejected": false,
+          "reason": null
+        },
+        {
+          "id": "SRC-01",
+          "rejected": true,
+          "reason": "error"
+        },
+        {
+          "id": "SRC-02",
+          "rejected": true,
+          "reason": "error"
+        },
+        {
+          "id": "SRC-03",
+          "rejected": true,
+          "reason": "error"
+        },
+        {
+          "id": "SRC-04",
+          "rejected": true,
+          "reason": "error"
+        }
+      ]
+    },
+    "evidence_trace_completeness": {
+      "completeness_rate": 0.4,
+      "complete": 12,
+      "total": 30,
+      "per_case": [
+        {
+          "id": "SR-01",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-02",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-03",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-07",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-08",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-10",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-12",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-16",
+          "complete": false,
+          "has_expected": false,
+          "has_paths": false,
+          "has_match": false
+        },
+        {
+          "id": "SR-17",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-20",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-21",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-23",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-24",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-25",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-27",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-30",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-31",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-34",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-36",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-37",
+          "complete": false,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": false
+        },
+        {
+          "id": "SR-40",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-41",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-44",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-45",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-48",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SR-50",
+          "complete": true,
+          "has_expected": true,
+          "has_paths": true,
+          "has_match": true
+        },
+        {
+          "id": "SRC-01",
+          "complete": false,
+          "has_expected": false,
+          "has_paths": false,
+          "has_match": false
+        },
+        {
+          "id": "SRC-02",
+          "complete": false,
+          "has_expected": false,
+          "has_paths": false,
+          "has_match": false
+        },
+        {
+          "id": "SRC-03",
+          "complete": false,
+          "has_expected": false,
+          "has_paths": false,
+          "has_match": false
+        },
+        {
+          "id": "SRC-04",
+          "complete": false,
+          "has_expected": false,
+          "has_paths": false,
+          "has_match": false
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "SR-01",
+      "question": "a visible connection remains but its uncertainty and source path disappear",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a visible connection remains but its uncertainty and source path disappear",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 789 documents (23%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (0ms)\n├─ a visible connection remains but its uncertainty and source path disappear\n├─ vec: how to interpret residual connections in data science?\n├─ vec: methods for identifying uncertain and unexplained signals\n└─ hyde: Understanding a visible connection remains but its uncertainty and so...\nSearching 4 queries...\nEmbedding 4 queries... (6.3s)",
+      "passed": false,
+      "expected_suffixes": [
+        "concepts/relation-loss.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-f764e85bd022-research-methodology-dossier-and-manual-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-1e2da71308f7-casebook-living-genetic-archive-full-source-reservoir-mohammad-zare-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-fb9b4d032d7c-avant-trace-appendix-f-object-model-and-evidence-grammar-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-93c553f4df1c-mohammad-zare-general-phd-idea-reservoir-v6-media-archaeology-workbenc-extracted.md",
+        "qmd://mozare-wiki/04-notes/research/mozare-practice-constellation.md"
+      ]
+    },
+    {
+      "id": "SR-02",
+      "question": "the moment when an archival mark may become evidence but has not yet earned proof",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "the moment when an archival mark may become evidence but has not yet earned proof",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 789 documents (23%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (35.4s)\n├─ the moment when an archival mark may become evidence but has not yet earned proof\n├─ lex: understanding the dynamics\n├─ lex: importance of archival\n├─ vec: understanding the dynamics of archival markings\n├─ vec: importance of archival tags in legal contexts\n└─ hyde: The topic of the moment when an archival mark may become evidence but...\nSearching 6 queries...\nEmbedding 4 queries... (7.9s)",
+      "passed": false,
+      "expected_suffixes": [
+        "concepts/trace-before-proof.md",
+        "projects/avant-trace.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-b39689971928-Casebook-Genetic-Explainability-for-AI-Mediated-Source-Research-extracted.md",
+        "qmd://mozare-wiki/06-relations/bodies-symbiotic.md",
+        "qmd://mozare-wiki/04-notes/research/project-name-and-center-shifts.md",
+        "qmd://mozare-wiki/04-notes/research/interpretive-continuity-and-teleology-risk.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-c780a2bba718-Tracebook-Genetic-Explainability-and-AI-Mediated-Source-Relations-in-B-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-03",
+      "question": "a Persian play where corpses papers flood and administrative handling occupy the same theatrical field",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a Persian play where corpses papers flood and administrative handling occupy the same theatrical field",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 782 documents (23%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (47.2s)\n├─ a Persian play where corpses papers flood and administrative handling occupy the same theatrical field\n├─ lex: exploring the genre\n├─ lex: understanding the intersection\n├─ vec: exploring the genre of corpse-papers drama\n├─ vec: understanding the intersection of administrative and comedic elements\n└─ hyde: The topic of a persian play where corpses papers flood and administra...\nSearching 6 queries...\nEmbedding 4 queries... (10.2s)",
+      "passed": false,
+      "expected_suffixes": [
+        "works/grave.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-fd670dbd94f9-ALTERNATE-1-BRIDGE-MA-TO-PHD-extracted.md",
+        "qmd://mozare-wiki/03-objects/concepts/administrative-violence.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-d37889e0821d-mohammad-zare-a-genetic-dossier-extracted.md",
+        "qmd://mozare-wiki/09-indexes/semantic-search-test-set.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-4ff47a1ab3e4-MA-TO-PHD-BRIDGE-V3-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-07",
+      "question": "a designed Persian collection pairing scientific or historical research with poems",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a designed Persian collection pairing scientific or historical research with poems",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 733 documents (21%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (39.2s)\n├─ a designed Persian collection pairing scientific or historical research with poems\n├─ lex: pair scholarly works\n├─ lex: blend scientific insights\n├─ vec: pair scholarly works with poetic verses\n├─ vec: blend scientific insights with historical texts in persian themes\n└─ hyde: The topic of a designed Persian collection pairing scientific or hist...\nSearching 6 queries...\nEmbedding 4 queries... (8.4s)",
+      "passed": false,
+      "expected_suffixes": [
+        "works/ten-research-poems.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-93c553f4df1c-mohammad-zare-general-phd-idea-reservoir-v6-media-archaeology-workbenc-extracted.md",
+        "qmd://mozare-wiki/02-sources/records/mw-src-2567212946c6-ten-research-poems.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-eed7d40ed651-mohammad-zare-general-phd-idea-reservoir-v7-mapping-object-workbench-a-extracted.md",
+        "qmd://mozare-wiki/00-system/registers/CORPUS-MAP.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-340695cba202-mohammad-zare-general-phd-idea-reservoir-v8-relation-object-mapping-ob-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-08",
+      "question": "an artist-book project where pages also mean dismantling and recomposition",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "an artist-book project where pages also mean dismantling and recomposition",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 661 documents (19%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (46.7s)\n├─ an artist-book project where pages also mean dismantling and recomposition\n├─ lex: guide to artist-book\n├─ lex: understanding the process\n├─ vec: guide to artist-book projects emphasizing page design\n├─ vec: understanding the process of creating artist books\n└─ hyde: Understanding an artist-book project where pages also mean dismantlin...\nSearching 6 queries...\nEmbedding 4 queries... (6.1s)",
+      "passed": false,
+      "expected_suffixes": [
+        "works/owragh.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-50163e21dce0-mohammad-zare-baetens-matchness-reservoir-v8-relation-object-mapping-o-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-f656682011ea-mohammad-zare-baetens-media-genesis-reservoir-restored-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-340695cba202-mohammad-zare-general-phd-idea-reservoir-v8-relation-object-mapping-ob-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-eed7d40ed651-mohammad-zare-general-phd-idea-reservoir-v7-mapping-object-workbench-a-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-93c553f4df1c-mohammad-zare-general-phd-idea-reservoir-v6-media-archaeology-workbenc-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-10",
+      "question": "a stage play transformed into word banks rules timing triggers and generated poetry",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a stage play transformed into word banks rules timing triggers and generated poetry",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 551 documents (16%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (29.6s)\n├─ a stage play transformed into word banks rules timing triggers and generated poetry\n├─ lex: stage play to\n├─ lex: transforming theatrical\n├─ vec: stage play to film script\n├─ vec: transforming theatrical performance into written works\n└─ hyde: The topic of a stage play transformed into word banks rules timing tr...\nSearching 6 queries...\nEmbedding 4 queries... (6.1s)",
+      "passed": true,
+      "expected_suffixes": [
+        "works/grave-machine.md",
+        "grave-grave-machine.md"
+      ],
+      "matched_expected": [
+        "works/grave-machine.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/03-objects/works/grave-machine.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-f656682011ea-mohammad-zare-baetens-media-genesis-reservoir-restored-extracted.md",
+        "qmd://mozare-wiki/09-indexes/semantic-search-test-set.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-eed7d40ed651-mohammad-zare-general-phd-idea-reservoir-v7-mapping-object-workbench-a-extracted.md",
+        "qmd://ref-wiki/originals/ref-src-f8d672dac39b-pt030-04-01baetensfpp.md"
+      ]
+    },
+    {
+      "id": "SR-12",
+      "question": "a Persian modernist constellation of Hedayat Sadeghi and Nalbandian as artistic machines",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a Persian modernist constellation of Hedayat Sadeghi and Nalbandian as artistic machines",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 541 documents (16%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (38.2s)\n├─ a Persian modernist constellation of Hedayat Sadeghi and Nalbandian as artistic machines\n├─ lex: exploring the cultural\n├─ lex: role of artistic\n├─ vec: exploring the cultural impact of Hedayat Sadeghi and Nalbandian\n├─ vec: role of artistic machines in modernist expression\n└─ hyde: The topic of a persian modernist constellation of hedayat Sadeghi and...\nSearching 6 queries...\nEmbedding 4 queries... (4.5s)",
+      "passed": false,
+      "expected_suffixes": [
+        "works/bodies-of-flight.md",
+        "works/symbiotic-machines.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-32f540f796bd-bodies-of-flight-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-ee2b9185b107-symbiotic-machines-theatres-of-objects-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-ff0e7457c7dd-Hauthal-Sketch-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-93c553f4df1c-mohammad-zare-general-phd-idea-reservoir-v6-media-archaeology-workbenc-extracted.md",
+        "qmd://mozare-wiki/02-sources/records/mw-src-7c13aff0e1b9-Works-of-Sadegh-Hedayat.md"
+      ]
+    },
+    {
+      "id": "SR-16",
+      "question": "formation joining industrial engineering dramatic literature and later AI-mediated research",
+      "collection": "canonical-default",
+      "passed": false,
+      "error": "timeout after 180 seconds",
+      "paths": []
+    },
+    {
+      "id": "SR-17",
+      "question": "product work with bottlenecks reporting APIs interfaces and hidden system constraints",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "product work with bottlenecks reporting APIs interfaces and hidden system constraints",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 441 documents (13%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (46.8s)\n├─ product work with bottlenecks reporting APIs interfaces and hidden system constraints\n├─ lex: bottlenecks reporting in product\n├─ lex: bottlenecks handling in product\n├─ vec: bottlenecks handling in product\n├─ vec: bottlenecks reporting in product\n└─ hyde: Understanding product work with bottlenecks reporting is essential fo...\nSearching 6 queries...\nEmbedding 4 queries... (4.3s)",
+      "passed": false,
+      "expected_suffixes": [
+        "professional-practice.md",
+        "product-work-and-ai-research.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-d37889e0821d-mohammad-zare-a-genetic-dossier-extracted.md",
+        "qmd://mozare-wiki/07-genesis/lineages/professional-practice-lineage.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-c47e8ab22210-a-proxy-space-for-withdrawn-genealogies-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-8b842b4c11f0-a-proxy-space-for-withdrawn-genealogies-expanded-ontography-v2-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-26608f5b5c89-claude-code-context-and-token-optimization-dossier-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-20",
+      "question": "Factory Story Officer and curatorial projects involving bookness leakage and underground water",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Factory Story Officer and curatorial projects involving bookness leakage and underground water",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 435 documents (13%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (35.5s)\n├─ Factory Story Officer and curatorial projects involving bookness leakage and underground water\n├─ lex: Curatorial projects involving\n├─ lex: Officer and curatorial\n├─ vec: Curatorial projects involving bookness leakage and underground water\n├─ vec: Officer and curatorial projects in water management and conservation\n└─ hyde: The topic of factory story officer and curatorial projects involving ...\nSearching 6 queries...\nEmbedding 4 queries... (5.6s)",
+      "passed": false,
+      "expected_suffixes": [
+        "factory-artistic-community.md",
+        "curatorial-practice-context.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/06-relations/factory-and-curatorial-practice.md",
+        "qmd://mozare-wiki/07-genesis/lineages/curatorial-practice-lineage.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-d37889e0821d-mohammad-zare-a-genetic-dossier-extracted.md",
+        "qmd://mozare-wiki/05-claims/mohammad-zare-curatorial-role-chronology.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-2feefa24665d-CV-v4-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-21",
+      "question": "scenographic AI humanities workbench using Appia Svoboda provenance agents and replay",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "scenographic AI humanities workbench using Appia Svoboda provenance agents and replay",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 435 documents (13%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (62.5s)\n├─ scenographic AI humanities workbench using Appia Svoboda provenance agents and replay\n├─ lex: ai-driven scenographic art\n├─ lex: digital provenance in\n├─ vec: ai-driven scenographic art creation tools\n├─ vec: digital provenance in scenographic contexts\n└─ hyde: The topic of scenographic ai humanities workbench using Appia Svoboda...\nSearching 6 queries...\nEmbedding 4 queries... (5.2s)",
+      "passed": true,
+      "expected_suffixes": [
+        "projects/casebook.md",
+        "casebook-scenographic-lineage.md"
+      ],
+      "matched_expected": [
+        "projects/casebook.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-4c613fa2d567-mohammad-zare-casebook-comprehensive-research-sketch-ai-mediated-2-extracted.md",
+        "qmd://mozare-wiki/03-objects/projects/casebook.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-8a6646699c33-mohammad-zare-casebookresearchsketch-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-a44177b9eb13-research-sketch-expanded-version-vanhoutte-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-eed7d40ed651-mohammad-zare-general-phd-idea-reservoir-v7-mapping-object-workbench-a-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-23",
+      "question": "trace before proof genetic explainability Dante Milton Beckett Joyce package",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "trace before proof genetic explainability Dante Milton Beckett Joyce package",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 431 documents (12%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (25.5s)\n├─ trace before proof genetic explainability Dante Milton Beckett Joyce package\n├─ lex: explain genetic codes in dante\n├─ vec: explain genetic codes in dante\n└─ hyde: Trace before proof genetic explainability Dante Milton Beckett Joyce ...\nSearching 4 queries...\nEmbedding 3 queries... (5.3s)",
+      "passed": true,
+      "expected_suffixes": [
+        "projects/avant-trace.md",
+        "avant-trace-project-package-lineage.md"
+      ],
+      "matched_expected": [
+        "projects/avant-trace.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-606016bb78f6-joyce-beckett-dante-milton-traces-extracted.md",
+        "qmd://mozare-wiki/04-notes/research/dante-milton-trace-before-influence.md",
+        "qmd://mozare-wiki/03-objects/projects/avant-trace.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-202fbf6067d8-avant-trace-appendix-b-dante-milton-source-field-and-pilot-dossier-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-c780a2bba718-Tracebook-Genetic-Explainability-and-AI-Mediated-Source-Relations-in-B-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-24",
+      "question": "relation-object before relation-type profiles permissions events and residue architecture",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "relation-object before relation-type profiles permissions events and residue architecture",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 425 documents (12%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (28.2s)\n├─ relation-object before relation-type profiles permissions events and residue architecture\n├─ lex: relation-object vs relation-type\n├─ lex: comparing relation-object and relation-type\n├─ vec: relation-object vs relation-type\n├─ vec: comparing relation-object and relation-type\n└─ hyde: The relation-object before relation-type configuration depends on the...\nSearching 6 queries...\nEmbedding 4 queries... (4.9s)",
+      "passed": false,
+      "expected_suffixes": [
+        "projects/ontograph.md",
+        "ontograph-mixt-workbench.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-f764e85bd022-research-methodology-dossier-and-manual-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-ca789eb8e0c7-ontograph-integrated-architecture-draft-extracted.md",
+        "qmd://mozare-wiki/07-genesis/lineages/relation-object-development.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-1e2da71308f7-casebook-living-genetic-archive-full-source-reservoir-mohammad-zare-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-340695cba202-mohammad-zare-general-phd-idea-reservoir-v8-relation-object-mapping-ob-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-25",
+      "question": "latest supplied main Mixt proposal relation loss media shared ground version 7.3",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "latest supplied main Mixt proposal relation loss media shared ground version 7.3",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 405 documents (12%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (33.2s)\n├─ latest supplied main Mixt proposal relation loss media shared ground version 7.3\n├─ lex: new proposal for\n├─ vec: new proposal for mixt in media shared ground\n├─ vec: recent changes in main mixt proposals\n└─ hyde: The topic of latest supplied main Mixt proposal relation loss media s...\nSearching 5 queries...\nEmbedding 4 queries... (5.2s)",
+      "passed": true,
+      "expected_suffixes": [
+        "mixt-current-main-version.md",
+        "mixt-main-preproposal-lineage.md"
+      ],
+      "matched_expected": [
+        "mixt-current-main-version.md",
+        "mixt-main-preproposal-lineage.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/records/mw-src-b0c200c56138-mixt-workbench-main-preproposal-v7-0-validated-media-ground.md",
+        "qmd://mozare-wiki/05-claims/mixt-current-main-version.md",
+        "qmd://mozare-wiki/07-genesis/lineages/mixt-main-preproposal-lineage.md",
+        "qmd://mozare-wiki/03-objects/projects/mixt-workbench.md",
+        "qmd://mozare-wiki/02-sources/records/mw-src-e8f2585020e5-mixt-workbench-preproposal-v7-3.md"
+      ]
+    },
+    {
+      "id": "SR-27",
+      "question": "artwork process archive critical writing protected residue public form",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "artwork process archive critical writing protected residue public form",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 390 documents (11%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (41.2s)\n├─ artwork process archive critical writing protected residue public form\n├─ lex: digital art archive writing protection\n├─ lex: digital art process record\n├─ vec: digital art archive writing protection\n├─ vec: digital art process record\n└─ hyde: The topic of artwork process archive archive critical writing protect...\nSearching 6 queries...\nEmbedding 4 queries... (9.2s)",
+      "passed": false,
+      "expected_suffixes": [
+        "projects/visible-genesis-artistic-research.md",
+        "visible-genesis-lineage.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-a63542497cc7-how-a-relation-becomes-a-work-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-c8533313fe71-Research-Poetry-Literature-Review-Plan-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-93c553f4df1c-mohammad-zare-general-phd-idea-reservoir-v6-media-archaeology-workbenc-extracted.md",
+        "qmd://mozare-wiki/06-relations/mixt-workbench-visible-genesis.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-340695cba202-mohammad-zare-general-phd-idea-reservoir-v8-relation-object-mapping-ob-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-30",
+      "question": "project names Casebook AvanT-Trace Ontograph Mixt Visible Genesis different centres not synonyms",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "project names Casebook AvanT-Trace Ontograph Mixt Visible Genesis different centres not synonyms",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 388 documents (11%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (55.9s)\n├─ project names Casebook AvanT-Trace Ontograph Mixt Visible Genesis different centres not synonyms\n├─ lex: different centres not\n├─ lex: comparing project names to\n├─ vec: different centres not sharing the same name\n├─ vec: comparing project names to AvanT-Trace and Ontograph\n└─ hyde: Understanding project names Casebook AvanT-Trace Ontograph Mixt Visib...\nSearching 6 queries...\nEmbedding 4 queries... (11.3s)",
+      "passed": true,
+      "expected_suffixes": [
+        "project-family-topology.md",
+        "project-name-and-center-shifts.md"
+      ],
+      "matched_expected": [
+        "project-family-topology.md",
+        "project-name-and-center-shifts.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/04-notes/research/project-name-and-center-shifts.md",
+        "qmd://mozare-wiki/04-notes/research/project-family-topology.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-a46e1464e0c3-avant-trace-master-source-reservoir-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-eed7d40ed651-mohammad-zare-general-phd-idea-reservoir-v7-mapping-object-workbench-a-extracted.md",
+        "qmd://mozare-wiki/07-genesis/lineages/casebook-to-avant-trace-lineage.md"
+      ]
+    },
+    {
+      "id": "SR-31",
+      "question": "earlier MA framework in which language is deterritorialized and individual speech becomes collective",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "earlier MA framework in which language is deterritorialized and individual speech becomes collective",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 386 documents (11%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (45.5s)\n├─ earlier MA framework in which language is deterritorialized and individual speech becomes collective\n├─ lex: framework for understanding\n├─ lex: deterritorializing language to\n├─ vec: framework for understanding earlier MA (marxismed) contributions\n├─ vec: deterritorializing language to prioritize individual voice\n└─ hyde: The topic of earlier ma framework in which language is deterritoriali...\nSearching 6 queries...\nEmbedding 4 queries... (5.1s)",
+      "passed": true,
+      "expected_suffixes": [
+        "concepts/minor-literature.md",
+        "concepts/deterritorialization.md",
+        "concepts/collective-enunciation.md"
+      ],
+      "matched_expected": [
+        "concepts/collective-enunciation.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-bed29f2bb034-Ian-Buchanan-John-Marks-Deleuze-and-Literature-Edinburgh-University-Pr-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-38daff26a5de-MA-Thesis-summary-formatted-not-final-extracted.md",
+        "qmd://mozare-wiki/03-objects/concepts/collective-enunciation.md",
+        "qmd://ref-wiki/02-sources/text/ref-src-39eca4c8fe90-Steven-Devleminck-Research-Corpus-MASTER-FINAL-2026-08-11-extracted.md",
+        "qmd://mozare-wiki/06-relations/minor-literature-to-object-oriented-ontology.md"
+      ]
+    },
+    {
+      "id": "SR-34",
+      "question": "a trace becomes a relation then a claim through evidence counter-evidence and permission",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a trace becomes a relation then a claim through evidence counter-evidence and permission",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 376 documents (11%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (44.8s)\n├─ a trace becomes a relation then a claim through evidence counter-evidence and permission\n├─ lex: processes for establishing\n├─ lex: how to create\n├─ vec: processes for establishing a trace in academic contexts\n├─ vec: how to create a relation backed by evidence\n└─ hyde: The topic of a trace becomes a relation then a claim through evidence...\nSearching 6 queries...\nEmbedding 4 queries... (8.4s)",
+      "passed": false,
+      "expected_suffixes": [
+        "methods/evidence-to-claim-workflow.md",
+        "concepts/counter-evidence.md",
+        "concepts/claim-permission.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-f764e85bd022-research-methodology-dossier-and-manual-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-e43cd6edf6ae-avant-trace-preproposal-mohammad-zare-extracted.md",
+        "qmd://mozare-wiki/03-objects/concepts/trace-before-proof.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-1e2da71308f7-casebook-living-genetic-archive-full-source-reservoir-mohammad-zare-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-fb9b4d032d7c-avant-trace-appendix-f-object-model-and-evidence-grammar-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-36",
+      "question": "prompts retrievals generated candidates commits and runtimes as a reconstructable process field",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "prompts retrievals generated candidates commits and runtimes as a reconstructable process field",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 362 documents (10%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (52.8s)\n├─ prompts retrievals generated candidates commits and runtimes as a reconstructable process field\n├─ lex: code execution tracking\n├─ lex: process runtime monitoring\n├─ vec: code execution tracking\n├─ vec: process runtime monitoring\n└─ hyde: The topic of prompts retrievals generated candidates commits and runt...\nSearching 6 queries...\nEmbedding 4 queries... (6.3s)",
+      "passed": false,
+      "expected_suffixes": [
+        "concepts/digital-avant-texte.md",
+        "methods/visible-genesis-method.md",
+        "concepts/event-sourcing.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://ref-wiki/02-sources/text/ref-src-ce622db6540e-gpt-after-Stalpaert-plan-suggestions-1-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-26608f5b5c89-claude-code-context-and-token-optimization-dossier-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-95729066badd-best-practices-for-claude-code-saved-official-documentation-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-f764e85bd022-research-methodology-dossier-and-manual-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-37",
+      "question": "an AI interface turns contradictory sources into fluent prose while hiding its route",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "an AI interface turns contradictory sources into fluent prose while hiding its route",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 341 documents (10%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (37.8s)\n├─ an AI interface turns contradictory sources into fluent prose while hiding its route\n├─ lex: ai writing tool\n├─ vec: ai writing tool\n└─ hyde: The topic of an ai interface turns contradictory sources into fluent ...\nSearching 4 queries...\nEmbedding 3 queries... (7.4s)",
+      "passed": false,
+      "expected_suffixes": [
+        "concepts/smoothing-machine.md",
+        "concepts/scenographic-epistemology.md",
+        "projects/casebook.md"
+      ],
+      "matched_expected": [],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-6b8870f86ec1-the-mixt-workbench-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-9072a033e1a7-the-mixt-workbench-expanded-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-4c613fa2d567-mohammad-zare-casebook-comprehensive-research-sketch-ai-mediated-2-extracted.md",
+        "qmd://mozare-wiki/09-indexes/semantic-search-test-set.md",
+        "qmd://mozare-wiki/02-sources/records/mw-src-9002f8514e38-Tuning-AI-Tools-to-Write-Like-You-Plan.md"
+      ]
+    },
+    {
+      "id": "SR-40",
+      "question": "constraints redistribute model outputs in poetry and executable Taroko systems",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "constraints redistribute model outputs in poetry and executable Taroko systems",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 333 documents (10%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (34.6s)\n├─ constraints redistribute model outputs in poetry and executable Taroko systems\n├─ lex: red manage data flow in\n├─ vec: red manage data flow in\n└─ hyde: The topic of constraints redistribute model outputs in poetry and exe...\nSearching 4 queries...\nEmbedding 3 queries... (5.9s)",
+      "passed": true,
+      "expected_suffixes": [
+        "concepts/constraint.md",
+        "methods/token-distribution-techniques.md",
+        "constraint-and-ai-composition.md"
+      ],
+      "matched_expected": [
+        "constraint-and-ai-composition.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/06-relations/constraint-and-ai-composition.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-5b5f71dd8f82-mohammad-zare-the-mixt-workbench-research-note-for-baetens-v3-1-extracted.md",
+        "qmd://mozare-wiki/07-genesis/lineages/procedural-poetry-lineage.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-5a53473b12c6-mohammad-zare-the-mixt-workbench-research-note-final-revised-1-extracted.md",
+        "qmd://zp-pages/03-objects/flows/zp-obj-registration-flow.md"
+      ]
+    },
+    {
+      "id": "SR-41",
+      "question": "a Persian modernist constellation of Hedayat Sadeqi and Nalbandian without a single influence chain",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "a Persian modernist constellation of Hedayat Sadeqi and Nalbandian without a single influence chain",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Warning: 331 documents (10%) need embeddings. Run 'qmd embed' for better results.\nExpanding query... (69.0s)\n├─ a Persian modernist constellation of Hedayat Sadeqi and Nalbandian without a single influence chain\n├─ lex: describing the modernist\n├─ lex: hedayat sadeqi\n├─ vec: describing the modernist constellation of hedayat sadeqi and nalbandi...\n├─ vec: hedayat sadeqi and nalbandian in modernist constellation space\n└─ hyde: The topic of a persian modernist constellation of hedayat sadeqi and ...\nSearching 6 queries...\nEmbedding 4 queries... (6.2s)",
+      "passed": true,
+      "expected_suffixes": [
+        "collections/persian-modernist-constellation.md",
+        "persian-modernist-constellation-as-relational-field.md"
+      ],
+      "matched_expected": [
+        "collections/persian-modernist-constellation.md",
+        "persian-modernist-constellation-as-relational-field.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/03-objects/collections/persian-modernist-constellation.md",
+        "qmd://mozare-wiki/04-notes/research/persian-modernist-constellation-as-relational-field.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-32f540f796bd-bodies-of-flight-extracted.md",
+        "qmd://mozare-wiki/07-genesis/lineages/persian-modernist-constellation-lineage.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-ff0e7457c7dd-Hauthal-Sketch-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-44",
+      "question": "Joyce notebooks notons source lists and digital pathways are not equivalent evidence states",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Joyce notebooks notons source lists and digital pathways are not equivalent evidence states",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Tip: 322 documents need embeddings. Run 'qmd embed' to index them.\nExpanding query... (37.4s)\n├─ Joyce notebooks notons source lists and digital pathways are not equivalent evidence states\n├─ lex: difference between joyce\n├─ lex: source lists and\n├─ vec: difference between joyce notebooks and source lists\n├─ vec: source lists and digital pathways are not equivalent evidence states\n└─ hyde: Understanding Joyce notebooks notons source lists and digital pathway...\nSearching 6 queries...\nEmbedding 4 queries... (5.7s)",
+      "passed": true,
+      "expected_suffixes": [
+        "joyce-beckett-asymmetrical-archives.md",
+        "joyce-archive-interface.md"
+      ],
+      "matched_expected": [
+        "joyce-archive-interface.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-1b39d5bc790f-avant-trace-appendix-d-joyce-genetic-interface-reservoir-extracted.md",
+        "qmd://mozare-wiki/03-objects/collections/joyce-beckett-comparative-field.md",
+        "qmd://mozare-wiki/06-relations/joyce-archive-interface.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-bf2fc79a90ee-casebook-genetic-explainability-and-ai-mediated-source-relations-in-be-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-efe3e58b17b5-James-Joyce-and-Genetic-Criticism-Sartor-Genevieve-2018-May-09-Bril-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-45",
+      "question": "Beckett marked books copied notes drafts cancellations and published traces form an evidence ladder",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Beckett marked books copied notes drafts cancellations and published traces form an evidence ladder",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Tip: 314 documents need embeddings. Run 'qmd embed' to index them.\nExpanding query... (38.1s)\n├─ Beckett marked books copied notes drafts cancellations and published traces form an evidence ladder\n├─ lex: The importance of keeping\n├─ vec: The importance of keeping drafts and copies organized\n├─ vec: How to create evidence trails for literary analysis\n└─ hyde: The topic of beckett marked books copied notes drafts cancellations a...\nSearching 5 queries...\nEmbedding 4 queries... (5.6s)",
+      "passed": true,
+      "expected_suffixes": [
+        "beckett-archive-evidence-ladder.md",
+        "beckett-archive-resource-scope.md"
+      ],
+      "matched_expected": [
+        "beckett-archive-evidence-ladder.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/02-sources/text/mw-src-46e987ce4a3c-avant-trace-appendix-e-beckett-reading-and-archive-reservoir-extracted.md",
+        "qmd://mozare-wiki/06-relations/beckett-archive-evidence-ladder.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-202fbf6067d8-avant-trace-appendix-b-dante-milton-source-field-and-pilot-dossier-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-20bf532f70c0-avant-trace-appendix-a-archive-and-corpus-registry-extracted.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-1b39d5bc790f-avant-trace-appendix-d-joyce-genetic-interface-reservoir-extracted.md"
+      ]
+    },
+    {
+      "id": "SR-48",
+      "question": "AI research reports preserve leads and project history but repetition does not corroborate a claim",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "AI research reports preserve leads and project history but repetition does not corroborate a claim",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Tip: 305 documents need embeddings. Run 'qmd embed' to index them.\nExpanding query... (30.4s)\n├─ AI research reports preserve leads and project history but repetition does not corroborate a claim\n├─ lex: understanding preserve leads\n├─ vec: understanding preserve leads in data analysis\n├─ vec: guide to effective lead preservation for future research\n└─ hyde: The topic of ai research reports preserve leads and project history b...\nSearching 5 queries...\nEmbedding 4 queries... (5.0s)",
+      "passed": true,
+      "expected_suffixes": [
+        "ai-research-reports-and-evidence-firewall.md",
+        "ai-report-authority-claim.md"
+      ],
+      "matched_expected": [
+        "ai-report-authority-claim.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/06-relations/ai-report-evidence.md",
+        "qmd://mozare-wiki/03-objects/collections/ai-comparative-research-reports.md",
+        "qmd://mozare-wiki/05-claims/ai-report-authority-claim.md",
+        "qmd://mozare-wiki/02-sources/text/mw-src-f2f30d1bf063-the-mixt-workbench-extracted.md",
+        "qmd://mozare-wiki/00-system/registers/AI-RESEARCH-REPORT-AUTHORITY-REGISTER.md"
+      ]
+    },
+    {
+      "id": "SR-50",
+      "question": "supervisor fit translates a project but does not prove delivery availability response or endorsement",
+      "collection": "canonical-default",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "supervisor fit translates a project but does not prove delivery availability response or endorsement",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5"
+      ],
+      "returncode": 0,
+      "stderr": "Tip: 304 documents need embeddings. Run 'qmd embed' to index them.\nExpanding query... (29.0s)\n├─ supervisor fit translates a project but does not prove delivery availability response or endorsement\n├─ lex: translate project supervision\n├─ lex: delivery confirmation supervisor\n├─ vec: translate project supervision\n├─ vec: delivery confirmation supervisor\n└─ hyde: The topic of supervisor fit translates a project but does not prove d...\nSearching 6 queries...\nEmbedding 4 queries... (5.1s)",
+      "passed": true,
+      "expected_suffixes": [
+        "supervisor-fit-as-project-translation.md",
+        "supervisor-fit-not-endorsement.md"
+      ],
+      "matched_expected": [
+        "supervisor-fit-as-project-translation.md",
+        "supervisor-fit-not-endorsement.md"
+      ],
+      "paths": [
+        "qmd://mozare-wiki/06-relations/supervisor-fit-project-translation.md",
+        "qmd://mozare-wiki/07-genesis/lineages/supervisor-correspondence-lineage.md",
+        "qmd://mozare-wiki/05-claims/project-letter-delivery-status.md",
+        "qmd://mozare-wiki/04-notes/research/supervisor-fit-as-project-translation.md",
+        "qmd://mozare-wiki/05-claims/supervisor-fit-not-endorsement.md"
+      ]
+    },
+    {
+      "id": "SRC-01",
+      "question": "complete MA thesis on Nalbandian ugliness minor literature with Grave practical project",
+      "collection": "mozare-source-records",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "complete MA thesis on Nalbandian ugliness minor literature with Grave practical project",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5",
+        "-c",
+        "mozare-source-records"
+      ],
+      "returncode": 1,
+      "stderr": "Collection not found: mozare-source-records",
+      "passed": false,
+      "error": "qmd command failed",
+      "paths": []
+    },
+    {
+      "id": "SRC-02",
+      "question": "Mohammad Zare Adaptive Writing Protocol",
+      "collection": "mozare-source-records",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Mohammad Zare Adaptive Writing Protocol",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5",
+        "-c",
+        "mozare-source-records"
+      ],
+      "returncode": 1,
+      "stderr": "Collection not found: mozare-source-records",
+      "passed": false,
+      "error": "qmd command failed",
+      "paths": []
+    },
+    {
+      "id": "SRC-03",
+      "question": "Research Methodology Dossier and Manual object field relation governance visible genesis",
+      "collection": "mozare-source-records",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Research Methodology Dossier and Manual object field relation governance visible genesis",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5",
+        "-c",
+        "mozare-source-records"
+      ],
+      "returncode": 1,
+      "stderr": "Collection not found: mozare-source-records",
+      "passed": false,
+      "error": "qmd command failed",
+      "paths": []
+    },
+    {
+      "id": "SRC-04",
+      "question": "Mohammad Zare A Genetic Dossier archaeological excavation catalogue of relations",
+      "collection": "mozare-source-records",
+      "command": [
+        "C:\\Users\\Zarinpal\\AppData\\Roaming\\npm\\qmd.CMD",
+        "query",
+        "Mohammad Zare A Genetic Dossier archaeological excavation catalogue of relations",
+        "--no-rerank",
+        "--json",
+        "-n",
+        "5",
+        "-c",
+        "mozare-source-records"
+      ],
+      "returncode": 1,
+      "stderr": "Collection not found: mozare-source-records",
+      "passed": false,
+      "error": "qmd command failed",
+      "paths": []
+    }
+  ]
+}
