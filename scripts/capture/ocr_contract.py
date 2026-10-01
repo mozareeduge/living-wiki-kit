@@ -105,9 +105,9 @@ def make_preview(image_path: str, capture_id: str) -> dict:
 def extract_capture(capture_id: str, adapter_name: str = "rapidocr") -> dict:
     rec = wc.read_capture(capture_id)
     if rec["front_matter"]["capture_kind"] not in (
-            "handwriting", "drawing", "image", "mixed", "file"):
+            "handwriting", "drawing", "image", "mixed", "file", "url"):
         raise wc.CaptureError("E_WRONG_KIND",
-                              "extraction is for visual/file captures")
+                              "extraction is for visual/file/url captures")
     adapter = ADAPTERS.get(adapter_name)
     if adapter is None:
         raise wc.CaptureError("E_UNKNOWN_ADAPTER", f"unknown adapter: {adapter_name}")
