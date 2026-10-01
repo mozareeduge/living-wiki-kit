@@ -30,6 +30,19 @@ counts; this file records what each kit version changed and why.
   3 conflicts.
 - **Phase 3 acceptance (W4)**: 50 proposals → 30 audited + 20 rejected-audit,
   zero canonical change.
+- **Capture breadth (U1)**: URL, photo and file arrivals are first-class governed
+  captures — `capture-url` / `capture-photo` plus a provider-neutral
+  `SingleFileAdapter` (extracts `.txt/.md/.csv`, *flags* what it will not guess).
+  All three modalities emit the same checksummed, deduplicated candidate receipt.
+  A URL's own bytes are its content: no fetch, no model call.
+- **Benchmark metrics (M2)**: `run-semantic-benchmark.py` now reports
+  neighborhood recall@K, human rejection rate and evidence-trace completeness in
+  both JSON and markdown, and runs on Windows (a cp1252 decode crash that made
+  the 30-case run impossible is fixed). Measured 12/30 against the 3/30 lexical
+  baseline (`_audits/2026-10-01--semantic-benchmark/`).
+- **Capture schema parity**: the canonical and client capture schemas are pinned
+  to one `capture_kind` vocabulary, and the capture test suite is write-isolated
+  so a test run never writes into the repository.
 - Governance invariants unchanged. Adjudication promotes authority; it never
   gates the pipeline or grants visibility.
 
