@@ -114,6 +114,133 @@ def run_case(case: dict, top_k: int, timeout: int) -> dict:
     return result
 
 
+def compute_neighborhood_recall(results: list[dict], k: int) -> dict:
+    """Compute neighborhood recall@K for each case and aggregate.
+
+    recall@K = |expected ∩ retrieved@K| / |expected|
+
+    A case with zero expected items is excluded from the aggregate mean
+    (it has no neighborhood to recall) but is reported with recall=None.
+    """
+    per_case = []
+    recalls = []
+    for r in results:
+        expected = r.get("expected_suffixes", [])
+        matched = r.get("matched_expected", [])
+        if not expected:
+            recall = None
+        else:
+            recall = len(matched) / len(expected)
+            recalls.append(recall)
+        per_case.append({
+            "id": r["id"],
+            "expected_count": len(expected),
+            "matched_count": len(matched),
+            "recall_at_k": round(recall, 4) if recall is not None else None,
+        })
+    mean_recall = round(sum(recalls) / len(recalls), 4) if recalls else None
+    return {
+        "k": k,
+        "mean_recall_at_k": mean_recall,
+        "cases_with_expected": len(recalls),
+        "per_case": per_case,
+    }
+
+
+def compute_human_rejection_rate(results: list[dict]) -> dict:
+    """Compute human rejection rate.
+
+    A case is considered "rejected" if a human reviewer would find the
+    retrieval inadequate — operationalized as: not all expected items
+    were found in the top-K results (recall@K < 1.0), or the case
+    errored out (no paths returned).
+
+    rejection_rate = rejected_cases / total_cases
+    """
+    total = len(results)
+    rejected = 0
+    per_case = []
+    for r in results:
+        expected = r.get("expected_suffixes", [])
+        matched = r.get("matched_expected", [])
+        paths = r.get("paths", [])
+        error = r.get("error")
+
+        # A case is rejected if:
+        # 1. It errored (no paths, error message present)
+        # 2. It has expected items but not all were matched
+        # 3. It has expected items but no paths were returned
+        # A case with no expected items is never rejected (nothing to find).
+        is_rejected = False
+        if error:
+            is_rejected = True
+        elif expected and len(matched) < len(expected):
+            is_rejected = True
+        elif expected and not paths:
+            is_rejected = True
+
+        if is_rejected:
+            rejected += 1
+        per_case.append({
+            "id": r["id"],
+            "rejected": is_rejected,
+            "reason": (
+                "error" if error
+                else "incomplete_recall" if expected and len(matched) < len(expected)
+                else "no_paths" if not paths
+                else None
+            ),
+        })
+    rate = round(rejected / total, 4) if total else None
+    return {
+        "rejection_rate": rate,
+        "rejected": rejected,
+        "total": total,
+        "per_case": per_case,
+    }
+
+
+def compute_evidence_trace_completeness(results: list[dict]) -> dict:
+    """Compute evidence-trace completeness.
+
+    A case has a complete evidence trace if ALL of the following hold:
+    1. expected_suffixes is non-empty (the case defines what should be found)
+    2. paths is non-empty (the system returned at least one result)
+    3. matched_expected is non-empty (at least one expected item was found)
+
+    completeness_rate = cases_with_complete_trace / total_cases
+    """
+    total = len(results)
+    complete = 0
+    per_case = []
+    for r in results:
+        expected = r.get("expected_suffixes", [])
+        matched = r.get("matched_expected", [])
+        paths = r.get("paths", [])
+
+        has_expected = bool(expected)
+        has_paths = bool(paths)
+        has_match = bool(matched)
+        is_complete = has_expected and has_paths and has_match
+
+        if is_complete:
+            complete += 1
+        per_case.append({
+            "id": r["id"],
+            "complete": is_complete,
+            "has_expected": has_expected,
+            "has_paths": has_paths,
+            "has_match": has_match,
+        })
+    rate = round(complete / total, 4) if total else None
+    return {
+        "completeness_rate": rate,
+        "complete": complete,
+        "total": total,
+        "per_case": per_case,
+    }
+
+
 def write_markdown(report: dict, path: Path) -> None:
     lines = [
         "# Semantic Benchmark 1.1.0",
@@ -123,9 +250,39 @@ def write_markdown(report: dict, path: Path) -> None:
         f"- Threshold: **{report['threshold']}**",
         f"- Result: **{report['result']}**",
         "",
+    ]
+
+    # Add metrics summary if present
+    metrics = report.get("metrics", {})
+    if metrics:
+        lines.extend([
+            "## Metrics",
+            "",
+        ])
+        if "neighborhood_recall" in metrics:
+            nr = metrics["neighborhood_recall"]
+            lines.append(
+                f"- **Neighborhood Recall@{nr['k']}**: "
+                f"{nr['mean_recall_at_k'] if nr['mean_recall_at_k'] is not None else 'N/A'}"
+            )
+        if "human_rejection_rate" in metrics:
+            hr = metrics["human_rejection_rate"]
+            lines.append(
+                f"- **Human Rejection Rate**: "
+                f"{hr['rejection_rate'] if hr['rejection_rate'] is not None else 'N/A'}"
+            )
+        if "evidence_trace_completeness" in metrics:
+            etc = metrics["evidence_trace_completeness"]
+            lines.append(
+                f"- **Evidence-Trace Completeness**: "
+                f"{etc['completeness_rate'] if etc['completeness_rate'] is not None else 'N/A'}"
+            )
+        lines.append("")
+
+    lines.extend([
         "| ID | Scope | Pass | Expected hit | Top paths |",
         "|---|---|---:|---|---|",
-    ]
+    ])
     for item in report["cases"]:
         top = "<br>".join(item.get("paths", [])[:5]).replace("|", "\\|")
         hit = ", ".join(item.get("matched_expected", [])) or "—"
@@ -169,6 +326,11 @@ def main() -> int:
         print("  PASS" if result["passed"] else "  FAIL", flush=True)
 
     passed = sum(1 for x in results if x["passed"])
+    metrics = {
+        "neighborhood_recall": compute_neighborhood_recall(results, top_k),
+        "human_rejection_rate": compute_human_rejection_rate(results),
+        "evidence_trace_completeness": compute_evidence_trace_completeness(results),
+    }
     report = {
         "benchmark_id": config["id"],
         "run_at": datetime.now().isoformat(timespec="seconds"),
@@ -176,6 +338,7 @@ def main() -> int:
         "passed": passed,
         "threshold": threshold,
         "result": "PASS" if passed >= threshold else "FAIL",
+        "metrics": metrics,
         "cases": results,
     }
 
