@@ -136,6 +136,27 @@ def main() -> int:
                 path.write_text(new, encoding="utf-8")
                 changed.append(path.relative_to(ROOT).as_posix())
 
+    # QMD collection names: the QMD index is machine-wide, so every instance
+    # must own distinct names. The kit ships generic `wiki-*` names; rename
+    # them to `<prefix>-*` or two instances on one machine would overwrite
+    # each other's collections. Every reference reads the names from this
+    # file (scripts/qmd_scope.py), so this is the only place they change.
+    qmd_cfg_path = ROOT / "00-system/configuration/qmd-collections-v1.1.0.json"
+    if qmd_cfg_path.exists():
+        qmd_cfg = json.loads(qmd_cfg_path.read_text(encoding="utf-8"))
+        renamed = False
+        for col in qmd_cfg.get("collections", []):
+            name = col.get("name", "")
+            if name.startswith("wiki-"):
+                col["name"] = f"{prefix}-" + name[len("wiki-"):]
+                renamed = True
+        if renamed:
+            qmd_cfg_path.write_text(json.dumps(qmd_cfg, indent=2, ensure_ascii=False) + "\n",
+                                    encoding="utf-8")
+            rel = qmd_cfg_path.relative_to(ROOT).as_posix()
+            if rel not in changed:
+                changed.append(rel)
+
     # Corpus register: rename the empty-state id to the instance's own.
     if state.get("id") != corpus_new:
         state["id"] = corpus_new

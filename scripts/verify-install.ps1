@@ -15,11 +15,10 @@ qmd status
 if ($LASTEXITCODE -ne 0) { exit 3 }
 
 $Collections = (qmd collection list 2>&1 | Out-String)
-$Required = @(
-    "wiki-root", "wiki-system", "wiki-objects", "wiki-notes",
-    "wiki-claims", "wiki-relations", "wiki-genesis", "wiki-indexes",
-    "wiki-source-records", "wiki-derivatives"
-)
+$Required = @((& python scripts/qmd_scope.py names --all | Out-String).Trim() -split "\r?\n")
+$Default = @()
+foreach ($Name in ((& python scripts/qmd_scope.py names --default | Out-String).Trim() -split "\r?\n")) { $Default += @("-c", $Name) }
+$SourceRecords = (& python scripts/qmd_scope.py names --role source-records | Out-String).Trim()
 foreach ($Name in $Required) {
     if ($Collections -notmatch [regex]::Escape($Name)) {
         Write-Error "Missing QMD collection: $Name"
@@ -28,15 +27,15 @@ foreach ($Name in $Required) {
 }
 
 Write-Host "4. Exact canonical test"
-qmd search '"relation loss"' --files -n 5
+qmd search '"relation loss"' @Default --files -n 5
 if ($LASTEXITCODE -ne 0) { exit 5 }
 
 Write-Host "5. Semantic canonical test"
-qmd query "a visible connection remains while its source conditions and uncertainty disappear" --files -n 8
+qmd query "a visible connection remains while its source conditions and uncertainty disappear" @Default --files -n 8
 if ($LASTEXITCODE -ne 0) { exit 6 }
 
 Write-Host "6. Source-record test"
-qmd search "smoke-test" -c wiki-source-records --files -n 5
+qmd search "smoke-test" -c $SourceRecords --files -n 5
 if ($LASTEXITCODE -ne 0) { exit 7 }
 
 Write-Host "INSTALLATION VERIFICATION PASS"

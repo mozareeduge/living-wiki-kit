@@ -43,10 +43,18 @@ def default_search(query: str, n: int, root: Path) -> list[dict]:
     qmd = shutil.which("qmd")
     if not qmd:
         return []
+    # Scope to this instance's own default collections (the QMD index is
+    # machine-wide; an unscoped or hardcoded name either leaks other wikis'
+    # hits or matches nothing).
+    from qmd_scope import names, scope_args
+    own = names(root, "default")
+    if not own:
+        return []
     proc = subprocess.run(
         [qmd, "query", f"lex: {query}", "--no-rerank", "--json", "-n", str(n),
-         "--collection", "wiki"],
-        cwd=str(root), text=True, capture_output=True, timeout=90,
+         *scope_args(own)],
+        cwd=str(root), text=True, encoding="utf-8", errors="replace",
+        capture_output=True, timeout=90,
     )
     try:
         return json.loads(proc.stdout)
@@ -163,9 +171,9 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                 if len(entries) >= max_records:
                     break
         for hit in fn(query, want):
-            # qmd hits carry file paths like qmd://wiki/<name> — map by stem
+            # qmd hits carry file paths like qmd://<collection>/<path> — map by stem
             f = str(hit.get("file", ""))
-            stem = Path(f.replace("qmd://wiki/", "")).stem
+            stem = Path(re.sub(r"^qmd://[^/]+/", "", f)).stem
             row = con.execute(
                 "SELECT id, path, title FROM nodes WHERE path LIKE ?",
                 (f"%{stem}%",)).fetchone()

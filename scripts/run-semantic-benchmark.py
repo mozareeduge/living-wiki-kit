@@ -13,6 +13,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from qmd_scope import names as qmd_names, scope_args  # noqa: E402
 CONFIG = ROOT / "00-system/configuration/semantic-benchmark-v1.1.0.json"
 QMD = shutil.which("qmd") or "qmd"
 
@@ -70,8 +72,10 @@ def parse_qmd_json(stdout: str):
 
 def run_case(case: dict, top_k: int, timeout: int) -> dict:
     command = [QMD, "query", case["question"], "--no-rerank", "--json", "-n", str(top_k)]
-    if case.get("collection"):
-        command.extend(["-c", case["collection"]])
+    # A case without a collection searches this instance's default collections,
+    # never the whole machine-wide QMD index (other wikis share it).
+    command.extend(["-c", case["collection"]] if case.get("collection")
+                   else scope_args(qmd_names(ROOT, "default")))
     # qmd prints UTF-8 box-drawing glyphs on stderr/stdout. Without an explicit
     # UTF-8 decode Windows uses cp1252, the reader thread raises
     # UnicodeDecodeError, and proc.stdout silently becomes None - which used to

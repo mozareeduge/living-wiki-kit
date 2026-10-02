@@ -37,6 +37,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from qmd_scope import names as qmd_names, scope_args  # noqa: E402
 CONFIG = ROOT / "00-system/configuration/semantic-benchmark-v1.1.0.json"
 RUNS_DIR = ROOT / "_audits/runtime/faithfulness"
 
@@ -172,9 +174,12 @@ def cmd_retrieve(args, run: Run) -> None:
                "expected_suffixes": case.get("expected_suffixes", []),
                "results": [], "error": None}
         try:
+            scope = (["-c", case["collection"]] if case.get("collection")
+                     else scope_args(qmd_names(ROOT, "default")))
             proc = subprocess.run(
-                [qmd_exe, mode, case["question"], "--json", "-n", str(top_k)],
-                cwd=ROOT, text=True, capture_output=True, timeout=args.timeout,
+                [qmd_exe, mode, case["question"], "--json", "-n", str(top_k), *scope],
+                cwd=ROOT, text=True, encoding="utf-8", errors="replace",
+                capture_output=True, timeout=args.timeout,
             )
             payload = json.loads(proc.stdout)
             for hit in payload[:top_k]:

@@ -26,7 +26,14 @@ $Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 $Existing = (& qmd collection list 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0) { throw "qmd collection list failed." }
 
-$ManagedNames = @("wiki") + @($Config.collections | ForEach-Object { $_.name })
+# The QMD index is shared by every wiki on this machine. Only this instance's
+# own configured names are managed, and only when QMD has them registered on a
+# path inside this repository: a name that belongs to another wiki is refused,
+# never removed.
+& python scripts/qmd_scope.py check-owned
+if ($LASTEXITCODE -ne 0) { throw "QMD collection names collide with another wiki; see message above." }
+
+$ManagedNames = @($Config.collections | ForEach-Object { $_.name })
 foreach ($Name in $ManagedNames) {
     if ($Existing -match "(?m)(^|\s)$([regex]::Escape($Name))(\s|$)") {
         Write-Host "Removing rebuildable collection registration: $Name"
@@ -36,7 +43,11 @@ foreach ($Name in $ManagedNames) {
 }
 
 foreach ($Spec in $Config.collections) {
-    $CollectionPath = (Resolve-Path (Join-Path $RepoRoot $Spec.path)).Path
+    # A fresh instance has empty content folders, which git does not track;
+    # create them so the collection exists and fills as material arrives.
+    $Target = Join-Path $RepoRoot $Spec.path
+    if (-not (Test-Path $Target)) { New-Item -ItemType Directory -Path $Target -Force | Out-Null }
+    $CollectionPath = (Resolve-Path $Target).Path
     Write-Host "Adding $($Spec.name) from $CollectionPath"
     & qmd collection add "$CollectionPath" --name $Spec.name --mask $Spec.mask | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Failed to add QMD collection $($Spec.name)." }
@@ -52,7 +63,7 @@ foreach ($Spec in $Config.collections) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to set default inclusion for $($Spec.name)." }
 }
 
-& qmd update | Out-Host
+& python scripts/qmd_scope.py update | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "QMD update failed." }
 
 Write-Host ""

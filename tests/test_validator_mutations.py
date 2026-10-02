@@ -590,6 +590,12 @@ def test_instantiate_seeds_gate_clean_empty_instance():
             # of the four entry pages, not just some of them.
             assert "Artifacts held: 0" in text, name
             assert "wiki-corpus-empty" not in text, name
+        # QMD collections are per-instance: the shared machine index must not
+        # see two instances register the same generic `wiki-*` names.
+        qcfg = json.loads((kit / "00-system/configuration/qmd-collections-v1.1.0.json")
+                          .read_text(encoding="utf-8"))
+        qnames = [c["name"] for c in qcfg["collections"]]
+        assert qnames and all(n.startswith("swk-") for n in qnames), qnames
         for script in ("scripts/validate_repo.py",):
             v = subprocess.run([sys.executable, script, "--full"], cwd=kit,
                                capture_output=True, text=True, encoding="utf-8",

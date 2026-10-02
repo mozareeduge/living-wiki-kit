@@ -43,6 +43,20 @@ counts; this file records what each kit version changed and why.
 - **Capture schema parity**: the canonical and client capture schemas are pinned
   to one `capture_kind` vocabulary, and the capture test suite is write-isolated
   so a test run never writes into the repository.
+- **Machine-wide QMD index, scoped (F10)**: QMD keeps one index per machine,
+  shared by every wiki on it. `refresh-search.ps1` ran bare `qmd update` /
+  `qmd embed -f` (re-indexing every wiki, and with `-Force` deleting every
+  wiki's vectors), unscoped queries ranked other wikis' files, `context_pack`
+  queried a hardcoded `wiki` collection that matched nothing, and every
+  instance shipped the same `wiki-*` names. New `scripts/qmd_scope.py` keeps
+  every QMD call inside the instance's own configured collections, refuses a
+  name another wiki already registered, and `instantiate.py` renames
+  collections to `<prefix>-*`. `configure-search.ps1` now creates the empty
+  content folders a fresh instance lacks instead of failing.
+- **Schema-drift fixer (S3b)**: several derivable errors on one file are fixed
+  in one pass; derived values YAML would misread are written quoted.
+- **Benchmark case sets are instance data (F2)**: both runners take `--config`
+  and explain a missing case set in one line.
 - Governance invariants unchanged. Adjudication promotes authority; it never
   gates the pipeline or grants visibility.
 
