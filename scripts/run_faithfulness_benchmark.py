@@ -40,6 +40,19 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "00-system/configuration/semantic-benchmark-v1.1.0.json"
 RUNS_DIR = ROOT / "_audits/runtime/faithfulness"
 
+
+def load_config(path: Path) -> dict:
+    """The case set is instance data, not kit data (finding F2): an empty kit
+    has no corpus to ask questions about. Each instance supplies its own file
+    at CONFIG, or passes --config. A missing file is a clear exit, not a trace."""
+    if not path.is_file():
+        raise SystemExit(
+            f"benchmark case set not found: {path}\n"
+            "The kit ships no case set; benchmarks are instance-supplied. Create "
+            "00-system/configuration/semantic-benchmark-v1.1.0.json in your "
+            "instance (see SEARCH_GUIDE.md section 7) or pass --config <file>.")
+    return json.loads(path.read_text(encoding="utf-8"))
+
 # ---------------------------------------------------------------- utilities
 
 STOPWORDS = {
@@ -142,7 +155,7 @@ def cmd_retrieve(args, run: Run) -> None:
         # overwrite a checkpointed stage accidentally.
         print("retrieve: already complete, skipping")
         return
-    config = load_json(CONFIG)
+    config = load_config(Path(getattr(args, "config", None) or CONFIG))
     cases = config["cases"][: args.limit] if args.limit else config["cases"]
     top_k = args.top_k or config.get("top_k", 5)
     mode = args.engine  # "search" (BM25, deterministic) | "query" (hybrid, may hang)
@@ -590,6 +603,8 @@ def main() -> int:
     p = sub.add_parser("retrieve")
     p.add_argument("--limit", type=int)
     p.add_argument("--top-k", type=int)
+    p.add_argument("--config", type=Path, default=CONFIG,
+                   help="case-set JSON (default: the instance's 00-system/configuration file)")
     p.add_argument("--timeout", type=int, default=90)
     p.add_argument("--engine", choices=["search", "query"], default="search",
                    help="search=BM25 deterministic (default; query/vsearch hang on some setups)")

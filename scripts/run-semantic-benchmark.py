@@ -17,6 +17,19 @@ CONFIG = ROOT / "00-system/configuration/semantic-benchmark-v1.1.0.json"
 QMD = shutil.which("qmd") or "qmd"
 
 
+def load_config(path: Path) -> dict:
+    """The case set is instance data, not kit data (finding F2): an empty kit
+    has no corpus to ask questions about. Each instance supplies its own file
+    at CONFIG, or passes --config. A missing file is a clear exit, not a trace."""
+    if not path.is_file():
+        raise SystemExit(
+            f"benchmark case set not found: {path}\n"
+            "The kit ships no case set; benchmarks are instance-supplied. Create "
+            "00-system/configuration/semantic-benchmark-v1.1.0.json in your "
+            "instance (see SEARCH_GUIDE.md section 7) or pass --config <file>.")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def normalize(value: str) -> str:
     value = value.replace("\\", "/").strip()
     value = re.sub(r"^qmd://[^/]+/", "", value)
@@ -315,6 +328,8 @@ def write_markdown(report: dict, path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=Path, default=CONFIG,
+                        help="case-set JSON (default: the instance's 00-system/configuration file)")
     parser.add_argument("--top-k", type=int)
     parser.add_argument("--threshold", type=int)
     parser.add_argument("--timeout", type=int, default=240)
@@ -324,7 +339,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    config = load_config(args.config)
     top_k = args.top_k or config.get("top_k", 5)
     threshold = args.threshold or config.get("threshold", 27)
 

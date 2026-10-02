@@ -31,6 +31,8 @@ import sys
 import time
 from pathlib import Path
 
+import yaml
+
 OBJECT_KIND_BY_DIR = {
     "concepts": "concept", "institutions": "institution", "methods": "method",
     "people": "person", "references": "reference", "works": "work",
@@ -66,8 +68,31 @@ def _has_key(block: str, key: str) -> bool:
     return re.search(rf"^{key}:", block, re.MULTILINE) is not None
 
 
+def yaml_scalar(value: str) -> str:
+    """Render a derived string as a YAML scalar that parses back to itself.
+
+    Plain when YAML already reads it as that exact string; otherwise a
+    double-quoted (JSON-escaped, which is valid YAML) scalar. A basename with
+    `: `, ` #`, a leading indicator, or a bool/null/number look-alike would
+    otherwise be misread or produce invalid frontmatter (finding F4)."""
+    try:
+        if value == value.strip() and yaml.safe_load(f"k: {value}\n") == {"k": value}:
+            return value
+    except yaml.YAMLError:
+        pass
+    return json.dumps(value, ensure_ascii=False)
+
+
+class _Ops(dict):
+    """Operations keyed by (path, field): a file with several derivable errors
+    keeps one operation per field instead of only the last one (finding F3)."""
+
+    def __setitem__(self, rel: str, op: dict) -> None:  # type: ignore[override]
+        super().__setitem__((rel, op["field"]), op)
+
+
 def plan_ops(root: Path, err_file: Path) -> tuple[list[dict], list[str]]:
-    ops: dict[str, dict] = {}
+    ops: dict = _Ops()
     skipped: list[str] = []
     for raw in err_file.read_text(encoding="utf-8", errors="ignore").splitlines():
         line = raw.strip()
@@ -139,7 +164,7 @@ def apply_manifest(root: Path, manifest: dict) -> tuple[int, int]:
                 continue
             anchor = op.get("after_key", "id")
             am = re.search(rf"^{anchor}:.*(?:\n(?![A-Za-z_-]+:).*)*", block, re.MULTILINE)
-            new_line = f"\n{field}: {op['value']}"
+            new_line = f"\n{field}: {yaml_scalar(op['value'])}"
             if am:
                 new_block = block[:am.end()] + new_line + block[am.end():]
             else:
@@ -147,9 +172,9 @@ def apply_manifest(root: Path, manifest: dict) -> tuple[int, int]:
         else:  # set
             vm = re.search(rf"^{field}:.*$", block, re.MULTILINE)
             if not vm:
-                new_block = block + f"\n{field}: {op['value']}"
+                new_block = block + f"\n{field}: {yaml_scalar(op['value'])}"
             else:
-                new_block = block[:vm.start()] + f"{field}: {op['value']}" + block[vm.end():]
+                new_block = block[:vm.start()] + f"{field}: {yaml_scalar(op['value'])}" + block[vm.end():]
         # preserve original BOM/leading text; replace only the block interior
         new_text = text[:span[0]] + new_block + text[span[1]:]
         if new_text != text:

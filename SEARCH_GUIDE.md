@@ -72,3 +72,29 @@ python scripts/validate_content_release.py
 powershell -ExecutionPolicy Bypass -File scripts/verify-install.ps1
 python scripts/run-semantic-benchmark.py
 ```
+
+## 7. Benchmark case sets are instance data
+
+The kit ships the benchmark runners but **no case set**: an empty kit has no
+corpus to ask questions about, and a starter set would measure nothing. Each
+instance writes its own `00-system/configuration/semantic-benchmark-v1.1.0.json`
+(or passes `--config <file>` to `run-semantic-benchmark.py` /
+`run_faithfulness_benchmark.py retrieve`). Without one, both runners exit with a
+one-line explanation instead of a traceback. Minimal shape:
+
+```json
+{
+  "id": "my-wiki-semantic-benchmark-1.1.0",
+  "top_k": 5,
+  "threshold": 27,
+  "cases": [
+    {"id": "q01",
+     "question": "Who founded the institution behind the 1998 survey?",
+     "expected_suffixes": ["people/some-person.md"]}
+  ]
+}
+```
+
+Each case needs `id`, `question` and `expected_suffixes` (path suffixes that
+count as a hit in the top `top_k`); an optional `collection` restricts the
+query to one QMD collection.

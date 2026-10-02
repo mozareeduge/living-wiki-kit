@@ -244,3 +244,63 @@ def test_cli_requires_an_errors_file(tmp_path):
                        capture_output=True, text=True)
     assert r.returncode == 2
     assert "--errors" in r.stderr
+
+
+# ------------------------------------------------------------- S3b (F3 / F4)
+
+def test_plan_keeps_every_operation_for_a_file_with_two_errors(tmp_path):
+    """F3: two derivable errors on one file must yield two operations, not
+    only the last one parsed."""
+    _write(tmp_path, "03-objects/people/p.md", "---\nid: obj-1\ntype: person\n---\n")
+    ops, skipped = _plan(
+        tmp_path,
+        "ERROR: 03-objects/people/p.md: object type must be 'object', got person",
+        "ERROR: 03-objects/people/p.md: missing required field 'kind'",
+    )
+    assert [(o["field"], o["value"]) for o in ops] == [("type", "object"), ("kind", "person")]
+    assert skipped == []
+
+
+def test_plan_does_not_duplicate_a_repeated_error_line(tmp_path):
+    line = "ERROR: 03-objects/people/p.md: object type must be 'object', got person"
+    ops, _ = _plan(tmp_path, line, line)
+    assert len(ops) == 1
+
+
+def test_apply_both_operations_on_one_file_in_a_single_pass(tmp_path):
+    p = _write(tmp_path, "03-objects/people/p.md",
+               "---\nid: obj-1\ntype: person\ntitle: A\n---\nbody\n")
+    err = _errors(tmp_path,
+                  "ERROR: 03-objects/people/p.md: object type must be 'object', got person",
+                  "ERROR: 03-objects/people/p.md: missing required field 'kind'")
+    ops, _ = fx.plan_ops(tmp_path, err)
+    changed, failed = fx.apply_manifest(tmp_path, {"operations": ops})
+    assert failed == 0 and changed == 2
+    assert p.read_text(encoding="utf-8") == (
+        "---\nid: obj-1\ntype: object\nkind: person\ntitle: A\n---\nbody\n")
+
+
+@pytest.mark.parametrize("name", [
+    "Report: final.pdf", "notes #3.md", "- dash first.txt", "*star.md",
+    "& amp.md", "! bang.md", "% pct.md", "@at.md", "`tick.md", "'quoted'.md",
+    "\"dq\".md", "|pipe.md", ">gt.md", "? q.md", "yes", "null", "1.5",
+])
+def test_apply_writes_yaml_unsafe_values_quoted_and_round_trips(tmp_path, name):
+    """F4: a derived value that YAML would misread is written quoted, and
+    parses back to exactly the derived string."""
+    import yaml
+    p = _write(tmp_path, "02-sources/records/s1.md", "---\nid: s1\n---\nbody\n")
+    changed, failed = fx.apply_manifest(tmp_path, {"operations": [
+        {"path": "02-sources/records/s1.md", "op": "insert", "after_key": "id",
+         "field": "filename", "value": name}]})
+    assert (changed, failed) == (1, 0)
+    fm = p.read_text(encoding="utf-8").split("---\n")[1]
+    assert yaml.safe_load(fm)["filename"] == name
+
+
+def test_apply_leaves_plain_safe_values_unquoted(tmp_path):
+    p = _write(tmp_path, "02-sources/records/s1.md", "---\nid: s1\n---\n")
+    fx.apply_manifest(tmp_path, {"operations": [
+        {"path": "02-sources/records/s1.md", "op": "insert", "after_key": "id",
+         "field": "filename", "value": "Doc One.pdf"}]})
+    assert "filename: Doc One.pdf\n" in p.read_text(encoding="utf-8")

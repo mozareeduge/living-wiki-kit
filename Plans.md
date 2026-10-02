@@ -140,16 +140,16 @@ sequentially because they share the register/CI surfaces (operating rule 1).
 **Findings recorded while running the ladder** (not fixed here; each is a candidate rung):
 
 - **F1** `schema_drift_fixer.py` reads and writes in text mode, so a CRLF file comes back LF-normalised although its docstring says "format-preserving". Git's `* text=auto` hides it. Pinned by a characterisation test in `tests/test_schema_drift_fixer.py`; fix only if an instance turns off `text=auto`.
-- **F2** `run_faithfulness_benchmark.py` and `run-semantic-benchmark.py` both read `00-system/configuration/semantic-benchmark-v1.1.0.json`, which the kit does not ship (the empty kit has no benchmark set), so neither can run from a fresh instance until one is supplied.
+- **F2** (fixed 2026-10-02, decision: instance-only) `run_faithfulness_benchmark.py` and `run-semantic-benchmark.py` both read `00-system/configuration/semantic-benchmark-v1.1.0.json`, which the kit does not ship (the empty kit has no benchmark set), so neither can run from a fresh instance until one is supplied. Resolved: case sets are instance data (an empty kit has no corpus to measure); both runners take `--config` and exit with a one-line explanation instead of a traceback; `SEARCH_GUIDE.md` §7 documents the shape. Pinned by `scripts/tests/test_benchmark_config_contract.py`.
 
-- **F3** `schema_drift_fixer.py` keeps one operation per file (`ops[rel] = ...`): two errors on the same file drop all but the last, so a second validate → fix pass is needed. No test pins it; candidate rung `S3b`.
-- **F4** `schema_drift_fixer.py` writes a derived `filename` unquoted and only guards a leading `[` or `{`; a basename containing `: ` or ` #` would produce invalid YAML. Candidate rung `S3b` (quote unsafe values; keep the kit and `mozare-wiki` copies identical).
+- **F3** (fixed S3b 2026-10-02) `schema_drift_fixer.py` keeps one operation per file (`ops[rel] = ...`): two errors on the same file drop all but the last, so a second validate → fix pass is needed. No test pins it; candidate rung `S3b`.
+- **F4** (fixed S3b 2026-10-02) `schema_drift_fixer.py` writes a derived `filename` unquoted and only guards a leading `[` or `{`; a basename containing `: ` or ` #` would produce invalid YAML. Candidate rung `S3b` (quote unsafe values; keep the kit and `mozare-wiki` copies identical).
 
 - **F5** (fixed K1b) The kit's `configure-search.ps1` read `qmd-collections-v1.1.0.json`, which the kit never shipped; now shipped with generic `wiki-*` names and the MCP server reads it by folder.
 - **F6** (fixed K1a) `instantiate.py` renamed the corpus id without refreshing kernel state, so a fresh instance failed `wiki_state.py check`; it now runs `wiki_state.py rebuild` last.
 - **F7** (fixed K1a) With `core.autocrlf=true` a fresh Windows clone checked `SYSTEM_STATE.json` out as CRLF → `STATE.GENERATED_DRIFT`; LF pinned in `.gitattributes`.
 - **F8** (W1) `evidence_audit.py`, `report_holdings.py` and `tests/test_evidence_audit.py` still read the legacy `_proposals/proposals.jsonl`; the kernel writes `_proposals/records/`.
-- **F9** (sync) The kit's MCP server now reads QMD names from config; `mozare-wiki`'s copy still hardcodes `mozare-*`. Port `qmd_collections()` back so both files stay identical.
+- **F9** (fixed 2026-10-02, mozare-wiki `564ad05` on `system/2026-10-02--f9-s3b-kit-sync`, same mozare-* sets resolved, instance suite 200 passed) (sync) The kit's MCP server now reads QMD names from config; `mozare-wiki`'s copy still hardcodes `mozare-*`. Port `qmd_collections()` back so both files stay identical.
 - **F10** (K1c) The kit ships the capture core but no capture tests; mozare-wiki's suite found a Linux-only path bug (fixed c0dc845) and a 1-in-3 flaky fixture (fixed there, not yet in the kit).
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → K1a → K1b → **K1c → K1d** → H0 (owner) → W1 → O1 → O2 → O3/O4 → O5 → O6 → O7 → O8 → W3 → W4 → M2 → R1 → R2.
