@@ -18,7 +18,9 @@ to every wiki instantiated from this kit.
    for an interpretive question; source-records collection for provenance;
    derivatives collection for candidate passages; original files for exact
    form.
-6. QMD scores organize attention and are never evidence.
+6. QMD scores organize attention and are never evidence. Object labels work
+   the same way: discovery aid, never proof, never a merge reason. Read
+   `00-system/policies/SEMANTIC_MODEL.md` before classifying anything.
 7. Side-effect workflows are manually invoked: `/wiki-intake`,
    `/wiki-reconcile`, `/wiki-write`, `/wiki-validate`, `/wiki-handoff`.
 8. Apply a supplied content change only through its `PATCH_MANIFEST.json`.
@@ -27,8 +29,11 @@ to every wiki instantiated from this kit.
    caches, local indexes, backups, or machine-specific paths.
 10. Before claiming success, show exact commands and decisive results. At
     minimum run:
-    - `python scripts/validate_repo.py --full`
-    - `python scripts/validate_content_release.py` (once populated)
+    - `python scripts/wiki_validate.py --format json`
+    - `python scripts/wiki_state.py --repo . check`
+    These are the governance gates. Raw validators (`validate_repo.py`,
+    `validate_content_release.py`) are diagnostic and remain subject to the
+    repository's reviewed known-baseline debt policy.
 11. End consequential work with a handoff containing changed files,
     decisions, validation output, unresolved findings, negative constraints,
     and the next exact operation.
@@ -44,7 +49,7 @@ to every wiki instantiated from this kit.
 
 ## Current state
 
-- kit version: `1.2.0`
+- kit version: `1.3.0`
 - Current corpus snapshot: `wiki-corpus-empty`
 - Registered source artifacts: 0 (empty kit — instance registries start empty)
 - Artifacts held: 0 (empty kit — nothing under `_originals/` yet)

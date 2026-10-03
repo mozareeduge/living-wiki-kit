@@ -1,0 +1,77 @@
+{
+  "version": "1.1.0",
+  "english_first": true,
+  "default_model": "QMD built-in default",
+  "collections": [
+    {
+      "name": "wiki-root",
+      "path": ".",
+      "mask": "*.md",
+      "include_by_default": true,
+      "context": "Root entry pages, system design, setup and workflow guides."
+    },
+    {
+      "name": "wiki-system",
+      "path": "00-system",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Governance, plans, decisions, audits, registers, policies, schemas and templates."
+    },
+    {
+      "name": "wiki-objects",
+      "path": "03-objects",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Canonical records for works, projects, people, institutions, concepts and collections."
+    },
+    {
+      "name": "wiki-notes",
+      "path": "04-notes",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Substantial research, context, method, close-reading and synthesis notes."
+    },
+    {
+      "name": "wiki-claims",
+      "path": "05-claims",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Bounded claim objects with evidence, certainty and responsible scope."
+    },
+    {
+      "name": "wiki-relations",
+      "path": "06-relations",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Consequential relation histories with participants, evidence and status."
+    },
+    {
+      "name": "wiki-genesis",
+      "path": "07-genesis",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Lineages, versions, events, decisions, handoffs and residue."
+    },
+    {
+      "name": "wiki-indexes",
+      "path": "09-indexes",
+      "mask": "**/*.md",
+      "include_by_default": true,
+      "context": "Curated navigation, dashboards, evaluation sets and release indexes."
+    },
+    {
+      "name": "wiki-source-records",
+      "path": "02-sources/records",
+      "mask": "**/*.md",
+      "include_by_default": false,
+      "context": "Provenance and authority records for immutable source artifacts."
+    },
+    {
+      "name": "wiki-derivatives",
+      "path": "02-sources/text",
+      "mask": "**/*.md",
+      "include_by_default": false,
+      "context": "Machine-extracted source text used to locate passages; never authority on its own."
+    }
+  ]
+}

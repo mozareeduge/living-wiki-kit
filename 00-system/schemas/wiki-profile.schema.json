@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wiki-profile.schema.json",
+  "title": "Living Wiki Kit instance profile (advisory only)",
+  "description": "A profile suggests vocabulary, relation language, lenses and outputs for a practice or context. It configures attention, never truth: unknown keys are rejected so no profile can smuggle control over kernel invariants.",
+  "type": "object",
+  "required": ["id", "type", "profile_class", "title", "version", "status"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,60}$"},
+    "type": {"const": "wiki-profile"},
+    "profile_class": {"enum": ["practice", "domain", "collaboration", "compliance"]},
+    "title": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["example", "active", "retired"]},
+    "seed_labels": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "suggested_relation_language": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "suggested_lenses": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "suggested_outputs": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "preferred_lens": {"type": ["string", "null"], "default": null},
+    "preferred_output": {"type": ["string", "null"], "default": null}
+  },
+  "additionalProperties": false
+}

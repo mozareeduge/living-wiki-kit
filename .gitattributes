@@ -6,3 +6,9 @@ _originals/** -text
 _proposals/patches/** -text -diff
 00-system/registers/MATERIALS_INDEX.jsonl text eol=lf
 00-system/registers/CORPUS_STATE.json text eol=lf
+# Kernel-generated state is compared byte-for-byte by `wiki_state.py check`;
+# a CRLF checkout (core.autocrlf=true) would read as drift.
+00-system/registers/SYSTEM_STATE.json text eol=lf
+00-system/registers/ACCEPTED_EVIDENCE_INDEX.jsonl text eol=lf
+_proposals/records/** text eol=lf
+_proposals/adjudications/** text eol=lf

@@ -1,6 +1,7 @@
 import importlib.util
 import inspect
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -166,7 +167,7 @@ def test_manifest_row_mojibake_check_unaffected_by_source_record_guard():
     validate(), lines ~616-624): C1 must not touch its wording or call site.
     No prior test exercised this path directly; this closes that gap."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         manifest_path = kit / "00-system/registers/MATERIALS_INDEX.jsonl"
         row = {
@@ -253,7 +254,7 @@ REFRESH_HINT = "refresh the entry page from the registers in the same change"
 
 
 def test_entry_pages_all_fresh_pass():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _gate_root(Path(td), _fresh_pages())
         state = {"id": "snap-1", "source_material_count": 103}
         assert _run_gate(root, state) == []
@@ -261,7 +262,7 @@ def test_entry_pages_all_fresh_pass():
 
 def test_entry_page_stale_snapshot_detected_per_page():
     for stale in ENTRY_PAGE_NAMES:
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             pages = _fresh_pages()
             pages[stale] = pages[stale].replace("snap-1", "snap-0")
             root = _gate_root(Path(td), pages)
@@ -281,7 +282,7 @@ def test_entry_page_stale_snapshot_detected_per_page():
 
 def test_entry_page_wrong_labelled_count_detected_per_page():
     for stale in ENTRY_PAGE_NAMES:
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             pages = _fresh_pages()
             pages[stale] = pages[stale].replace(
                 "Registered source artifacts: 103",
@@ -296,7 +297,7 @@ def test_entry_page_wrong_labelled_count_detected_per_page():
 
 
 def test_unrelated_zero_does_not_satisfy_zero_marker():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages(state_id="s0", count=0)
         for name in ENTRY_PAGE_NAMES:
             # replace the labelled marker with prose that merely contains a 0
@@ -315,7 +316,7 @@ def test_unrelated_zero_does_not_satisfy_zero_marker():
 
 
 def test_missing_state_id_skips_only_snapshot_check():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         for name in ENTRY_PAGE_NAMES:
             # drop the snapshot line entirely, keep the count line
@@ -327,7 +328,7 @@ def test_missing_state_id_skips_only_snapshot_check():
 
 
 def test_empty_layers_declared_zero_pass():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages(state_id="s0", count=0)
         for name in ENTRY_PAGE_NAMES:
             pages[name] = pages[name].replace(
@@ -340,7 +341,7 @@ def test_empty_layers_declared_zero_pass():
 
 
 def test_every_layer_declaration_occurrence_is_checked():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         pages["HOME.md"] = pages["HOME.md"].replace(
             "2 objects", "2 objects, then later prose says 3 objects")
@@ -353,7 +354,7 @@ def test_every_layer_declaration_occurrence_is_checked():
 
 
 def test_singular_plural_case_insensitive_layers():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         pages["README.md"] = pages["README.md"].replace(
             "Layer counts: 2 objects",
@@ -367,7 +368,7 @@ def test_singular_plural_case_insensitive_layers():
 
 
 def test_fenced_and_inline_code_layers_ignored():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         pages["SYSTEM_DESIGN.md"] = _page_text("snap-1", 103, None) + (
             "\nExample block:\n\n```text\n99 objects\n```\n\n"
@@ -379,7 +380,7 @@ def test_fenced_and_inline_code_layers_ignored():
 
 
 def test_missing_entry_page_reported():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         del pages["CLAUDE.md"]
         root = _gate_root(Path(td), pages)
@@ -390,7 +391,7 @@ def test_missing_entry_page_reported():
 
 def test_count_zero_marker_requires_label_not_coincidence():
     # snapshot marker itself must be the labelled form, not a bare id
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages()
         pages["README.md"] = _page_text(None, 103, None) + (
             "Mentions snap-1 in prose only.\n")
@@ -404,7 +405,7 @@ def test_count_zero_marker_requires_label_not_coincidence():
 # ------------------------------------------------------ B1: Artifacts held:
 
 def test_entry_pages_all_fresh_pass_with_artifacts_held():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _gate_root(Path(td), _fresh_pages(held=544))
         state = {"id": "snap-1", "source_material_count": 103,
                  "held_artifact_count": 544}
@@ -413,7 +414,7 @@ def test_entry_pages_all_fresh_pass_with_artifacts_held():
 
 def test_entry_page_missing_artifacts_held_detected_per_page():
     for stale in ENTRY_PAGE_NAMES:
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             pages = _fresh_pages(held=544)
             pages[stale] = pages[stale].replace("Artifacts held: 544\n\n", "")
             root = _gate_root(Path(td), pages)
@@ -427,7 +428,7 @@ def test_entry_page_missing_artifacts_held_detected_per_page():
 
 def test_entry_page_wrong_held_count_detected_per_page():
     for stale in ENTRY_PAGE_NAMES:
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             pages = _fresh_pages(held=544)
             pages[stale] = pages[stale].replace(
                 "Artifacts held: 544", "Artifacts held: 999")
@@ -448,7 +449,7 @@ def test_artifacts_held_observed_value_read_from_raw_not_prose():
     """1.1.0 precedent: _visible_prose() strips code spans, which is
     exactly where a stale value can live; the observed hint must be built
     from the raw page text or it silently shows a bare label instead."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages(held=544)
         # Wrap the (wrong) marker in a code span so _visible_prose() strips
         # it entirely out of prose.
@@ -465,7 +466,7 @@ def test_artifacts_held_observed_value_read_from_raw_not_prose():
 
 
 def test_held_artifact_count_absent_from_state_skips_only_that_check():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages(held=544)
         for name in ENTRY_PAGE_NAMES:
             # drop the held marker entirely from every page
@@ -478,7 +479,7 @@ def test_held_artifact_count_absent_from_state_skips_only_that_check():
 
 
 def test_held_artifact_count_absent_still_enforces_other_two_checks():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         pages = _fresh_pages(held=544)
         pages["HOME.md"] = pages["HOME.md"].replace("snap-1", "snap-0")
         for name in ENTRY_PAGE_NAMES:
@@ -573,7 +574,7 @@ def _run_instantiate(cwd, *args):
 
 def test_instantiate_seeds_gate_clean_empty_instance():
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         r = _run_instantiate(kit, "--name", "Smoke Wiki", "--prefix", "swk")
         assert r.returncode == 0, r.stdout + r.stderr
@@ -589,15 +590,31 @@ def test_instantiate_seeds_gate_clean_empty_instance():
             # of the four entry pages, not just some of them.
             assert "Artifacts held: 0" in text, name
             assert "wiki-corpus-empty" not in text, name
+        # QMD collections are per-instance: the shared machine index must not
+        # see two instances register the same generic `wiki-*` names.
+        qcfg = json.loads((kit / "00-system/configuration/qmd-collections-v1.1.0.json")
+                          .read_text(encoding="utf-8"))
+        qnames = [c["name"] for c in qcfg["collections"]]
+        assert qnames and all(n.startswith("swk-") for n in qnames), qnames
         for script in ("scripts/validate_repo.py",):
             v = subprocess.run([sys.executable, script, "--full"], cwd=kit,
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace")
             assert v.returncode == 0, _safe(v.stdout) + _safe(v.stderr)
+        # Governance kernel: the generated state follows the renamed corpus,
+        # and the evidence snapshot id carries the instance prefix.
+        s = subprocess.run([sys.executable, "scripts/wiki_state.py", "--repo", ".", "check"],
+                           cwd=kit, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace")
+        assert s.returncode == 0, _safe(s.stdout) + _safe(s.stderr)
+        system = json.loads((kit / "00-system/registers/SYSTEM_STATE.json")
+                            .read_text(encoding="utf-8"))
+        assert system["source_corpus"]["snapshot_id"] == "swk-corpus-empty", system
+        assert system["accepted_evidence"]["snapshot_id"].startswith("swk-evidence-"), system
 
 
 def test_instantiate_is_idempotent_on_same_empty_instance():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         assert _run_instantiate(kit, "--name", "Smoke Wiki",
                                 "--prefix", "swk").returncode == 0
@@ -608,7 +625,7 @@ def test_instantiate_is_idempotent_on_same_empty_instance():
 
 
 def test_instantiate_refuses_populated_state_before_writing():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         assert _run_instantiate(kit, "--name", "Smoke Wiki",
                                 "--prefix", "swk").returncode == 0
@@ -634,7 +651,7 @@ def test_instantiate_refuses_populated_state_before_writing():
 
 
 def test_instantiate_refuses_different_existing_instance():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         assert _run_instantiate(kit, "--name", "Smoke Wiki",
                                 "--prefix", "swk").returncode == 0
@@ -684,7 +701,7 @@ def test_validate_calls_entry_gate_once_with_loaded_state():
 
 def test_stale_marker_makes_validate_repo_exit_nonzero():
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         state_path = kit / "00-system/registers/CORPUS_STATE.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -747,7 +764,7 @@ def test_controlled_vocabulary_tier_set_matches_policy():
 
 
 def test_load_holdings_policy_raises_on_unknown_tier():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         fixture_root = Path(td)
         policies_dir = fixture_root / "00-system/policies"
         policies_dir.mkdir(parents=True)
@@ -868,7 +885,7 @@ def _run_census(root, state):
 
 
 def test_holdings_census_all_registered_and_consistent_passes():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/a.pdf")
         _write_source_record(
@@ -889,7 +906,7 @@ def test_holdings_census_all_registered_and_consistent_passes():
 
 
 def test_holdings_census_unregistered_original_without_record_fails():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/stray.pdf")
         state = {"source_material_count": 0}
@@ -900,7 +917,7 @@ def test_holdings_census_unregistered_original_without_record_fails():
 
 
 def test_holdings_census_record_claims_registered_without_manifest_row_fails():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_source_record(
             root, "02-sources/records/b.md",
@@ -914,7 +931,7 @@ def test_holdings_census_record_claims_registered_without_manifest_row_fails():
 
 
 def test_holdings_census_manifest_row_record_not_registered_fails():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/c.pdf")
         _write_source_record(
@@ -934,7 +951,7 @@ def test_holdings_census_manifest_row_record_not_registered_fails():
 
 
 def test_holdings_census_held_artifact_count_off_by_one_fails():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/a.pdf")
         _write_original(root, "_originals/b.pdf")
@@ -951,7 +968,7 @@ def test_holdings_census_held_artifact_count_off_by_one_fails():
 
 
 def test_holdings_census_holdings_by_tier_not_summing_fails():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/a.pdf")
         _write_original(root, "_originals/b.pdf")
@@ -966,7 +983,7 @@ def test_holdings_census_holdings_by_tier_not_summing_fails():
 
 
 def test_holdings_census_empty_originals_zero_counts_passes():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         (root / "_originals").mkdir(parents=True, exist_ok=True)
         state = {
@@ -979,7 +996,7 @@ def test_holdings_census_empty_originals_zero_counts_passes():
 
 
 def test_holdings_census_absent_held_artifact_count_skips_counts_only():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_source_record(
             root, "02-sources/records/a.md",
@@ -998,7 +1015,7 @@ def test_holdings_census_absent_held_artifact_count_skips_counts_only():
 
 def test_every_holdings_census_error_names_path_and_register():
     """Acceptance (d): every error names a path and the disagreeing register."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/a.pdf")
         _write_original(root, "_originals/stray.pdf")
@@ -1078,7 +1095,7 @@ def test_undeclared_original_makes_validate_repo_exit_nonzero():
     naming that exact path. Planted only in a throwaway _copy_kit() copy --
     never in the real repository."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         undeclared_rel = "_originals/undeclared-test-artifact.txt"
         undeclared_path = kit / undeclared_rel
@@ -1109,7 +1126,7 @@ def test_holdings_census_reports_malformed_policy_instead_of_swallowing_it():
     validate() as of A4, so a malformed policy would have disabled the
     entire census gate without a single error line.
     """
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         (root / "00-system/policies/HOLDINGS_POLICY.json").write_text(
             '{"tiers": {"registered": {}}, '
@@ -1122,7 +1139,7 @@ def test_holdings_census_reports_malformed_policy_instead_of_swallowing_it():
 
 def test_holdings_census_reports_malformed_manifest_line():
     """A broken MATERIALS_INDEX.jsonl line must be named with its number."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         manifest = root / "00-system/registers/MATERIALS_INDEX.jsonl"
         manifest.parent.mkdir(parents=True, exist_ok=True)
@@ -1144,7 +1161,7 @@ def test_biconditional_violation_surfaces_through_validate_repo_subprocess():
     record -- to the real command an operator runs.
     """
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         # A record that claims registration while the manifest stays empty:
         # exactly the mozare-wiki defect shape that motivated this change.
@@ -1215,7 +1232,7 @@ def _run_register_policies(root, state):
 def test_register_policy_missing_declaration_fails_naming_file_and_legal_values():
     """Rule 1: no refresh_policy at all is an error naming the file and
     listing the legal enum values."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(root, "00-system/registers/EXAMPLE.md", frontmatter=None)
         errors = _run_register_policies(root, {})
@@ -1230,7 +1247,7 @@ def test_register_policy_missing_declaration_fails_naming_file_and_legal_values(
 def test_register_policy_unknown_value_fails_naming_file_and_legal_values():
     """Rule 1: an unknown refresh_policy value is an error naming the file,
     the offending value, and the legal enum values."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/EXAMPLE.md",
@@ -1246,7 +1263,7 @@ def test_register_policy_unknown_value_fails_naming_file_and_legal_values():
 def test_register_policy_per_intake_stale_fails_quoting_both_dates_and_files():
     """Rule 2: a per-intake register whose updated date predates
     CORPUS_STATE.updated fails, quoting both dates and naming both files."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/INTAKE_REGISTER.md",
@@ -1261,7 +1278,7 @@ def test_register_policy_per_intake_stale_fails_quoting_both_dates_and_files():
 
 
 def test_register_policy_per_intake_fresh_passes():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/INTAKE_REGISTER.md",
@@ -1274,7 +1291,7 @@ def test_register_policy_per_release_stale_fails_quoting_both_dates_and_files():
     """Rule 3: a per-release register whose updated date predates
     content-release.json's updated date fails, quoting both dates and
     naming both files."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/RELEASE_REGISTER.md",
@@ -1289,7 +1306,7 @@ def test_register_policy_per_release_stale_fails_quoting_both_dates_and_files():
 
 
 def test_register_policy_per_release_fresh_passes():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/RELEASE_REGISTER.md",
@@ -1301,7 +1318,7 @@ def test_register_policy_per_release_fresh_passes():
 def test_register_policy_static_never_fails_on_freshness():
     """Rule 4: static never fails on freshness, however old its updated
     date and however new the registers that would otherwise trigger it."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/STATIC_REGISTER.md",
@@ -1314,7 +1331,7 @@ def test_register_policy_static_never_fails_on_freshness():
 def test_register_policy_archive_directory_exempt_entirely():
     """Rule 5: files under 00-system/registers/archive/ are exempt
     entirely -- not even the rule-1 declaration check applies."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/archive/OLD_REGISTER.md", frontmatter=None)
@@ -1323,7 +1340,7 @@ def test_register_policy_archive_directory_exempt_entirely():
 
 def test_register_policy_unparseable_date_is_its_own_error():
     """Rule 6: an unparseable date is its own error, never a silent pass."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/EXAMPLE.md",
@@ -1339,7 +1356,7 @@ def test_register_policy_missing_corpus_state_updated_skips_only_that_check():
     skipped -- same 'absent key skips only its own check' pattern
     check_holdings_census uses for held_artifact_count -- but rule 1
     (declaration) still runs for every other register."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td)
         _write_register_md(
             root, "00-system/registers/INTAKE_REGISTER.md",
@@ -1388,7 +1405,7 @@ def test_stale_per_intake_register_makes_validate_repo_exit_nonzero():
     scenario has a comparison basis; the real repo's CORPUS_STATE.json is
     never touched."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         state_path = kit / "00-system/registers/CORPUS_STATE.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -1456,7 +1473,7 @@ def _run_retier(cwd, *args):
 
 def test_retier_plan_empty_repo_is_zero_records_to_retier():
     """Acceptance (a) at the unit level: nothing declared, nothing to do."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=0)
         plan = retier_holdings.build_plan(root)
         assert plan["correctly_registered"] == 0, plan
@@ -1471,7 +1488,7 @@ def test_retier_plan_flags_record_claiming_registered_without_manifest_row():
     """Acceptance (b) shape at the unit level: one held-but-unregistered
     original whose record wrongly claims `registered` is exactly one
     record to retier, resolved to the policy's default tier."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=0)
         _write_original(root, "_originals/a.pdf")
         _write_source_record(
@@ -1494,7 +1511,7 @@ def test_retier_never_touches_correctly_registered_record():
     Mutation probe: dropping the `continue` after `correctly_registered +=
     1` in build_plan() would fall through and evaluate this record for
     retiering too. This pins len(to_retier) == 0, not just a truthy count."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=1)
         _write_original(root, "_originals/reg.pdf")
         _write_source_record(
@@ -1520,7 +1537,7 @@ def test_retier_family_tier_override_selects_declared_tier():
     `overrides`) would still pass a test that only checked "some tier was
     assigned"; asserting the *specific* override tier and that the default
     tier's bucket stays at 0 catches it."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(
             Path(td), source_material_count=0,
             family_tier_overrides={"backlog-scans": "reference-shelf"})
@@ -1545,7 +1562,7 @@ def test_retier_skips_record_already_correctly_tiered():
     Mutation probe: removing the "already correctly tiered" early-continue
     would count and (under --apply) rewrite a record with no actual change
     -- a spurious diff on every rerun. This pins to_retier == []."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=0)
         _write_original(root, "_originals/c.pdf")
         _write_source_record(
@@ -1561,7 +1578,7 @@ def test_retier_skips_record_already_correctly_tiered():
 def test_retier_refuses_manifest_state_count_mismatch():
     """Refusal condition 1/4 (tasks.md A5): manifest rows and
     source_material_count disagree."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=5)
         try:
             retier_holdings.build_plan(root)
@@ -1572,7 +1589,7 @@ def test_retier_refuses_manifest_state_count_mismatch():
 
 def test_retier_refuses_missing_holdings_policy():
     """Refusal condition 2/4: HOLDINGS_POLICY.json missing."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td) / "repo"
         registers_dir = root / "00-system" / "registers"
         registers_dir.mkdir(parents=True, exist_ok=True)
@@ -1589,7 +1606,7 @@ def test_retier_refuses_missing_holdings_policy():
 def test_retier_refuses_family_override_matching_no_record():
     """Refusal condition 4/4: a family_tier_overrides key names a family no
     record carries."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(
             Path(td), source_material_count=0,
             family_tier_overrides={"ghost-family": "reference-shelf"})
@@ -1611,7 +1628,7 @@ def test_retier_rewrite_record_preserves_body_and_other_fields():
     Mutation probe: a rewrite that re-serializes the body (e.g. drops it,
     or normalizes its whitespace) would corrupt archived prose. This
     compares the body byte-for-byte and every untouched frontmatter key."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _retier_root(Path(td), source_material_count=0)
         body = "# Title\n\nSome body text with *emphasis* and a  double space.\n"
         _write_source_record(
@@ -1633,7 +1650,7 @@ def test_retier_rewrite_record_preserves_body_and_other_fields():
 
 def test_retier_dry_run_empty_kit_prints_zero_and_writes_nothing():
     """Acceptance (a), CLI-level: a fresh copy of the tracked empty kit."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         before = _tree_hash(kit)
         r = _run_retier(kit)
@@ -1648,7 +1665,7 @@ def test_retier_dry_run_then_apply_flips_unregistered_record_and_validates():
     flips status/holdings_tier to pending-registration; validate_repo.py
     --full then PASSes."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         record_rel = "02-sources/records/wiki-src-000000000001.md"
         _write_original(kit, "_originals/claimed.pdf")
@@ -1695,7 +1712,7 @@ def test_retier_apply_refuses_on_dirty_working_tree():
     """Acceptance (c): --apply on a dirty tree exits nonzero, names
     'dirty', and writes nothing."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         subprocess.run(["git", "init", "-q"], cwd=kit, check=True)
         subprocess.run(["git", "config", "user.email", "test@example.invalid"],
@@ -1721,7 +1738,7 @@ def test_retier_apply_refuses_on_dirty_working_tree():
 def test_retier_refuses_manifest_state_mismatch_before_any_write():
     """Acceptance (d): manifest/state disagreement exits nonzero before any
     write, proven with a tree hash equal to the pre-run hash."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         state_path = kit / "00-system/registers/CORPUS_STATE.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -1740,7 +1757,7 @@ def test_retier_never_declares_original_or_materials_index_touched():
     """Negative (tasks.md A5): the script must never edit _originals/ or
     MATERIALS_INDEX.jsonl content, even under --apply. Proven by hashing
     both before and after an --apply run that does retier a record."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         original_rel = "_originals/g.pdf"
         _write_original(kit, original_rel, content=b"original bytes")
@@ -1781,7 +1798,7 @@ def test_malformed_corpus_state_updated_is_its_own_error():
     False -- so a malformed CORPUS_STATE.updated was silently reported as
     "fresh" instead of raising its own error.
     """
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td) / "repo"
         _write_register_md(root, "00-system/registers/R.md", frontmatter={
             "id": "r", "type": "register", "title": "R",
@@ -1796,7 +1813,7 @@ def test_malformed_corpus_state_updated_is_its_own_error():
 
 def test_malformed_content_release_updated_is_its_own_error():
     """Gap 1, the per-release half of the same surviving mutation."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td) / "repo"
         _write_register_md(root, "00-system/registers/R.md", frontmatter={
             "id": "r", "type": "register", "title": "R",
@@ -1817,7 +1834,7 @@ def test_register_walk_is_recursive_for_non_archive_subdirectories():
     for an unrelated reason. A nested NON-archive register must still be
     checked, which only a recursive walk can do.
     """
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td) / "repo"
         # nested, not under archive/, and missing refresh_policy entirely
         _write_register_md(root, "00-system/registers/sub/NESTED.md",
@@ -1839,7 +1856,7 @@ def test_generic_frontmatter_identity_and_duplicate_id_are_enforced():
     through the real validator in a throwaway copy, not by inspection.
     """
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         # A second file claiming the register's id must collide.
         dupe = kit / "00-system/registers/DUPE_PROBE.md"
@@ -1947,10 +1964,62 @@ def test_section6_table_status_completeness():
     assert not errors, _safe("\n".join(errors))
 
 
+def _section6_documented_scripts(text):
+    """Basenames named in backticks in the first cell of every section-6 row."""
+    names = set()
+    for row in _section6_table_rows(text):
+        cells = _split_row_cells(row)
+        if cells:
+            names.update(Path(tok).name for tok in re.findall(r"`([^`]+)`", cells[0]))
+    return names
+
+
+def check_section6_script_coverage(text, shipped):
+    """One error per shipped script that no section-6 row names.
+
+    Companion to check_section6_table_status: that check proves every listed
+    row is tiered; this one proves no shipped script is left off the table, so
+    an unlisted script cannot be mistaken for a non-existent one.
+    """
+    documented = _section6_documented_scripts(text)
+    return [f"scripts/{name} ships but has no section 6 row"
+            for name in sorted(shipped) if name not in documented]
+
+
+def _shipped_top_level_scripts():
+    return {p.name for p in (ROOT / "scripts").glob("*.py")}
+
+
+def test_section6_lists_every_shipped_script():
+    """S1: every scripts/*.py appears in the section-6 table."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    errors = check_section6_script_coverage(text, _shipped_top_level_scripts())
+    assert not errors, _safe("\n".join(errors))
+
+
+def test_section6_coverage_check_fails_by_name_when_a_row_is_removed():
+    """S1 negative check: dropping the context_pack row must fail naming it."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    mutated = "\n".join(
+        ln for ln in text.splitlines() if "`context_pack.py`" not in ln)
+    errors = check_section6_script_coverage(mutated, _shipped_top_level_scripts())
+    assert any("context_pack.py" in e for e in errors), _safe("\n".join(errors))
+
+
+def test_section6_does_not_claim_the_census_gate_is_unwired():
+    """S1: A4 wired check_holdings_census into validate(); the prose must not
+    still say otherwise."""
+    text = SYSTEM_DESIGN.read_text(encoding="utf-8")
+    assert "not yet wired" not in text
+    # ...and the row must positively say the gate is enforced, so deleting the
+    # census description cannot satisfy the guard
+    assert "enforced in `validate()`" in text
+
+
 # ------------------------------------------------------- E1: report_holdings.py
 
 def test_report_holdings_all_zero_on_empty_fixture_is_clean():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         report = report_holdings.generate_report(root)
         assert report["registered"] == 0, report
@@ -1966,7 +2035,7 @@ def test_report_holdings_all_zero_on_empty_fixture_is_clean():
 
 
 def test_report_holdings_registered_held_unregistered_and_tier_breakdown():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_original(root, "_originals/reg.pdf")
         _write_original(root, "_originals/pending.pdf")
@@ -2000,7 +2069,7 @@ def test_report_holdings_degrades_gracefully_without_holdings_policy():
     unregistered numbers and a working status-contradiction check -- only
     the tier breakdown is unavailable, named by reason rather than crashing.
     """
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = Path(td) / "repo"  # deliberately: no _census_root(), no policy file
         _write_original(root, "_originals/reg.pdf")
         _write_original(root, "_originals/extra.pdf")
@@ -2024,7 +2093,7 @@ def test_report_holdings_degrades_gracefully_without_holdings_policy():
 def test_report_holdings_status_contradiction_both_directions_counted():
     """Mutation guard: a helper that only checks one direction of the
     biconditional would pass this fixture with count 1 instead of 2."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_manifest(root, [{
             "id": "s1", "filename": "a.pdf", "sha256": "x",
@@ -2046,7 +2115,7 @@ def test_report_holdings_status_contradiction_both_directions_counted():
 
 
 def test_report_holdings_status_contradiction_first_five_caps_at_five():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         for i in range(7):
             _write_source_record(root, f"02-sources/records/bad-{i}.md",
@@ -2059,7 +2128,7 @@ def test_report_holdings_status_contradiction_first_five_caps_at_five():
 
 
 def test_report_holdings_proposals_grouped_by_status_new_called_out():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         path = root / "_proposals" / "proposals.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -2074,7 +2143,7 @@ def test_report_holdings_proposals_grouped_by_status_new_called_out():
 
 
 def test_report_holdings_claims_grouped_by_permission_blocked_called_out():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         perms = ["may-note", "may-note", "may-describe", "blocked"]
         for i, perm in enumerate(perms):
@@ -2093,7 +2162,7 @@ def test_report_holdings_claims_grouped_by_permission_blocked_called_out():
 
 
 def test_report_holdings_registers_stale_flag_per_intake_and_static():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_register_md(root, "00-system/registers/A_REG.md", frontmatter={
             "id": "a", "type": "register", "title": "A",
@@ -2113,7 +2182,7 @@ def test_report_holdings_registers_stale_flag_per_intake_and_static():
 
 
 def test_report_holdings_register_missing_policy_reports_not_crashes():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_register_md(root, "00-system/registers/NOPOLICY.md", frontmatter={
             "id": "n", "type": "register", "title": "N", "updated": "2020-01-01"})
@@ -2128,7 +2197,7 @@ def test_report_holdings_register_missing_policy_reports_not_crashes():
 
 
 def test_report_holdings_mojibake_hits_grouped_by_field():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         mojibake_title = "CafÃ© Archive"
         assert validate_repo.looks_double_encoded(mojibake_title)
@@ -2150,7 +2219,7 @@ def test_report_holdings_verdict_counts_findings_exactly():
     count, not just 'clean vs. not clean'. A mutation that hardcodes
     CENSUS CLEAN, or one that always prints a fixed finding count, both
     fail this exact-value assertion."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         # 1 undeclared held file (no manifest row, no covering record)
         _write_original(root, "_originals/undeclared.pdf")
@@ -2189,7 +2258,7 @@ def test_report_holdings_json_handles_unquoted_yaml_date_updated_field():
     TypeError('Object of type date is not JSON serializable') before this
     fix. The plain-text report never crashed here (f-strings call str()
     implicitly); only --json did."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         path = root / "00-system/registers/DATE_REG.md"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -2216,7 +2285,7 @@ def test_report_holdings_finds_files_past_windows_max_path():
     mozare-wiki nested under a deep temp directory. This fixture manufactures
     the same condition portably by nesting enough directory levels that the
     full path clears 260 characters, then asserts the file is still found."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         deep = root / "_originals"
         segment = "a-very-long-directory-segment-name-used-only-to-pad-length"
@@ -2252,7 +2321,7 @@ def test_report_holdings_finds_files_past_windows_max_path():
 def test_report_holdings_cli_empty_kit_prints_seven_sections_and_clean():
     """tasks.md E1 acceptance (a)."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         r = subprocess.run(
             [sys.executable, "-B", "scripts/report_holdings.py"], cwd=kit,
@@ -2277,7 +2346,7 @@ def test_report_holdings_cli_empty_kit_prints_seven_sections_and_clean():
 def test_report_holdings_cli_json_has_held_and_registered_keys():
     """tasks.md E1 acceptance (c)."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         r = subprocess.run(
             [sys.executable, "-B", "scripts/report_holdings.py", "--json"],
@@ -2294,7 +2363,7 @@ def test_report_holdings_writes_nothing_to_the_tree():
     (same technique the retier fixtures use) rather than `git status`,
     since the fixture copy has no `.git` of its own."""
     import subprocess
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         before = _tree_hash(kit)
         r = subprocess.run(
@@ -2313,7 +2382,7 @@ def test_report_holdings_writes_nothing_to_the_tree():
 
 
 def test_capture_record_status_registered_is_not_a_holdings_claim():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_manifest(root, [])
         path = root / "02-sources/records/wiki-cap-000000000000.md"
@@ -2331,7 +2400,7 @@ def test_capture_record_status_registered_is_not_a_holdings_claim():
 
 def test_source_record_status_registered_is_still_a_holdings_claim():
     """The scoping must not weaken the invariant for real source records."""
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         _write_manifest(root, [])
         _write_source_record(
@@ -2343,7 +2412,7 @@ def test_source_record_status_registered_is_still_a_holdings_claim():
 
 
 def test_manifest_row_pointing_at_a_non_source_record_is_an_error():
-    with tempfile.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         root = _census_root(Path(td))
         rel = "02-sources/records/wiki-cap-000000000000.md"
         path = root / rel

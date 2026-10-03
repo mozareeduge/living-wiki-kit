@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reconciliation-receipt.schema.json",
+  "title": "Reconciliation run receipt (class-carrying)",
+  "description": "Every reconcile/intake run declares its class first (RC-0 mechanism, RC-1 candidate intake, RC-2 correction on accepted evidence, RC-3 new accepted evidence, RC-4 ontology change). The receipt carries the class from plan to verify.",
+  "type": "object",
+  "required": ["run_id", "class", "mode", "batches", "status"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "class": {"enum": ["RC-0", "RC-1", "RC-2", "RC-3", "RC-4"]},
+    "mode": {"enum": ["full", "incremental"]},
+    "batches": {"type": "array", "items": {"type": "object"}},
+    "status": {"enum": ["planned", "verified"]},
+    "verdict": {"type": ["string", "null"], "default": null},
+    "conflicts": {"type": "integer", "minimum": 0, "default": 0}
+  },
+  "additionalProperties": true
+}

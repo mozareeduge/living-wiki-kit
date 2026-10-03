@@ -6,13 +6,19 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $RepoRoot
 
-& qmd update | Out-Host
+# The QMD index is shared by every wiki on this machine. Bare `qmd update`
+# re-indexes all of them and `qmd embed -f` deletes all of their vectors, so
+# both are scoped to this instance's own collections.
+& python scripts/qmd_scope.py check-owned
+if ($LASTEXITCODE -ne 0) { throw "QMD collection names collide with another wiki; see message above." }
+
+& python scripts/qmd_scope.py update | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "QMD update failed." }
 
 if ($Force) {
-    & qmd embed -f | Out-Host
+    & python scripts/qmd_scope.py embed --force | Out-Host
 } else {
-    & qmd embed | Out-Host
+    & python scripts/qmd_scope.py embed | Out-Host
 }
 if ($LASTEXITCODE -ne 0) { throw "QMD embedding failed." }
 

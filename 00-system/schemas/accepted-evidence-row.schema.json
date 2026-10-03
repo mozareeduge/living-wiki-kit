@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "accepted-evidence-row.schema.json",
+  "type": "object",
+  "required": ["evidence_id", "kind", "record_path", "content_sha256", "authority_level", "authority_scope", "status", "acceptance_event"],
+  "properties": {
+    "type": {"enum": ["accepted-evidence-row", null]},
+    "evidence_id": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "minLength": 1},
+    "record_path": {"type": "string", "minLength": 1},
+    "content_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "authority_level": {"type": "integer", "minimum": 0},
+    "authority_scope": {},
+    "status": {"const": "accepted"},
+    "accepted_at": {"type": ["string", "null"]},
+    "acceptance_event": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

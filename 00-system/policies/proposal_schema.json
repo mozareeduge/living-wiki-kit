@@ -1,6 +1,6 @@
 {
   "_comment": "Proposal schema for the candidate layer (Phase 3). Every model-produced proposal is candidate-tier (authority level 7) by construction. The queue (_proposals/proposals.jsonl) is inert until a human moves it. evidence_audit.py validates each record against this schema; a proposal missing its required evidence fields is AUTO-REJECTED in the audit report (never auto-deleted - the human decides from the report).",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "common_required": ["id", "received", "kind", "authority_tier", "status", "body"],
   "common_enums": {
     "authority_tier": ["candidate"],
@@ -31,7 +31,7 @@
     },
     "tier-change": {
       "required": ["target_id", "from_tier", "to_tier", "why", "source_passage"],
-      "to_tier_enum": ["pending-registration", "registered", "held"]
+      "to_tier_enum": ["pending-registration", "registered", "reference-shelf"]
     },
     "record-correction": {
       "required": ["target_id", "field", "old_value", "new_value", "why", "source_passage"]
@@ -42,6 +42,42 @@
     "retirement-request": {
       "_desc": "Request to retire/supersede a record. Requires stronger evidence: passage + explicit superseded_by or error documentation.",
       "required": ["target_id", "why", "source_passage", "superseded_by"]
+    },
+    "object-create": {
+      "_desc": "Propose a NEW canonical object. No closed object kind: carry optional labels only. Use instead of object-note when no object record exists yet.",
+      "required": ["title", "characterization", "why", "source_passage"]
+    },
+    "object-update": {
+      "_desc": "Revise an existing object page. Use instead of object-note (which appends an observation) and record-correction (which fixes one field value).",
+      "required": ["object_id", "update", "why", "source_passage"]
+    },
+    "relation-create": {
+      "_desc": "Propose a NEW relation-object. Use instead of relation-edge (which asserts a typed link where the endpoints already exist) when no relation record exists yet.",
+      "required": ["subject_id", "proposed_type", "why", "source_passage"]
+    },
+    "relation-amend": {
+      "_desc": "Revise an existing relation record. Use instead of link-repair (which fixes a broken wikilink address).",
+      "required": ["relation_id", "amendment", "why", "source_passage"]
+    },
+    "claim-create": {
+      "_desc": "Propose a NEW claim-object.",
+      "required": ["claim", "why", "source_passage"]
+    },
+    "claim-amend": {
+      "_desc": "Revise an existing claim's text or scope. Use instead of claim-amendment (which challenges a claim's support or permission).",
+      "required": ["claim_id", "amendment", "why", "source_passage"]
+    },
+    "lineage-link": {
+      "_desc": "Link a record to a lineage or genesis event.",
+      "required": ["target_id", "event_ref", "why", "source_passage"]
+    },
+    "research-question": {
+      "_desc": "File an open research question. The passage is the context that motivates it, not an answer.",
+      "required": ["question", "why", "source_passage"]
+    },
+    "capture-promotion": {
+      "_desc": "Promote captures into a proposal. Evidence is the capture: refs on the record, not a quoted passage.",
+      "required": ["capture_refs"]
     }
   }
 }

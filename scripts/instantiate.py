@@ -23,7 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET_GLOBS = [
     "scripts/*.py",
     "scripts/capture/*.py",
+    "scripts/gov_kernel/*.py",
+    "scripts/retrieval/*.py",
+    "scripts/tests/*.py",
     "scripts/*.ps1",
+    "00-system/configuration/*.json",
+    ".claude/agents/*.md",
     "00-system/schemas/*.json",
     "00-system/templates/*.md",
     "00-system/policies/*.md",
@@ -41,7 +46,7 @@ TARGET_GLOBS = [
     ".mcp.json",
 ]
 
-MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-)")
+MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-)")
 MOZARE_WORDS = [
     ("mozare-wiki", "this-wiki"),
     ("Mozare Wiki", "This Wiki"),
@@ -131,6 +136,27 @@ def main() -> int:
                 path.write_text(new, encoding="utf-8")
                 changed.append(path.relative_to(ROOT).as_posix())
 
+    # QMD collection names: the QMD index is machine-wide, so every instance
+    # must own distinct names. The kit ships generic `wiki-*` names; rename
+    # them to `<prefix>-*` or two instances on one machine would overwrite
+    # each other's collections. Every reference reads the names from this
+    # file (scripts/qmd_scope.py), so this is the only place they change.
+    qmd_cfg_path = ROOT / "00-system/configuration/qmd-collections-v1.1.0.json"
+    if qmd_cfg_path.exists():
+        qmd_cfg = json.loads(qmd_cfg_path.read_text(encoding="utf-8"))
+        renamed = False
+        for col in qmd_cfg.get("collections", []):
+            name = col.get("name", "")
+            if name.startswith("wiki-"):
+                col["name"] = f"{prefix}-" + name[len("wiki-"):]
+                renamed = True
+        if renamed:
+            qmd_cfg_path.write_text(json.dumps(qmd_cfg, indent=2, ensure_ascii=False) + "\n",
+                                    encoding="utf-8")
+            rel = qmd_cfg_path.relative_to(ROOT).as_posix()
+            if rel not in changed:
+                changed.append(rel)
+
     # Corpus register: rename the empty-state id to the instance's own.
     if state.get("id") != corpus_new:
         state["id"] = corpus_new
@@ -142,12 +168,25 @@ def main() -> int:
         "id": f"{prefix}-instance",
         "name": args.name,
         "record_prefix": prefix,
-        "created_from": "living-wiki-kit 1.2.0",
+        "created_from": "living-wiki-kit 1.3.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
+        "active_profiles": [],
     }
     out = ROOT / "00-system/registers/INSTANCE.json"
     out.write_text(json.dumps(instance, indent=2) + "\n", encoding="utf-8")
+
+    # Governance kernel: regenerate SYSTEM_STATE.json (and the stable-bytes
+    # corpus/evidence registers) so the renamed corpus id and the prefixed
+    # evidence snapshot id are the state the instance starts from.
+    import subprocess
+    rebuilt = subprocess.run(
+        [sys.executable, "scripts/wiki_state.py", "--repo", ".", "rebuild"],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if rebuilt.returncode != 0:
+        print("ERROR: wiki_state.py rebuild failed after instantiation:\n"
+              + rebuilt.stdout + rebuilt.stderr, file=sys.stderr)
+        return 1
 
     print(f"Instance: {args.name} (prefix '{prefix}')")
     print(f"Rewrote {len(changed)} files:")

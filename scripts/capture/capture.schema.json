@@ -9,7 +9,7 @@
     "type": {"const": "capture"},
     "title": {"type": "string", "pattern": "^Capture cap-"},
     "status": {"enum": ["received", "processing", "transcribed", "described", "needs-review", "processing-failed", "reviewed", "parked", "promoted"]},
-    "capture_kind": {"enum": ["text", "voice", "handwriting", "drawing", "image", "file", "mixed"]},
+    "capture_kind": {"enum": ["text", "url", "voice", "handwriting", "drawing", "image", "file", "mixed"]},
     "captured_at": {"type": "string", "format": "date-time"},
     "capture_channel": {"enum": ["telegram-hermes", "claude-mobile", "obsidian", "mcp", "filesystem"]},
     "language_hint": {"enum": ["fa", "en", "mixed", "unknown"]},

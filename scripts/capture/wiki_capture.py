@@ -44,7 +44,7 @@ KIND_FOR_SUFFIX = {s: "voice" for s in ALLOWED_AUDIO}
 KIND_FOR_SUFFIX.update({s: "image" for s in ALLOWED_IMAGE})
 KIND_FOR_SUFFIX.update({s: "file" for s in ALLOWED_FILE})
 
-CAPTURE_KINDS = {"text", "voice", "handwriting", "drawing", "image", "file", "mixed"}
+CAPTURE_KINDS = {"text", "url", "voice", "handwriting", "drawing", "image", "file", "mixed"}
 CHANNELS = {"telegram-hermes", "claude-mobile", "obsidian", "mcp", "filesystem"}
 LANGS = {"fa", "en", "mixed", "unknown"}
 
@@ -414,6 +414,57 @@ def capture_media(src: str, kind: str, channel: str,
             "message": f"duplicate of {dup}" if dup else f"{kind} capture stored"}
 
 
+# ---------------------------------------------------------------- URL capture
+
+_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
+
+def capture_url(url: str, channel: str, language_hint: str = "unknown",
+               title: str | None = None) -> dict:
+    """Capture a URL reference. The URL string itself is the content;
+    no network fetch is performed (deterministic, zero-LLM). The URL
+    is stored as the body text and hashed for deduplication."""
+    if channel not in CHANNELS:
+        raise CaptureError("E_BAD_CHANNEL", f"unknown channel: {channel}")
+    if language_hint not in LANGS:
+        raise CaptureError("E_BAD_LANG", f"unknown language hint: {language_hint}")
+    canonical = url.strip()
+    if not canonical:
+        raise CaptureError("E_EMPTY", "URL capture is empty")
+    if not _URL_RE.match(canonical):
+        raise CaptureError("E_BAD_URL", f"not an http(s) URL: {canonical[:80]}")
+    body = canonical + "\n"
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    dup = find_by_hash(digest)
+    cid = _new_id()
+    sections = _blank_sections()
+    sections["User-supplied text"] = canonical + "\n"
+    sections["Provenance events"] = _event_line("created", "ok", f"sha256:{digest[:16]}") + "\n"
+    fm = {"id": cid, "type": "capture", "title": title or f"Capture {cid}", "status": "received",
+          "capture_kind": "url", "captured_at": _now_iso(),
+          "capture_channel": channel, "language_hint": language_hint,
+          "raw_media": None, "raw_media_available": False,
+          "sha256": digest, "bytes": len(canonical.encode("utf-8")),
+          "duplicate_of": dup,
+          "transcription_state": "not-requested", "transcription_method": None,
+          "transcription_version": None, "transcription_reviewed": False,
+          "quality_flags": [], "promoted_to": None,
+          "schema_version": CAPTURE_SCHEMA_VERSION}
+    if dup:
+        sections["Provenance events"] += _event_line("duplicate-of", "ok", dup) + "\n"
+    dest = _finalize_record(fm, sections)
+    return {"ok": True, "id": cid, "status": "received", "path": _repo_rel(dest),
+            "sha256": digest, "bytes": fm["bytes"], "duplicate_of": dup,
+            "message": f"duplicate of {dup}" if dup else "url capture stored"}
+
+
+def capture_photo(src: str, channel: str,
+                  language_hint: str = "unknown") -> dict:
+    """Convenience wrapper: capture a photo (image file) with kind='image'.
+    Delegates to capture_media for all validation and storage."""
+    return capture_media(src, "image", channel, language_hint)
+
+
 # -------------------------------------------------------------------- access
 
 def _load(capture_id: str):
@@ -517,8 +568,8 @@ def record_description(capture_id: str, literal: str, description: str,
                        adapter: str, version: str) -> dict:
     """Keep literal visible text and interpretive description strictly separate."""
     p, (fm, sections) = _load(capture_id)
-    if fm.get("capture_kind") not in ("handwriting", "drawing", "image", "mixed", "file"):
-        raise CaptureError("E_WRONG_KIND", "descriptions attach only to visual/file captures")
+    if fm.get("capture_kind") not in ("handwriting", "drawing", "image", "mixed", "file", "url"):
+        raise CaptureError("E_WRONG_KIND", "descriptions attach only to visual/file/url captures")
     if literal is not None:
         sections["Literal transcript or extraction"] = (
             literal.rstrip("\n") + "\n" if literal.strip() else "")
@@ -579,7 +630,7 @@ def validate_record(capture_id_or_path: str) -> list[str]:
     # media integrity: recompute hash from bytes
     raw = fm.get("raw_media")
     if raw:
-        if ".." in str(raw) or str(raw).startswith("/"):
+        if ".." in str(raw):  # containment below is the rule on every OS; a leading "/" check rejected valid Linux paths
             errors.append("E_TRAVERSAL: raw_media escapes roots")
         else:
             mp = _resolve_media(str(raw))
@@ -604,7 +655,7 @@ def validate_record(capture_id_or_path: str) -> list[str]:
                 if not kind_ok:
                     errors.append(f"E_MEDIA_MISMATCH: kind {kind!r} vs file type {mp.suffix}")
     else:
-        if fm.get("capture_kind") == "text":
+        if fm.get("capture_kind") in ("text", "url"):
             body_text = sections.get("User-supplied text", "")
             if hashlib.sha256(body_text.encode("utf-8")).hexdigest() != fm.get("sha256"):
                 errors.append("E_HASH_MISMATCH: text bytes do not match recorded sha256")
@@ -713,6 +764,17 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--channel", required=True, choices=sorted(CHANNELS))
     m.add_argument("--lang", default="unknown", choices=sorted(LANGS))
 
+    u = sub.add_parser("capture-url")
+    u.add_argument("--url", required=True)
+    u.add_argument("--channel", required=True, choices=sorted(CHANNELS))
+    u.add_argument("--lang", default="unknown", choices=sorted(LANGS))
+    u.add_argument("--title", default=None)
+
+    ph = sub.add_parser("capture-photo")
+    ph.add_argument("--src", required=True)
+    ph.add_argument("--channel", required=True, choices=sorted(CHANNELS))
+    ph.add_argument("--lang", default="unknown", choices=sorted(LANGS))
+
     l = sub.add_parser("list")
     l.add_argument("--state", default=None)
     l.add_argument("--kind", default=None)
@@ -750,6 +812,10 @@ def main(argv: list[str] | None = None) -> int:
             return _out(capture_text(args.text, args.channel, args.lang), as_json)
         if args.cmd == "capture-media":
             return _out(capture_media(args.src, args.kind, args.channel, args.lang), as_json)
+        if args.cmd == "capture-url":
+            return _out(capture_url(args.url, args.channel, args.lang, args.title), as_json)
+        if args.cmd == "capture-photo":
+            return _out(capture_photo(args.src, args.channel, args.lang), as_json)
         if args.cmd == "list":
             obj = list_captures(args.state, args.kind, args.channel)
             if as_json:

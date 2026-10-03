@@ -6,6 +6,9 @@ is LLM work around a deterministic core. This script IS that core:
 
 - plan --mode full        freeze expected.jsonl + batch plan over ALL rows
 - plan --mode incremental freeze batches over rows changed since last freeze
+- plan --class RC-x       declare the run class first (RC-0..RC-4); recorded
+                          in batch-plan.json and run-receipt.json (validated
+                          against reconciliation-receipt.schema.json)
 - verify --run-id X       assert exact-once id coverage vs expected.jsonl
 - state                   show drift since last freeze + escalation reasons
 
@@ -30,6 +33,12 @@ STATE_FILE = Path("_audits/reconcile-state.json")
 BATCH_MIN, BATCH_MAX = 8, 12
 ESCALATE_CHANGED_PCT = 30
 ESCALATE_CONFLICTS = 3
+
+# Run classes (W3): every run declares one first. RC-0 mechanism only;
+# RC-1 candidate intake (gates only); RC-2 correction on accepted evidence
+# (graph-impact scan); RC-3 new accepted evidence / RC-4 ontology change
+# (batched corpus-reader runs with exact-once verify).
+RUN_CLASSES = ("RC-0", "RC-1", "RC-2", "RC-3", "RC-4")
 
 
 def _load_jsonl(p: Path) -> list[dict]:
@@ -84,7 +93,7 @@ def _plan_batches(rows: list[dict]) -> tuple[list[dict], list[list[dict]]]:
 
 
 def _write_run_scaffold(root: Path, run_id: str, rows: list[dict],
-                        mode: str) -> tuple[Path, list[dict], list[list[dict]]]:
+                         mode: str, run_class: str) -> tuple[Path, list[dict], list[list[dict]]]:
     run_dir = root / "_audits" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "expected.jsonl").write_text(
@@ -92,16 +101,33 @@ def _write_run_scaffold(root: Path, run_id: str, rows: list[dict],
         encoding="utf-8")
     plan, batches = _plan_batches(rows)
     (run_dir / "batch-plan.json").write_text(
-        json.dumps({"run_id": run_id, "mode": mode, "plan": plan},
+        json.dumps({"run_id": run_id, "mode": mode, "class": run_class, "plan": plan},
                    ensure_ascii=False, indent=1), encoding="utf-8")
     for b, rows_b in zip([f"batch-{i+1:02d}" for i in range(len(batches))], batches):
         lines = [f"{r.get('id')} | {r.get('format')} | {r.get('word_count')} | "
                  f"{Path(str(r.get('filename', ''))).name}" for r in rows_b]
         (run_dir / f"{b}-files.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    receipt = {"run_id": run_id, "class": run_class, "mode": mode,
+               "batches": plan, "status": "planned",
+               "verdict": None, "conflicts": 0}
+    _write_receipt(root, run_dir, receipt)
     return run_dir, rows, batches
 
 
-def plan(root: Path, mode: str) -> int:
+def _write_receipt(root: Path, run_dir: Path, receipt: dict) -> None:
+    from gov_kernel.schemas import validate_record
+    findings = validate_record(receipt, root / "00-system/schemas",
+                               explicit_schema="reconciliation-receipt.schema.json")
+    if findings:
+        raise ValueError("run receipt invalid: " + "; ".join(f.message for f in findings))
+    (run_dir / "run-receipt.json").write_text(
+        json.dumps(receipt, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def plan(root: Path, mode: str, run_class: str = "RC-1") -> int:
+    if run_class not in RUN_CLASSES:
+        print(f"ERROR: unknown run class {run_class!r} (expected one of {', '.join(RUN_CLASSES)})")
+        return 2
     rows = manifest_rows(root)
     cstate = corpus_state(root)
     state = _load_state(root)
@@ -140,7 +166,7 @@ def plan(root: Path, mode: str) -> int:
                 rows = scope
                 print(f"incremental scope: {len(new)} new, {len(changed)} changed")
     run_id = time.strftime("recon-%Y-%m-%d--") + mode
-    run_dir, rows, batches = _write_run_scaffold(root, run_id, rows, mode)
+    run_dir, rows, batches = _write_run_scaffold(root, run_id, rows, mode, run_class)
     _save_state(root, {
         "last_run_id": run_id, "mode": mode,
         "frozen_at_epoch": int(time.time()),
@@ -185,6 +211,13 @@ def verify(root: Path, run_id: str, receipts: Path) -> int:
     (run_dir / "verify-report.txt").write_text(
         f"{verdict}\ncovered={len(seen)}/{len(expected)}\n" +
         "\n".join(conflicts) + "\n", encoding="utf-8")
+    try:
+        receipt = json.loads((run_dir / "run-receipt.json").read_text(encoding="utf-8"))
+        receipt.update({"status": "verified", "verdict": verdict,
+                        "conflicts": len(conflicts)})
+        _write_receipt(root, run_dir, receipt)
+    except (OSError, ValueError) as exc:
+        print(f"WARNING: could not update run receipt: {exc}")
     if len(conflicts) > ESCALATE_CONFLICTS:
         print(f"ESCALATION: >{ESCALATE_CONFLICTS} conflicts — human review required")
         return 2
@@ -223,6 +256,11 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p_plan = sub.add_parser("plan")
     p_plan.add_argument("--mode", choices=["full", "incremental"], default="full")
+    p_plan.add_argument("--class", dest="run_class", choices=list(RUN_CLASSES),
+                        default="RC-1",
+                        help="run class: RC-0 mechanism, RC-1 candidate intake, "
+                             "RC-2 correction on accepted evidence, RC-3 new accepted "
+                             "evidence, RC-4 ontology change")
     p_ver = sub.add_parser("verify")
     p_ver.add_argument("--run-id", required=True)
     p_ver.add_argument("--receipts", required=True, type=Path)
@@ -230,7 +268,7 @@ def main() -> int:
     args = ap.parse_args()
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[1]
     if args.cmd == "plan":
-        return plan(root, args.mode)
+        return plan(root, args.mode, args.run_class)
     if args.cmd == "verify":
         return verify(root, args.run_id, args.receipts)
     return state_cmd(root)
