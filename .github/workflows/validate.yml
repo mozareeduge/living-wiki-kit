@@ -32,3 +32,16 @@ jobs:
           python scripts/wiki_profiles.py check
       - name: Test suite (validators, gates, context compiler, candidate layer, reconciliation, capture)
         run: python -m pytest tests scripts/tests scripts/capture/tests -q
+
+  fresh-wiki:
+    # Release gate (Q6): a brand-new wiki made from this commit passes every
+    # gate, census included, and re-instantiating it changes nothing.
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements.txt -r requirements-governance.txt
+      - name: Instantiate a fresh wiki and run every gate in it
+        run: python scripts/release_smoke.py
