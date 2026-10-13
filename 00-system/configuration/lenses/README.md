@@ -12,7 +12,7 @@ What each field does in a context pack:
 - `foreground_labels` — a record matched through one of these labels gets the
   reason `(foregrounded by lens <id>)`.
 - `foreground_relations` — a relation whose `relation_type` is listed, and
-  every record it joins, gets `(lens <id> foregrounds relation `<type>`)`.
+  every record it joins, gets ``(lens <id> foregrounds relation `<type>`)``.
 - `foreground_sections` — each record carries `section_order` (these
   headings first, then the rest as written); its content is unchanged.
 

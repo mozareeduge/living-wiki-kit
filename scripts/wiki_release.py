@@ -7,7 +7,7 @@ from gov_kernel.common import atomic_write
 def main():
  ap=argparse.ArgumentParser(); ap.add_argument('--repo',default='.'); sub=ap.add_subparsers(dest='cmd',required=True)
  for name in ['verify','manifest']:
-  p=sub.add_parser(name); p.add_argument('--profile',required=True); p.add_argument('--receipts',default='.git/mozare-governance-hardening/evidence')
+  p=sub.add_parser(name); p.add_argument('--profile',required=True); p.add_argument('--receipts',default='.git/wiki-governance/evidence')
  a=ap.parse_args(); root=pathlib.Path(a.repo).resolve(); profile=root/a.profile; receipts=root/a.receipts
  v=verify_release(root,profile,receipts); print(json.dumps(v,ensure_ascii=False,indent=2))
  if not v['ok']: return 1

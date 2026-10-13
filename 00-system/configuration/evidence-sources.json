@@ -1,6 +1,6 @@
 {
   "accepted_record_globs": [],
-  "note": "Verified Mozare Wiki profile: promoted captures are considered only with durable state:promoted provenance; no history is fabricated.",
+  "note": "Kit default: promoted captures are considered only with durable state:promoted provenance; no history is fabricated.",
   "promoted_capture_globs": [
     "01-inbox/captures/**/mw-cap-*.md",
     "_captures/**/mw-cap-*.md"

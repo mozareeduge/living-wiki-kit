@@ -17,7 +17,7 @@ Writes ONLY to `_audits/` (never canonical zones). Reads
 (counts drift; never hardcode). Escalation (incremental -> full / human):
 any removed row, corpus-state count change, >30% rows changed, or >3
 verify conflicts. Committing the scaffold is the operator's call per
-instance policy (mozare-wiki commits audit scaffolds on audit/ branches).
+instance policy (an instance may commit audit scaffolds on audit/ branches).
 """
 from __future__ import annotations
 

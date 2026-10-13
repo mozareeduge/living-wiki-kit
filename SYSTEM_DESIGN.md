@@ -14,8 +14,9 @@ source_of_truth: true
 
 ## 1. What this kit is
 
-This repository is a **generalized extraction** of the mozare-wiki operational
-system: a private, Git-versioned, Obsidian-readable archive pattern that
+This repository is an **independent, reusable system** (it began as the
+generalization of one operational archive and is now developed on its own):
+a private, Git-versioned, Obsidian-readable archive pattern that
 preserves not only current statements but *how works, concepts, claims, and
 directions changed* — a "living genetic archive."
 
@@ -163,7 +164,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_mcp_server.py` | governance MCP (stdio, UTF-8), profile-scoped: `--profile read` (default) = `wiki_read_text`, `wiki_get_record`, `wiki_search` (portable FTS5 floor + optional QMD over the collections in `qmd-collections-v1.1.0.json`), `wiki_resolve_id`, `wiki_get_source`, `wiki_state`, `wiki_context_pack`; `--profile capture` adds the capture tools and `wiki_propose` / `wiki_propose_from_capture` (immutable candidate records in `_proposals/records/`). No profile writes canonical records | operational |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
-| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); baseline 3/30 lexical-only recorded in `mozare-wiki` 2026-09-20 | operational |
+| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); the case set is instance data (`--config`), so a fresh kit has none to run | operational |
 | `run_faithfulness_benchmark.py` | faithfulness evaluation loop: answer from retrieved records, then entailment-check each claim against the sources | available (unexercised) |
 | `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` | operational |
 | `check_research_spans.py` | citation-span audit over an external research quarantine | available (unexercised) |

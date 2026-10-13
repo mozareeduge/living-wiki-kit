@@ -6,6 +6,7 @@ Record schemas must accept any instance prefix (`mw-` in the kit, the
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,3 +40,24 @@ def test_object_and_claim_ids_accept_any_instance_prefix(prefix: str) -> None:
              "responsible_language": "en"}
     assert validate_record(obj, SCHEMAS, explicit_schema="object-record.schema.json") == []
     assert validate_record(claim, SCHEMAS) == []
+
+
+# Where history may name the projects the kit came from: handoffs, audit
+# records, archived specs, the plan/changelog, and this test's own word list.
+HISTORY = ("07-genesis/", "_audits/", "openspec/changes/archive/", ".maws/",
+           "Plans.md", "CHANGELOG.md", "tests/test_kit_independence.py")
+
+
+def test_shipped_files_carry_no_other_project_name() -> None:
+    files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
+                           text=True, check=True).stdout.splitlines()
+    hits = []
+    for rel in files:
+        if rel.startswith(HISTORY):
+            continue
+        try:
+            text = (ROOT / rel).read_text(encoding="utf-8").lower()
+        except (UnicodeDecodeError, OSError):
+            continue
+        hits += [f"{rel}: {w}" for w in FOREIGN if w in text]
+    assert hits == []

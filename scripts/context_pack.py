@@ -98,6 +98,18 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
     if not db.exists():
         raise SystemExit(f"no graph index at {db}; run build_graph_index.py first")
     con = sqlite3_connect(db)
+    try:
+        return _build_pack(con, root, seed, hops, query, max_records,
+                           budget_tokens, search_fn, lens, accepted_only,
+                           include_candidates)
+    finally:
+        con.close()  # an open handle keeps graph.db locked on Windows
+
+
+def _build_pack(con, root: Path, seed: str, hops: int, query: str | None,
+                max_records: int, budget_tokens: int, search_fn,
+                lens: str | dict | None, accepted_only: bool,
+                include_candidates: bool) -> dict:
     seed_row = con.execute("SELECT path, title FROM nodes WHERE id=?", (seed,)).fetchone()
     if not seed_row:
         raise SystemExit(f"seed id {seed!r} not in graph index")

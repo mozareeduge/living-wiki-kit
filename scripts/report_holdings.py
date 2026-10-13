@@ -51,7 +51,7 @@ HOLDINGS_TIER_REGISTERED = validate_repo.HOLDINGS_TIER_REGISTERED
 def _long_path(p: Path) -> Path:
     """Return `p` usable for filesystem calls past Windows' 260-char limit.
 
-    Found live (2026-09-18) auditing a throwaway clone of mozare-wiki
+    Found live (2026-09-18) auditing a throwaway clone of a populated instance
     nested under a deep temp directory: plain `os.scandir`/`pathlib.rglob`
     silently dropped 17 of 544 `_originals/` files whose full path exceeded
     the classic MAX_PATH -- no exception, just a wrong number, which is
@@ -506,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         # default=str: a frontmatter `updated:` written unquoted (e.g.
         # `updated: 2026-09-16`) parses through PyYAML as a datetime.date,
-        # not a string -- found live against mozare-wiki's own
+        # not a string -- found live against a populated instance's own
         # CORPUS_MAP.md. json.dumps has no default encoding for that type;
         # falling back to str() renders its ISO form instead of crashing,
         # matching what the plain-text report already shows via f-string

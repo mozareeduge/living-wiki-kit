@@ -36,7 +36,7 @@ committing.
 
 ## 3. Edit the instance-facing pages
 
-- `HOME.md` — subject, routes, entry points (replace mozare examples)
+- `HOME.md` — subject, routes, entry points (replace the kit's examples)
 - `SYSTEM_DESIGN.md` — keep §§2–5 (authority, preservation, record grammar)
   verbatim; rewrite §1's subject description for your topic, but KEEP its
   `Current corpus snapshot:` / `Registered source artifacts:` markers as

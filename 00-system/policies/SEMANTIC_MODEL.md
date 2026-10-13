@@ -52,9 +52,19 @@ foreground it. Like a label, it organizes attention and is never evidence.
 
 Profiles (`00-system/configuration/profiles/`) bundle suggestions —
 vocabulary, relation language, lenses, outputs — for a practice, domain,
-collaboration shape, or compliance context. They compose additively, may
-tighten kernel rules, and may never weaken them. A profile never requires an
-object to fit its vocabulary; unknown labels always remain allowed.
+collaboration shape, or compliance context. They compose additively and may
+never weaken kernel rules: the profile schema accepts advisory keys only, so
+no key can switch off validation, authority or evidence rules. Tightening is
+not implemented: no profile key yet makes a kernel rule stricter (a
+compliance profile that needs one is an open decision). A profile never
+requires an object to fit its vocabulary; unknown labels always remain
+allowed.
+
+An object page's `## Profiles` section is not an instance profile. That
+section describes the object as different practices see it (a work as a
+score, as a rehearsal, as a case study); it is content, written and sourced
+like the rest of the page. Instance profiles live in
+`00-system/configuration/profiles/` and only configure attention.
 In retrieval an active profile only explains: a record carrying one of its
 seed labels gets a reason naming the profile, and its suggested lenses are
 offered, never applied. It never selects, hides, or reorders a record.

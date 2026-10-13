@@ -47,13 +47,6 @@ TARGET_GLOBS = [
 ]
 
 MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-)")
-MOZARE_WORDS = [
-    ("mozare-wiki", "this-wiki"),
-    ("Mozare Wiki", "This Wiki"),
-    ("mozare", "wiki"),
-    ("Mozare", "Wiki"),
-    ("MOZARE", "WIKI"),
-]
 
 
 def main() -> int:
@@ -125,8 +118,6 @@ def main() -> int:
                 continue
             text = path.read_text(encoding="utf-8")
             new = MW_ID.sub(f"{prefix}-", text)
-            for old, repl in MOZARE_WORDS:
-                new = new.replace(old, repl)
             if path.name in entry_pages:
                 new = new.replace(
                     f"Current corpus snapshot: `{corpus_old}`",

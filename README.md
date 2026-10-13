@@ -5,8 +5,9 @@ Git-versioned, Obsidian-readable wikis that preserve sources immutably and
 record how works, concepts, claims, and relations change over time, under a
 strict evidence-authority governance model.
 
-Extracted and generalized from the operational mozare-wiki system (v1.2.1),
-so new wikis can be instantiated in minutes with the same guarantees.
+An independent project: the kit is developed and released on its own, and
+every wiki made from it is a separate repository that the kit never reaches
+into. New wikis can be instantiated in minutes with the same guarantees.
 
 ## Start here
 

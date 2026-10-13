@@ -2,7 +2,7 @@
 
 On Windows a piped stdout defaults to the locale code page (cp1252), so the
 first reply containing Persian text raised UnicodeEncodeError and killed the
-server (found on mozare-wiki 2026-09-24). Forcing a cp1252 locale
+server (found on a populated instance 2026-09-24). Forcing a cp1252 locale
 reproduces that on any OS.
 """
 from __future__ import annotations

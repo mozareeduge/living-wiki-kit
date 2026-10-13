@@ -14,7 +14,7 @@ profile-neutral and fully functional.
 ## What an active profile changes in a context pack
 
 - A record whose label matches an active profile's `seed_labels` gets the
-  reason `(profile <id> seed label `<label>`)` and a `profile_attention`
+  reason ``(profile <id> seed label `<label>`)`` and a `profile_attention`
   entry. Matching ignores case and spacing; the label is quoted as written.
 - The pack's `meta` lists `active_profiles` and offers the profiles'
   `suggested_lenses` (with whether each lens ships). An offer is never

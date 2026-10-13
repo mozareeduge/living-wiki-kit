@@ -3,9 +3,10 @@
 
 A profile suggests vocabulary, relation language, lenses and outputs for a
 practice/domain/collaboration/compliance context. Profiles compose
-additively, may tighten kernel rules, and can NEVER weaken them: the schema
-accepts advisory keys only, so there is no key through which a profile could
-disable validation, authority, or evidence rules.
+additively and can NEVER weaken kernel rules: the schema accepts advisory
+keys only, so there is no key through which a profile could disable
+validation, authority, or evidence rules. Tightening is not implemented: no
+profile key makes a kernel rule stricter yet.
 
 Active set: `active_profiles` in 00-system/registers/INSTANCE.json
 (absent file or key means []; the empty kit stays profile-neutral).

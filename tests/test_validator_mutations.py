@@ -1164,7 +1164,7 @@ def test_biconditional_violation_surfaces_through_validate_repo_subprocess():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
         kit = _copy_kit(Path(td))
         # A record that claims registration while the manifest stays empty:
-        # exactly the mozare-wiki defect shape that motivated this change.
+        # exactly the populated-instance defect shape that motivated this change.
         record_rel = "02-sources/records/wiki-src-000000000000.md"
         _write_original(kit, "_originals/claimed.pdf")
         # Schema-complete on purpose: if the record were missing required
@@ -2253,7 +2253,7 @@ def test_report_holdings_verdict_counts_findings_exactly():
 def test_report_holdings_json_handles_unquoted_yaml_date_updated_field():
     """Regression: PyYAML parses an unquoted `updated: 2020-01-01` as a
     datetime.date, not a str. json.dumps has no default encoding for that
-    type, so the first --json run against a real mozare-wiki throwaway
+    type, so the first --json run against a real populated-instance throwaway
     clone (CORPUS_MAP.md uses an unquoted date) crashed with
     TypeError('Object of type date is not JSON serializable') before this
     fix. The plain-text report never crashed here (f-strings call str()
@@ -2282,7 +2282,7 @@ def test_report_holdings_finds_files_past_windows_max_path():
     files whose full path exceeds Windows' classic 260-character MAX_PATH
     -- no exception, just an undercount. Found live: 17 of 544
     _originals/ files vanished when auditing a throwaway clone of
-    mozare-wiki nested under a deep temp directory. This fixture manufactures
+    a populated instance nested under a deep temp directory. This fixture manufactures
     the same condition portably by nesting enough directory levels that the
     full path clears 260 characters, then asserts the file is still found."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
@@ -2375,7 +2375,7 @@ def test_report_holdings_writes_nothing_to_the_tree():
 
 
 # --------------------------------------- biconditional scoping (2026-09-18)
-# E1's run against mozare-wiki measured 459 contradictions, not the 447 the
+# E1's run against a populated instance measured 459 contradictions, not the 447 the
 # spec predicted: 447 source-records + 12 capture-records. capture-record
 # uses `status` for the capture pipeline state machine, so the biconditional
 # must not read it as an adjudication claim.
