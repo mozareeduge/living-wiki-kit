@@ -1987,11 +1987,15 @@ def check_section6_script_coverage(text, shipped):
 
 
 def _shipped_top_level_scripts():
-    return {p.name for p in (ROOT / "scripts").glob("*.py")}
+    """Every runnable top-level script: Python, PowerShell helpers (Q3) and
+    Node helpers."""
+    return {p.name for pattern in ("*.py", "*.ps1", "*.mjs")
+            for p in (ROOT / "scripts").glob(pattern)}
 
 
 def test_section6_lists_every_shipped_script():
-    """S1: every scripts/*.py appears in the section-6 table."""
+    """S1 + Q3: every scripts/*.py, *.ps1 and *.mjs appears in the section-6
+    table."""
     text = SYSTEM_DESIGN.read_text(encoding="utf-8")
     errors = check_section6_script_coverage(text, _shipped_top_level_scripts())
     assert not errors, _safe("\n".join(errors))

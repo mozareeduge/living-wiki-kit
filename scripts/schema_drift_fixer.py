@@ -192,7 +192,7 @@ def main() -> int:
     args = ap.parse_args()
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[1]
     ops, skipped = plan_ops(root, args.errors)
-    run_id = time.strftime("2026-%m-%d--schema-drift-reconcile")
+    run_id = time.strftime("%Y-%m-%d--schema-drift-reconcile")
     run_dir = root / "_audits" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     manifest = {

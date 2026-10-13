@@ -94,9 +94,14 @@ corpus state consistent, no broken links.
 ## 5. First commit
 
 ```bash
-git add -A
+git status --short   # review first: kit files and what instantiate wrote, nothing else
+git add -- .
 git commit -m "bootstrap: instantiate <name> from living-wiki-kit"
 ```
+
+Staging the whole tree is right only here, for the first commit of a new
+repository, and only after the review above. Every later change stages
+named paths (`git add <path> …`), never `git add -A`.
 
 (The pre-commit hook runs the validator automatically.)
 

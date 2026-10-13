@@ -46,7 +46,7 @@ TARGET_GLOBS = [
     ".mcp.json",
 ]
 
-MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-)")
+MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-|patch-|obj-|rel-|claim-)")
 
 
 def main() -> int:
@@ -188,7 +188,9 @@ def main() -> int:
     print("  1. Review: git diff")
     print("  2. Edit HOME.md and README.md for your subject")
     print("  3. python scripts/validate_repo.py --full")
-    print("  4. git add -A && git commit -m 'bootstrap: instantiate'")
+    print("  4. git status --short   (review: kit files + what instantiate wrote)")
+    print("  5. git add -- . && git commit -m 'bootstrap: instantiate'")
+    print("     (first commit only; later changes stage named paths)")
     return 0
 
 

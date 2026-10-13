@@ -168,7 +168,8 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `run_faithfulness_benchmark.py` | faithfulness evaluation loop: answer from retrieved records, then entailment-check each claim against the sources | available (unexercised) |
 | `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` | operational |
 | `check_research_spans.py` | citation-span audit over an external research quarantine | available (unexercised) |
-| `create-backup.ps1` | Windows helper: zip backup of the repo to `_wiki_backups/` | operational |
+| `create-backup.ps1` | Windows helper: zip backup of the repo to `Documents\Wiki-Backups` outside the repo (`-Destination` to change) | operational |
+| `setup-after-clone.ps1` | Windows one-shot setup after cloning: Python dependencies, both validators and the governance gates; optional QMD search setup (`-SkipQmd`) and Obsidian Git plugin (`-SkipObsidianPlugin`) | available (unexercised) |
 | `configure-search.ps1` / `refresh-search.ps1` / `search-wiki.ps1` / `verify-install.ps1` | Windows helpers: QMD config/refresh, verify-install, search wrapper; every QMD call scoped through `qmd_scope.py` (`configure-search.ps1` exercised end-to-end on an isolated index 2026-10-02; the others not yet) | available (unexercised) |
 | `qmd_scope.py` (+ `qmd_scoped_update.mjs`) | Keeps every QMD operation inside this instance's own collections (names from `qmd-collections-v1.1.0.json`): scoped `update` / `embed`, `-c` flags for queries, and `check-owned` refusing a name another wiki already registered. The QMD index is machine-wide; bare `qmd update` / `qmd embed -f` would touch every wiki on the machine. Pinned by `tests/test_qmd_scope.py`; scoped update and the collision refusal exercised on an isolated index | operational |
 

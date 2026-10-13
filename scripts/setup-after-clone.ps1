@@ -17,7 +17,7 @@ function Has-Command($Name) {
 }
 
 Step "Confirm repository root"
-if (-not (Test-Path "SYSTEM_DESIGN.md") -or -not (Test-Path "_originals")) {
+if (-not (Test-Path "SYSTEM_DESIGN.md") -or -not (Test-Path "00-system")) {
     throw "This script must run inside the wiki's Git root."
 }
 Write-Host "Repository: $RepoRoot"
@@ -58,12 +58,16 @@ if (-not $SkipObsidianPlugin) {
 }
 
 Step "Claude Code or Claude Desktop"
-Write-Host "The project MCP configuration is in .mcp.json. Approve only the qmd server."
+Write-Host "The project MCP configuration is in .mcp.json: the qmd search server and the read-only wiki-governance server."
 Write-Host "Claude must treat GPT-authored bundles as bounded patches and must not rewrite the corpus autonomously."
 
 Step "Final local verification"
 python scripts/validate_repo.py --full
 python scripts/validate_content_release.py
+python scripts/wiki_validate.py --repo . --format json | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Governance gate failed: python scripts/wiki_validate.py --repo . --format json" }
+python scripts/wiki_state.py --repo . check
+if ($LASTEXITCODE -ne 0) { throw "Governance gate failed: python scripts/wiki_state.py --repo . check" }
 Write-Host ""
 Write-Host "LOCAL STATIC SETUP PASS" -ForegroundColor Green
-Write-Host "Next: run scripts/verify-install.ps1 and the semantic benchmark, then inspect 09-indexes/release-dashboard.md in Obsidian."
+Write-Host "Next: run scripts/verify-install.ps1, then open HOME.md in Obsidian."
