@@ -21,11 +21,11 @@ verified against the repos themselves — commits are pushed, not just local.
 ## Where the work lives
 
 - **kit (template):** `github.com/mozareeduge/living-wiki-kit` @ `9e4fca4` (main)
-  Local: `Documents/Personal Formal Documents/living-wiki-kit`
-- **instance (the archive):** `github.com/mozareeduge/mozare-wiki` @ `e171b25` (main)
-  Local: `Documents/Personal Formal Documents/mozare-wiki/mozare-wiki`
-- **obsidian plugin:** `Documents/Personal Formal Documents/blackbirdpoem-field-extraction/black-bird-field/`
-  (packaged: `Downloads/black-bird-field-1.0.0.zip`)
+  Local: `<local checkout>`
+- **instance (the archive):** `github.com/mozareeduge/source-instance` @ `e171b25` (main)
+  Local: `<local instance checkout>`
+- **obsidian plugin:** `<external plugin source>/`
+  (packaged: `<plugin release zip>`)
 
 ## DONE (all pushed, validator-clean at each step)
 
@@ -39,7 +39,7 @@ verified against the repos themselves — commits are pushed, not just local.
 | 5 | run-semantic-benchmark exercised; baseline recorded: **3/30 lexical-only** (embeddings were 53% missing) | mw `9a2dd09` |
 | ops | evidence-audit report `_audits/evidence-audit-20260919-234541.json`; schema-drift audit `_audits/2026-09-20--schema-drift-reconcile/` | mw |
 | obsidian | `.obsidian` plugin dirs gitignored + untracked (obsidian-git auto-commit guard) | mw `e171b25` |
-| blackbird | black-bird-field plugin built + syntax/mock-load verified + packaged | (external dir, see above) |
+| field | field-plugin plugin built + syntax/mock-load verified + packaged | (external dir, see above) |
 
 QMD embeddings: 16,575 → **25,052 vectors embedded**; 1,062 chunks still pending
 (qmd's "LLM session expired" flakiness, not the model — local embeddinggemma
@@ -62,11 +62,11 @@ passes until Pending: 0).
    decide refiles from `_audits/evidence-audit-20260919-234541.json`.
    Note: `prop-20260906-154145-567` (mixt attribution guard) auto-rejected for
    missing source_passage — refile with the mixt source quote is the owner's call.
-5. **black-bird-field plugin** — installed in the mozare-wiki vault
+5. **field-plugin plugin** — installed in the source-instance vault
    (`.obsidian/plugins/`, registered in community-plugins.json), but the
    **enable-toggle in Obsidian Settings was never confirmed** (Obsidian was
    open during install; ribbon icons unverified). Open Settings → Community
-   plugins → enable "Black Bird Field" → check the four modes.
+   plugins → enable "the field plugin" → check the four modes.
 6. **G-series workbench UI cards** — blocked on the P08-02 lane (claimed by
    session `20260919_140225_2b37f5`, active 2026-09-20). After it frees:
    dispatch P08-03, then G-cards per `workbench-ui-spec.md`.

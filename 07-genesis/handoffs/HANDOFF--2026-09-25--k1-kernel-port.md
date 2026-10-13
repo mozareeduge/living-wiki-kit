@@ -37,22 +37,22 @@ Do not start W1 before the owner has recorded H0.
 | Last code commit | `b5272cb` K1b | `git log --oneline -6` |
 | Kit tests | `pytest tests scripts/tests` → 213 passed, 2 xfailed | run it |
 | Gates | `validate_repo.py --full` PASS; `wiki_validate.py --format json`, `wiki_state.py --repo . check`, `wiki_evidence.py --repo . check` all exit 0 | run them |
-| Instance repo | `mozareeduge/mozare-wiki` (**private**), `main` = `630a998`, CI green | owner access needed |
+| Instance repo | `mozareeduge/source-instance` (**private**), `main` = `630a998`, CI green | owner access needed |
 | Kit CI | **Not running.** Since 2026-09-25 GitHub refuses to start jobs: "recent account payments have failed or your spending limit needs to be increased" (owner's GitHub billing, not code). The two runs before that (K1a) failed on a real defect — CI did not install `jsonschema` — fixed in the commit after this hand-off was written; a clean venv with CI's install line runs `pytest tests scripts/tests` 213 passed, 2 xfailed | `gh run list --branch system/2026-09-20--next-version-plan` |
 
 Commits on the branch since `main` (oldest first): S1, S2, S3 (docs, CI, tests),
-W2 (`wiki_context_pack`), `c0dc845` (three bug fixes ported from mozare-wiki),
+W2 (`wiki_context_pack`), `c0dc845` (three bug fixes ported from source-instance),
 `e651c11` + `18423f3` (K1a kernel core, LF pin), `b5272cb` (K1b kernel MCP server).
 
 ## 3. What K1 is and why
 
-In September the private instance `mozare-wiki` installed an externally built
+In September the private instance `source-instance` installed an externally built
 "Governance Kernel v1.2.1": a fail-closed validation gate, one generated state
 file (`SYSTEM_STATE.json`), an accepted-evidence index, immutable proposal and
 adjudication records, portable SQLite FTS search, and an MCP server that is
 read-only unless started with `--profile capture`. The kit had none of it.
 K1 ports it into the kit in generic form. Instance names stay as `mw-` ids and
-the word "mozare" in code; `scripts/instantiate.py` rewrites both when a new
+the word "instance" in code; `scripts/instantiate.py` rewrites both when a new
 wiki is created (its `TARGET_GLOBS` now include the kernel folders).
 
 Done in K1a/K1b (see `Plans.md` rows for evidence): kernel core, schemas and
@@ -65,7 +65,7 @@ state, kernel MCP server with QMD collection names read from
 
 ### K1c — capture tests into the kit, CI runs everything
 
-1. Copy from mozare-wiki `main` (`630a998`), same relative paths:
+1. Copy from source-instance `main` (`630a998`), same relative paths:
    - `scripts/capture/tests/test_capture.py`, `test_fixtures.py`, `test_mcp_hook.py`
    - `scripts/capture/fixtures/` (whole folder, incl. `make_fixtures.py`)
    These are generic test code and synthetic fixtures. If you cannot read the
@@ -88,14 +88,14 @@ state, kernel MCP server with QMD collection names read from
 
 ### K1d — docs, skill, agents
 
-1. `.claude/skills/wiki-intake/SKILL.md`: adopt mozare-wiki's rewritten
+1. `.claude/skills/wiki-intake/SKILL.md`: adopt source-instance's rewritten
    procedure (gate first; `wiki_state.py --repo . rebuild`;
    `sync_intake_registers.py --accept-corpus-change` dry run then `--apply`;
    `retrieval/build_index.py`; the three gates; the "register a held
    `pending-registration` item" section with `repair_truncated_filenames.py`).
    Keep it generic: no instance counts, no instance ids.
 2. Add `.claude/agents/corpus-reader.md` and `.claude/agents/evidence-auditor.md`
-   (copy from mozare-wiki, strip instance specifics).
+   (copy from source-instance, strip instance specifics).
 3. `AGENTS.md` and `CLAUDE.md`: governance gates are `wiki_validate.py
    --format json` then `wiki_state.py --repo . check`; MCP is read-only by
    default; proposals go to `_proposals/records/` via the capture profile; add
@@ -151,14 +151,14 @@ Record the decision in `07-genesis/handoffs/`; W1 turns it into an enum.
 - `evidence_audit.py` / `report_holdings.py` still read the legacy
   `_proposals/proposals.jsonl` (finding F8) — expected until W1.
 
-## 8. Instance-side items (mozare-wiki, owner's lane)
+## 8. Instance-side items (source-instance, owner's lane)
 
 - Owner: keep or remove 10 test captures written on 2026-09-05 into
   `01-inbox/captures/` by an old test (the fixed tests can no longer do this).
 - Owner: intake thread M01–M04 (held items, 6 `.html` originals, 12
-  capture-derived records, 2 filenames) — tracked in mozare-wiki `.maws/`.
+  capture-derived records, 2 filenames) — tracked in source-instance `.maws/`.
 - Agent, small: port the kit's config-driven `qmd_collections()` into
-  mozare-wiki's `scripts/wiki_mcp_server.py` (finding F9).
+  source-instance's `scripts/wiki_mcp_server.py` (finding F9).
 - M1: `qmd embed` until `qmd status` shows `Pending: 0` (282 docs on 2026-09-23).
 
 ## 9. Next exact operation

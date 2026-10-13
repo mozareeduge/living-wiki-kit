@@ -22,7 +22,7 @@ import run_faithfulness_benchmark as fb  # noqa: E402
 # ------------------------------------------------------------- tokenisation
 
 def test_norm_tokens_casefolds_and_splits_on_punctuation():
-    assert fb.norm_tokens("The Black-Bird, v2!") == ["the", "black", "bird", "v2"]
+    assert fb.norm_tokens("The Night-Bus, v2!") == ["the", "night", "bus", "v2"]
 
 
 def test_norm_tokens_treats_zwnj_as_a_space_and_keeps_persian_letters():

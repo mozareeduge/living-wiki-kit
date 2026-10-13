@@ -36,7 +36,7 @@ list): `capture-promotion`.
 ## Why union
 
 - The live queue (`_audits/evidence-audit-20260919-234541.json` in
-  mozare-wiki: 32 proposals) uses `object-note` ×27, `relation-edge` ×2,
+  source-instance: 32 proposals) uses `object-note` ×27, `relation-edge` ×2,
   `claim-amendment` ×1 — all maintenance. Maintenance-only would still work,
   but the content kinds are the write-path vocabulary for the workbench UI
   (G-series); dropping them now just re-opens the decision later.

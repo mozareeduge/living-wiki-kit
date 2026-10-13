@@ -192,7 +192,7 @@ copy), `.githooks/pre-commit`, `.github/workflows/validate.yml`.
   fixed in this rung or written into the review note with a reason.
 
 **Negative.** No baseline line. No `--no-verify`. Do not also adopt anything
-in `mozare-wiki`.
+in `source-instance`.
 
 ---
 
@@ -347,9 +347,9 @@ or the MCP server version.
 
 ---
 
-### B4 — adopt the census in `mozare-wiki` `[lane:instance] [size:M]` — **operator-gated**
+### B4 — adopt the census in `source-instance` `[lane:instance] [size:M]` — **operator-gated**
 
-Depends: B3 · Runs in: `Documents/Personal Formal Documents/mozare-wiki/mozare-wiki`
+Depends: B3 · Runs in: `<local instance checkout>`
 
 **Goal.** The production instance tells the truth: 97 registered, 544 held,
 447 declared, and `HOME.md` no longer says 94.
@@ -434,7 +434,7 @@ current call site inside the manifest-row loop),
    name from the filesystem rather than hand-patch the garbled string.
 3. Measure the blast radius without changing anything:
    run `python scripts/validate_repo.py --full` in a **throwaway clone** of
-   `mozare-wiki` with the new validator copied in, and record the error count
+   `source-instance` with the new validator copied in, and record the error count
    in the review note.
 
 **Acceptance.**
@@ -443,7 +443,7 @@ current call site inside the manifest-row loop),
 - (b) `python tests/test_validator_mutations.py` prints `N/N passed`.
 - (c) `python scripts/validate_repo.py --full` prints `PASS` in the kit.
 - (d) The review note states the exact number of records this would fire on in
-  `mozare-wiki`, and the throwaway clone is deleted.
+  `source-instance`, and the throwaway clone is deleted.
 
 **Negative.** Do **not** add a baseline line anywhere. Do **not** "fix" a
 single filename in any instance — renaming an original is forbidden and
@@ -498,9 +498,9 @@ parsing beyond an ISO-shape check — a string comparison is the contract.
 
 ---
 
-### C3 — apply register policy in `mozare-wiki` `[lane:instance] [size:M]` — **operator-gated**
+### C3 — apply register policy in `source-instance` `[lane:instance] [size:M]` — **operator-gated**
 
-Depends: C2, B4 · Runs in: `mozare-wiki`
+Depends: C2, B4 · Runs in: `source-instance`
 
 **Goal.** All thirteen `.md` registers either declare a policy and are fresh,
 or are archived with a reason. The six July registers stop reading as current.
@@ -556,7 +556,7 @@ confidence as its validators.
 **Context.** `SYSTEM_DESIGN.md` section 6, `README.md` (the "what it ships"
 list), `tests/test_validator_mutations.py`.
 
-**Evidence, measured in `mozare-wiki` 2026-09-17, extended 2026-09-18.**
+**Evidence, measured in `source-instance` 2026-09-17, extended 2026-09-18.**
 
 Operational (run routinely there): `validate_repo.py`,
 `validate_content_release.py`, `check_against_baseline.py`,
@@ -641,7 +641,7 @@ destination allowed), `design.md` section 1.
 - (c) `--json` emits one parseable object;
   `python scripts/report_holdings.py --json | python -c "import json,sys;d=json.load(sys.stdin);print(d['held'], d['registered'])"`
   prints `0 0`.
-- (d) Run in a throwaway clone of `mozare-wiki`, it reproduces the audit
+- (d) Run in a throwaway clone of `source-instance`, it reproduces the audit
   numbers `97` registered, `544` held, `32` proposals with `20` at `new`,
   `24` claims with `1` blocked. Paste the output; delete the clone.
 - (e) `python tests/test_validator_mutations.py` prints `N/N passed`.
@@ -672,7 +672,7 @@ remains in the archived `tasks.md`; (d) `validate_repo.py --full` prints
 
 Depends: Z1
 
-Run `python scripts/report_holdings.py` in the kit and in `mozare-wiki`, and
+Run `python scripts/report_holdings.py` in the kit and in `source-instance`, and
 assert the horizon sentence from `design.md` section 1 holds in both:
 no unchecked number, no undeclared document, no stale register presented as
 current.
@@ -693,10 +693,10 @@ finished — open the follow-up rows rather than declaring completion.
 - [x] B1 entry gate learns `Artifacts held:`
 - [x] B2 seed the marker in kit + instantiator
 - [x] B3 kit 1.2.0 release
-- [x] B4 adopt the census in mozare-wiki (operator-gated)
+- [x] B4 adopt the census in source-instance (operator-gated)
 - [x] C1 mojibake guard across every source record
 - [x] C2 register refresh-policy gate
-- [x] C3 apply register policy in mozare-wiki (operator-gated)
+- [x] C3 apply register policy in source-instance (operator-gated)
 - [x] D1 tier the SYSTEM_DESIGN script table
 - [x] E1 `report_holdings.py`
 - [x] Z1 archive the change

@@ -35,7 +35,11 @@ def _accepted_adjudications(root: pathlib.Path) -> dict[str, dict[str, Any]]:
     return out
 
 
-def _capture_rows(root: pathlib.Path, patterns: list[str], findings: list[Finding]) -> list[dict[str, Any]]:
+def _capture_rows(root: pathlib.Path, patterns: list[str], findings: list[Finding],
+                  author_actors: list[str] | None = None) -> list[dict[str, Any]]:
+    # Author confirmation (level 3) is an explicit instance setting: only an
+    # actor named exactly in evidence-sources.json `author_actors` earns it.
+    authors = {str(a).strip().casefold() for a in (author_actors or []) if str(a).strip()}
     rows: list[dict[str, Any]] = []
     seen_paths: set[str] = set()
     for pattern in patterns:
@@ -69,7 +73,7 @@ def _capture_rows(root: pathlib.Path, patterns: list[str], findings: list[Findin
                 continue
             accepted_at = m.group(1).strip() or None
             actor = (m.group(2) or "").strip()
-            authority_level = 3 if actor.casefold().startswith("mohammad") else 6
+            authority_level = 3 if actor.casefold() in authors else 6
             row = {
                 "type": "accepted-evidence-row",
                 "evidence_id": f"capture:{cid}",
@@ -109,7 +113,8 @@ def build_accepted_evidence(root: pathlib.Path, provenance: ProvenanceResult) ->
 
     cfg_path = root / "00-system/configuration/evidence-sources.json"
     cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
-    rows.extend(_capture_rows(root, list(cfg.get("promoted_capture_globs", [])), findings))
+    rows.extend(_capture_rows(root, list(cfg.get("promoted_capture_globs", [])), findings,
+                              list(cfg.get("author_actors", []))))
 
     accepted_adjs = _accepted_adjudications(root)
     for pattern in cfg.get("accepted_record_globs", []):

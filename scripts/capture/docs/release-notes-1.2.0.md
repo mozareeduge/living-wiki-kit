@@ -26,7 +26,7 @@ canonical search; LFS-backed media with restore procedure.
    Remote disaster recovery = clone from GitHub + `git lfs fetch origin main`
    + `git lfs checkout` (same object store; LFS objects verified pushed).
 5. **Telegram hook is code + simulated tests.** Real voice-message delivery
-   needs the Wiki Inbox wiring + one live message from Mohammad.
+   needs the Wiki Inbox wiring + one live message from the owner.
 6. Duplicate voice deliveries store a second media copy (processing is
    deduplicated; bytes are retained per record for provenance independence).
 7. QMD `wiki` collection also matches the intake tree; separation is

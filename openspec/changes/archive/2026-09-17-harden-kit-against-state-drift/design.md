@@ -2,10 +2,10 @@
 
 ## Context
 
-living-wiki-kit 1.0.0 is an empty, validated template. ref-wiki,
-mozare-wiki, and zarinpal-product-wiki are instances. The 2026-09-16
-ref-wiki incident showed that a register can be internally correct while the
-documents an operator reads first remain six days stale. ref-wiki PR #6
+living-wiki-kit 1.0.0 is an empty, validated template. other-wiki,
+source-instance, and another-local-wiki are instances. The 2026-09-16
+other-wiki incident showed that a register can be internally correct while the
+documents an operator reads first remain six days stale. other-wiki PR #6
 proved that a deterministic entry-page check can block that drift; PRs
 #3–#5 and #7 repaired the surrounding documents and workflow. The kit needs
 the whole contract, not only the copied function.

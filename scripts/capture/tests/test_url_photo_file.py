@@ -106,8 +106,8 @@ class TestURLCapture(IsolatedRoot):
         cid = wc.capture_url("https://example.com/sm", "obsidian", "en")["id"]
         wc.set_state(cid, "processing", "op")
         wc.set_state(cid, "needs-review", "op")
-        wc.set_state(cid, "reviewed", "Mohammad", note="checked")
-        wc.set_state(cid, "promoted", "Mohammad", target="04-notes/web/x.md")
+        wc.set_state(cid, "reviewed", "Owner", note="checked")
+        wc.set_state(cid, "promoted", "Owner", target="04-notes/web/x.md")
         self.assertEqual(wc.validate_record(cid), [])
         r = wc.read_capture(cid)
         self.assertEqual(r["front_matter"]["promoted_to"], "04-notes/web/x.md")

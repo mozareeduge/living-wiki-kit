@@ -61,6 +61,6 @@ python scripts/validate_content_release.py   # once the wiki layer is populated
 
 ## License / reuse
 
-Personal research instrument of Mohammad Zare, extracted for reuse. If you
+A reusable research instrument. If you
 instantiate a wiki from this kit, keep the governance invariants
 (`SYSTEM_DESIGN.md` §5) intact — they are the system.

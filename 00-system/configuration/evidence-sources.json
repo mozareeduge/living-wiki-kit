@@ -1,6 +1,7 @@
 {
   "accepted_record_globs": [],
-  "note": "Kit default: promoted captures are considered only with durable state:promoted provenance; no history is fabricated.",
+  "author_actors": [],
+  "note": "Kit default: promoted captures are considered only with durable state:promoted provenance; no history is fabricated. List the wiki owner's actor name(s) in author_actors to count their own promotions as author confirmation (authority level 3); everyone else is level 6.",
   "promoted_capture_globs": [
     "01-inbox/captures/**/mw-cap-*.md",
     "_captures/**/mw-cap-*.md"

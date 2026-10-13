@@ -61,7 +61,7 @@ Two rules make this enforceable rather than decorative:
    per family in `HOLDINGS_POLICY.json`.
 
 **Open operator decision, deliberately not pre-empted:** whether
-`mozare-wiki`'s 447 are a registration backlog or a reference shelf. Task B4
+`source-instance`'s 447 are a registration backlog or a reference shelf. Task B4
 stops and emits an `advisor-request.v1` if the operator has not recorded a
 mapping; the default keeps the archive honest in the meantime.
 
@@ -165,7 +165,7 @@ lanes.
 ## 10. Rollback
 
 Every kit task is revertible with `git revert` on a branch plus a validator
-rerun. The one irreversible-feeling step is B4's `--apply` in `mozare-wiki`;
+rerun. The one irreversible-feeling step is B4's `--apply` in `source-instance`;
 it is reversible because it runs on a clean tree, so discarding the working
 tree restores the prior state before commit, and `git revert` restores it
 after.

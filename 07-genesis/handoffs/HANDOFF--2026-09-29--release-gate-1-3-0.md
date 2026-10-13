@@ -30,7 +30,7 @@ Instantiate rewrote 31 files; both validators PASS on the Smoke instance.
 ## (b) CENSUS CLEAN lines
 
 - kit (fresh clone above, empty Smoke instance): `7. Verdict: CENSUS CLEAN`
-- mozare-wiki @ `8e71ee3` (shallow read-only clone, tree left untouched):
+- source-instance @ `8e71ee3` (shallow read-only clone, tree left untouched):
   `7. Verdict: CENSUS CLEAN` (mojibake: none; per-intake registers fresh
   at 2026-09-28; 1 blocked claim intact)
 
@@ -40,7 +40,7 @@ Instantiate rewrote 31 files; both validators PASS on the Smoke instance.
 - Does not run CI (GitHub billing block stands; all workflow commands were
   reproduced locally: kernel gates + `pytest tests scripts/tests
   scripts/capture/tests` → 322 passed).
-- Does not touch mozare-wiki (read-only clone, deleted after the check).
+- Does not touch source-instance (read-only clone, deleted after the check).
 
 ## Remaining after R2
 

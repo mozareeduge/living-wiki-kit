@@ -157,7 +157,7 @@ def build(root: Path) -> tuple[int, int]:
             rel_to_id[md.stem.lower()] = rid
 
     # Alias pass over ALL other .md files (entry pages, registers, indexes):
-    # resolution-only mapping so wikilinks like [[the-black-bird]] resolve.
+    # resolution-only mapping so wikilinks like [[the-first-session]] resolve.
     # These files do NOT become nodes (canonical zones only).
     for md in sorted(root.rglob("*.md")):
         rel = md.relative_to(root).as_posix().lower()

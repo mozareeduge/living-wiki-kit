@@ -23,7 +23,7 @@ in a temp clone; all commits pushed to origin).
 - Base: `origin/main` at `02399e7942245748aa1f12d9e8fb890791d994e2`
 - Open PR: #7 (draft) branch → main, "needs review + CI + merge"
 - Instance repo (private, read-only for you unless the owner says otherwise):
-  `https://github.com/mozareeduge/mozare-wiki` (checked 2026-09-29 at
+  `https://github.com/mozareeduge/source-instance` (checked 2026-09-29 at
   `8e71ee3`, CENSUS CLEAN, untouched)
 - Task truth: `Plans.md`, section "Ladder 1.3.0" (plus closed "Ladder 1.2.0")
 - Design docs (owner machine, Downloads folder):
@@ -45,7 +45,7 @@ The 1.3.0 vision, set by the owner at the start ("wire, measure, seal"):
    reconcile core, P3 proposal schema + evidence audit, P4/P5 benchmarks)
    become reachable from the agent front door (MCP), CI, and the docs.
 2. The Governance Kernel (fail-closed gates, generated state, durable
-   proposal/adjudication records) is ported from mozare-wiki v1.2.1 into
+   proposal/adjudication records) is ported from source-instance v1.2.1 into
    the kit in generic form.
 3. The open semantic problem gets decided and built: no mandatory object
    kind; open labels; composable profiles; persona lenses; candidate
@@ -59,7 +59,7 @@ then the instance/operator lane (M1→M2, H1–H3, U1; U2 stays blocked).
 ## 3. Ladder map and status
 
 Lanes: `gate` = validator/CI-enforced; `doc` = docs only; `operator` =
-owner only, never an agent; `instance` = runs against mozare-wiki.
+owner only, never an agent; `instance` = runs against source-instance.
 
 | ID | Rung | Status |
 |---|---|---|
@@ -85,11 +85,11 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
 | W4 | Phase 3: 50 proposals → 30 audited + 20 rejected, zero canonical change | done (`2fbe138`) |
 | R1 | Kit 1.3.0 bump + CHANGELOG + QUICKSTART | code done (`b91901e`); (c)(d) need owner |
 | R2 | Release gate (smoke + CENSUS CLEAN both + handoff) | gate done (`6489024`); merge needs owner |
-| M1 | QMD embeddings to Pending: 0 in mozare-wiki | OWNER |
+| M1 | QMD embeddings to Pending: 0 in source-instance | OWNER |
 | M2 | Benchmark metrics (recall@K, rejection rate, trace completeness) | agent, after M1 |
-| H1 | Adjudicate 32 queued proposals in mozare-wiki | OWNER |
-| H2 | Resolve ~306 residual schema errors in mozare-wiki | OWNER |
-| H3 | Enable Black Bird Field in Obsidian, decide plugin home | OWNER |
+| H1 | Adjudicate 32 queued proposals in source-instance | OWNER |
+| H2 | Resolve ~306 residual schema errors in source-instance | OWNER |
+| H3 | Enable the field plugin in Obsidian, decide plugin home | OWNER |
 | U1 | Capture breadth (URL/photo/file) | agent, after H3 |
 | U2 | Workbench UI cards G-01…G-07 | blocked |
 
@@ -103,7 +103,7 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
   `report_holdings.py` → CENSUS CLEAN.
 - Fresh-clone smoke (`Smoke/sm`): instantiate rewrote 31 files, both
   validators PASS.
-- mozare-wiki @ `8e71ee3`: CENSUS CLEAN, mojibake none, per-intake
+- source-instance @ `8e71ee3`: CENSUS CLEAN, mojibake none, per-intake
   registers fresh 2026-09-28, 1 blocked claim intact; clone was read-only
   and removed afterwards.
 - 40 commits branch-vs-main (`git log main..branch`); PR #7 carries
@@ -117,15 +117,15 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
    or your spending limit needs to be increased" — no code runs at all.
 2. **Review PR #7** (40 commits, all green locally) and **merge** it.
    That act releases kit 1.3.0 and formally closes R1(c)(d).
-3. **M1**: in mozare-wiki, run `qmd embed` until `qmd status` shows
+3. **M1**: in source-instance, run `qmd embed` until `qmd status` shows
    `Pending: 0` (282 pending measured 2026-09-23).
 4. **H1**: adjudicate the 32 queued proposals
-   (`_audits/evidence-audit-20260919-234541.json` in mozare-wiki; 30
+   (`_audits/evidence-audit-20260919-234541.json` in source-instance; 30
    kind-valid under the union-17 decision, 2 strays to refile/reject).
 5. **H2**: resolve the ~306 residual schema errors, then re-derive with
    `schema_drift_fixer.py --errors <file>`; error count must strictly
    decrease, baseline re-registered in the same commit.
-6. **H3**: enable Black Bird Field in Obsidian, confirm four modes, decide
+6. **H3**: enable the field plugin in Obsidian, confirm four modes, decide
    plugin home (kit `tools/` vs external, version-pinned).
 
 ## 6. What remains — agent side (after the owner)
@@ -137,7 +137,7 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
   receipts; one receipt per modality; capture tests green; kit PASS.
 - **U2**: blocked (workbench UI spec lane).
 - Small port-back (finding F9): kit MCP reads QMD names from config;
-  mozare-wiki's copy still hardcodes `mozare-*` — port `qmd_collections()`
+  source-instance's copy still hardcodes `instance-*` — port `qmd_collections()`
   back so both files stay identical.
 
 ## 7. Standing rules (from AGENTS.md / CLAUDE.md / ladder)
@@ -149,7 +149,7 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
 - `_originals/` immutable, always. Never `git add -A`; stage named files.
   `git config core.hooksPath .githooks` once per clone. Never add lines to
   `.githooks/known-baseline-errors.txt` to force a commit through.
-- Never force-push. Work on the branch; mozare-wiki is read-only unless
+- Never force-push. Work on the branch; source-instance is read-only unless
   the owner orders an instance lane explicitly.
 - Binding owner decisions (do not relitigate): union-17 proposal kinds;
   object vocabulary stays OPEN (no enum enforcement, no template kind
@@ -187,7 +187,7 @@ owner only, never an agent; `instance` = runs against mozare-wiki.
 - `validate_content_release.py` treats any `id`+`type` .md as curated:
   new config example pages need inbound `[[wikilinks]]` from their
   README (profiles + lenses READMEs already do this).
-- mozare-wiki full clone is heavy (timed out twice); `--depth 1`
+- source-instance full clone is heavy (timed out twice); `--depth 1`
   suffices for read-only checks.
 
 ## 10. Verify right now (exact commands, kit repo, branch head)

@@ -14,7 +14,7 @@ Take living-wiki-kit from 1.2.0 to 1.3.0: wire the built P1-P5 parts (context pa
 
 ## Current state
 
-K1a + K1b done (e651c11, 18423f3, b5272cb): governance kernel core and kernel MCP server ported from mozare-wiki; 213 tests pass; validate_repo, wiki_validate, wiki_state check, wiki_evidence check all green. Hand-off for another host: 07-genesis/handoffs/HANDOFF--2026-09-25--k1-kernel-port.md.
+K1a + K1b done (e651c11, 18423f3, b5272cb): governance kernel core and kernel MCP server ported from source-instance; 213 tests pass; validate_repo, wiki_validate, wiki_state check, wiki_evidence check all green. Hand-off for another host: 07-genesis/handoffs/HANDOFF--2026-09-25--k1-kernel-port.md.
 
 ## Decisions
 

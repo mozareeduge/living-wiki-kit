@@ -32,7 +32,7 @@ counts; this file records what each kit version changed and why.
 
 ## 1.3.0 — governance kernel + adaptive semantics
 
-- **Governance kernel port** (from mozare-wiki v1.2.1): fail-closed
+- **Governance kernel port** (from source-instance v1.2.1): fail-closed
   `wiki_validate` gate, `SYSTEM_STATE.json`, accepted-evidence index,
   durable proposal/adjudication records, `sync_intake_registers.py`,
   `repair_truncated_filenames.py`, profile-scoped MCP server

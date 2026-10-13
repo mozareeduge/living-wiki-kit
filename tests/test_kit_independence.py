@@ -5,6 +5,7 @@ Record schemas must accept any instance prefix (`mw-` in the kit, the
 """
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
@@ -18,7 +19,20 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from gov_kernel.schemas import validate_record  # noqa: E402
 
 SCHEMAS = ROOT / "00-system" / "schemas"
-FOREIGN = ("ref wiki", "ref-wiki", "mozare", "zarinpal")
+# Names of the owner's personal wikis, machines and people that must never
+# appear in the kit. Stored encoded so this guard is not itself a trace.
+FOREIGN = tuple(base64.b64decode(w).decode() for w in (
+    "cmVmIHdpa2k=",
+    "cmVmLXdpa2k=",
+    "bW96YXJlLXdpa2k=",
+    "bW96YXJlIHdpa2k=",
+    "emFyaW5wYWw=",
+    "bW9oYW1tYWQ=",
+    "YmxhY2stYmlyZA==",
+    "YmxhY2tiaXJk",
+    "YmFldGVucw==",
+    "cGVyc29uYWwgZm9ybWFsIGRvY3VtZW50cw==",
+))
 
 
 @pytest.mark.parametrize("schema", sorted(p.name for p in SCHEMAS.glob("*.json")))
@@ -42,19 +56,14 @@ def test_object_and_claim_ids_accept_any_instance_prefix(prefix: str) -> None:
     assert validate_record(claim, SCHEMAS) == []
 
 
-# Where history may name the projects the kit came from: handoffs, audit
-# records, archived specs, the plan/changelog, and this test's own word list.
-HISTORY = ("07-genesis/", "_audits/", "openspec/changes/archive/", ".maws/",
-           "Plans.md", "CHANGELOG.md", "tests/test_kit_independence.py")
-
-
-def test_shipped_files_carry_no_other_project_name() -> None:
+def test_no_tracked_file_carries_a_personal_wiki_trace() -> None:
+    """Owner decision 2026-10-13: no trace of the owner's personal wikis in
+    any tracked file, history included (history is kept, names neutralised).
+    The kit's GitHub account name is allowed: the repository lives under it."""
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
                            text=True, check=True).stdout.splitlines()
     hits = []
     for rel in files:
-        if rel.startswith(HISTORY):
-            continue
         try:
             text = (ROOT / rel).read_text(encoding="utf-8").lower()
         except (UnicodeDecodeError, OSError):
