@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ref-wiki.local/schemas/object-record.schema.json",
-  "title": "Ref Wiki object record",
+  "$id": "https://living-wiki-kit.local/schemas/object-record.schema.json",
+  "title": "Living Wiki object record",
   "type": "object",
   "required": [
     "id",
@@ -12,7 +12,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^ref-obj-"
+      "pattern": "^[a-z][a-z0-9]{1,7}-obj-"
     },
     "type": {
       "const": "object"
