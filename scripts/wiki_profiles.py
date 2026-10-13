@@ -129,17 +129,14 @@ def read_profile(doc: Path, schema_dir: Path) -> tuple[dict, list[str]]:
     return record, errs
 
 
-def compose(root: Path) -> tuple[dict, list[str]]:
-    """Compose active profiles. Returns (composed, findings); findings
-    non-empty means: unknown/retired/invalid profile, a weakening attempt
-    (unknown control key), or an un-overridden slot conflict."""
+def active_records(root: Path) -> tuple[list[tuple[str, dict]], list[str]]:
+    """Valid active profiles in activation order, plus findings for the
+    ones skipped (unknown, invalid, retired)."""
     schema_dir = root / SCHEMAS_DIRNAME
     avail = available(root)
-    active = load_active_ids(root)
-    overrides = load_overrides(root)
     findings: list[str] = []
     records: list[tuple[str, dict]] = []
-    for pid in active:
+    for pid in load_active_ids(root):
         doc = avail.get(pid)
         if doc is None:
             findings.append(f"unknown profile: {pid!r}")
@@ -152,7 +149,15 @@ def compose(root: Path) -> tuple[dict, list[str]]:
             findings.append(f"{pid}: retired profile cannot be activated")
             continue
         records.append((pid, record))
+    return records, findings
 
+
+def compose(root: Path) -> tuple[dict, list[str]]:
+    """Compose active profiles. Returns (composed, findings); findings
+    non-empty means: unknown/retired/invalid profile, a weakening attempt
+    (unknown control key), or an un-overridden slot conflict."""
+    overrides = load_overrides(root)
+    records, findings = active_records(root)
     composed: dict = {"active_profiles": [pid for pid, _ in records]}
     for key in LIST_KEYS:
         seen: list[str] = []

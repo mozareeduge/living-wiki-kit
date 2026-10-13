@@ -11,6 +11,17 @@ with the kit so a new instance can see the shape. Activate by listing ids in
 `scripts/instantiate.py`; empty by default). The empty kit stays
 profile-neutral and fully functional.
 
+## What an active profile changes in a context pack
+
+- A record whose label matches an active profile's `seed_labels` gets the
+  reason `(profile <id> seed label `<label>`)` and a `profile_attention`
+  entry. Matching ignores case and spacing; the label is quoted as written.
+- The pack's `meta` lists `active_profiles` and offers the profiles'
+  `suggested_lenses` (with whether each lens ships). An offer is never
+  applied; a lens applies only when asked for.
+- Nothing else: no record is added, removed or reordered, and no authority
+  changes. With no active profile the pack is exactly what it was.
+
 ## Inactive examples
 
 - [[practice-research]] — long-horizon inquiry

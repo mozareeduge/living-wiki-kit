@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_graph_index as bgi  # noqa: E402
-import wiki_profiles as wp  # noqa: E402  (frontmatter parser only; lenses are advisory)
+import wiki_profiles as wp  # noqa: E402  (frontmatter parser + active profiles; advisory only)
 import candidate_projection as _cp  # noqa: E402  (disposable projections; never canonical)
 from gov_kernel.schemas import validate_record  # noqa: E402
 
@@ -235,6 +235,26 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
         e["tokens_est"] = est
         spent += est
 
+    # Profiles steer attention: reasons only, never membership or authority.
+    profile_meta: dict = {}
+    active, _ = wp.active_records(root)
+    if active:
+        labels_of: dict[str, list[str]] = {}
+        try:
+            for nid, raw in con.execute(
+                    "SELECT node_id, label_raw FROM labels ORDER BY rowid"):
+                labels_of.setdefault(nid, []).append(raw)
+        except Exception:  # index built before labels existed; rebuild it
+            pass
+        entries = apply_profiles(entries, seed_label_map(active), labels_of)
+        profile_meta = {
+            "active_profiles": [pid for pid, _ in active],
+            "profile_offers": {
+                "suggested_lenses": lens_offers(root, active),
+                "note": "offers only; a lens applies only when asked for",
+            },
+        }
+
     if lens_record is not None:
         joins = lens_relation_joins(con, lens_record.get("foreground_relations") or [])
         entries = apply_lens(entries, lens_record, lens_id or "accepted-only",
@@ -251,6 +271,7 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                                "scores and inclusion reasons are never evidence; "
                                "model output from it stays candidate-tier."),
             "generated_at_epoch": int(time.time()),
+            **profile_meta,
         },
         "records": entries,
     }
@@ -285,6 +306,58 @@ def _raise_unknown_lens(root: Path, lens_id: str):
         if (root / LENSES_DIRNAME).is_dir() else []
     raise ValueError(f"unknown lens {lens_id!r}"
                      + (f" (known: {', '.join(known)})" if known else ""))
+
+
+def seed_label_map(active: list[tuple[str, dict]]) -> dict[str, list[tuple[str, str]]]:
+    """normalized seed label -> [(profile id, seed label as written)]."""
+    seeds: dict[str, list[tuple[str, str]]] = {}
+    for pid, rec in active:
+        for raw in rec.get("seed_labels") or []:
+            norm = bgi.normalize_label(str(raw))
+            if norm and (pid, str(raw)) not in seeds.get(norm, []):
+                seeds.setdefault(norm, []).append((pid, str(raw)))
+    return seeds
+
+
+def apply_profiles(entries: list[dict], seeds: dict[str, list[tuple[str, str]]],
+                   labels_of: dict[str, list[str]]) -> list[dict]:
+    """Add a reason per (profile, matching label); never filters or reorders.
+
+    A record's labels come from the graph index (`labels_of`) or, for a
+    candidate projection, from its `candidate_labels`. The reason quotes the
+    label as the record wrote it.
+    """
+    out: list[dict] = []
+    for e in entries:
+        written = (e.get("candidate_labels") if e.get("candidate")
+                   else labels_of.get(str(e.get("id")))) or []
+        hits: list[dict] = []
+        for raw in written:
+            for pid, _ in seeds.get(bgi.normalize_label(str(raw)), []):
+                hit = {"profile": pid, "label": str(raw)}
+                if hit not in hits:
+                    hits.append(hit)
+        if hits:
+            e = dict(e)
+            e["reason"] = str(e.get("reason", "")) + "".join(
+                f" (profile {h['profile']} seed label `{h['label']}`)" for h in hits)
+            e["profile_attention"] = hits
+        out.append(e)
+    return out
+
+
+def lens_offers(root: Path, active: list[tuple[str, dict]]) -> list[dict]:
+    """Lenses the active profiles suggest, with who suggests them and
+    whether the lens ships here. Offered, never applied."""
+    offers: dict[str, list[str]] = {}
+    for pid, rec in active:
+        for lid in rec.get("suggested_lenses") or []:
+            offers.setdefault(str(lid), [])
+            if pid not in offers[str(lid)]:
+                offers[str(lid)].append(pid)
+    return [{"id": lid, "profiles": pids,
+             "available": (root / LENSES_DIRNAME / f"{lid}.md").is_file()}
+            for lid, pids in offers.items()]
 
 
 SECTION_HEAD = re.compile(r"^##\s+(.+?)\s*#*\s*$", re.MULTILINE)

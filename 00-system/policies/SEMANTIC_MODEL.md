@@ -55,6 +55,9 @@ vocabulary, relation language, lenses, outputs — for a practice, domain,
 collaboration shape, or compliance context. They compose additively, may
 tighten kernel rules, and may never weaken them. A profile never requires an
 object to fit its vocabulary; unknown labels always remain allowed.
+In retrieval an active profile only explains: a record carrying one of its
+seed labels gets a reason naming the profile, and its suggested lenses are
+offered, never applied. It never selects, hides, or reorders a record.
 
 ## Lenses foreground; they do not filter truth
 
