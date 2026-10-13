@@ -36,15 +36,14 @@ registers.
 
 ## Kit version
 
-`1.3.0` — governance kernel + adaptive semantics. The kernel port (fail-closed
-`wiki_validate` gate, `SYSTEM_STATE.json`, accepted-evidence index, durable
-proposal/adjudication records, intake sync, profile-scoped MCP server) and the
-adaptive semantic layer (open objects with labels instead of a closed kind
-enum, composable profiles, persona lenses, candidate projections visible by
-default) land in the kit. Proposals validate at the door against a 17-kind
-vocabulary with mandatory evidence passages; reconciliation runs staged
-(RC-0…RC-4) with class-carrying receipts. See `CHANGELOG.md` for the full
-release history.
+`1.4.0` — perspectives complete, an independent kit. Lenses highlight
+relationships (optional `relation_type`) and set section order; active
+profiles explain why records surface and offer their lenses; six practices
+(one in Persian) run on the unchanged kernel; profiles can make rules
+stricter from a closed set; label aliases help search meet your vocabulary;
+`instantiate.py --profile` chooses profiles at setup; every change is
+checked by creating a fresh wiki in CI. Built on `1.3.0` (governance kernel
++ adaptive semantics). See `CHANGELOG.md` for the full release history.
 
 ## The authority rule
 

@@ -1,6 +1,6 @@
 # Plans.md — living-wiki-kit
 
-> **Project**: living-wiki-kit (kit 1.2.0 → 1.3.0)
+> **Project**: living-wiki-kit (kit 1.3.0 → 1.4.0)
 > **Last updated**: 2026-10-13 (hand-off: `07-genesis/handoffs/HANDOFF--2026-10-13--independence-and-1-3-x.md`)
 > **Spec (1.3.0)**: `../living-wiki-kit next-phase spec DRAFT.md` (phases 0–5) and
 > `../workbench-ui-spec.md` (G-series) — verified against the repos 2026-09-20;
@@ -177,10 +177,10 @@ sequentially because they share the register/CI surfaces (operating rule 1).
 - **F18** (fixed O12) Docs promised that profiles "may tighten kernel rules"; no mechanism exists. Docs now say so; the mechanism is owner decision D-b.
 - **F19** (fixed 2026-10-13) The graph index recognised only `mw-`/`p-` id tokens with a 6-char head, so relations naming participants as `mw-obj-…` / `smk-rel-…` never joined anything.
 - **F20** (fixed O11) Four example profiles suggested lenses that did not exist (`lens-operator`, `-investigator`, `-experimenter`, `-archivist`).
-- **F21** (open, owner) `_audits/2026-10-0{1,2}--semantic-benchmark*/report.json` are measurements of a private instance: they carry machine paths (`C:\Users\…`) and private source filenames in this public repo (CLAUDE.md rule 9). Options: keep as history, redact the JSON to counts, or move them to the instance. Not changed without a decision.
-- **F22** (open, owner) A wiki made from the kit inherits the kit's own working history: `.maws/`, `Plans.md`, `CHANGELOG.md`, `07-genesis/handoffs/` (kit handoffs), `_audits/` (kit audits), `openspec/`. Decide what `instantiate.py` should reset or remove.
+- **F21** (fixed 2026-10-13, owner decision "no trace of my personal wikis") The instance benchmark reports under `_audits/` were removed; history files were kept with neutral names; a guard test scans every tracked file. The kernel's author-confirmation rule no longer keys on a personal name (`author_actors` setting).
+- **F22** (decided 2026-10-13: keep) A new wiki keeps inheriting the kit's history (`.maws/`, `Plans.md`, handoffs, audits, `openspec/`). Owner: "don't remove histories". No reset step.
 - **F23** (fixed Q3) `setup-after-clone.ps1` refused every fresh clone: its root check required `_originals/`, which git never ships empty.
-- **F24** (open, minor) Some tools still leave sqlite connections open (ResourceWarning in the suite; `context_pack` fixed). On Windows an open handle locks `_search/*.db`.
+- **F24** (fixed `7b9b46d`) Leaked sqlite handles: `tests/conftest.py` closes every connection a test opens; 9 → 0 ResourceWarnings. Same commit: `.githooks/pre-commit` tracked as executable so the gate runs on macOS/Linux.
 
 ### Ladder 1.3.x — dossier closure + setup polish (all in-repo)
 
@@ -202,19 +202,27 @@ relevance ≠ authority, accepted-only always explicit, 17 proposal kinds.
 | Q3 | `[lane:doc] [tdd:required] [size:S]` §6 covers `*.ps1`/`*.mjs`; setup script works on a fresh clone | RED names `setup-after-clone.ps1`; GREEN | cc:done (383a080) |
 | Q4 | S3b (F3 + F4) | done before PR #7 merged (`49febf5`) | cc:done |
 | Q5 | F8 proposals path | already fixed by W1 | cc:withdrawn |
-| Q6 | `[lane:gate] [size:S]` Fresh-wiki release check as CI job `fresh-wiki` (`scripts/release_smoke.py`) | local RELEASE SMOKE PASS (9 steps); negative test fails at `validate_repo --full`; CI log on the PR | cc:done exc. CI log (03fc25c) |
+| Q6 | `[lane:gate] [size:S]` Fresh-wiki release check as CI job `fresh-wiki` (`scripts/release_smoke.py`) | local RELEASE SMOKE PASS (9 steps); negative test fails at `validate_repo --full`; CI log on the PR | cc:done exc. CI log (03fc25c; CI waits on the self-hosted runner) |
 
-**Owner decisions still open** (each becomes a rung only after a decision is recorded):
+**Owner decisions** (all recorded 2026-10-13):
 
 | ID | Decision | Unlocks |
 |---|---|---|
-| D-a | Ship example profiles for `domain` / `collaboration` / `compliance`, or keep practice-only | example files + O11-style fixture |
-| D-b | What "a compliance profile may tighten" means mechanically | tightening mechanism + tests |
-| D-c | Optional `LABEL_ALIASES.json` (instance policy, never auto-merge) | loader + `report_labels.py` alias section |
-| D-d | `instantiate.py --profile …` | CLI flag + smoke test |
+| D-a | ~~More example profiles~~ | decided 2026-10-13: **no** (practice examples only) |
+| D-b | Profile tightening | done `16d0447`: `tighten: [object-labels, relation-type, record-visibility]`, enforced by `wiki_profiles.py check` |
+| D-c | Label aliases | done `0e89eb2`: optional `LABEL_ALIASES.json`, retrieval-only, reason names the alias |
+| D-d | `instantiate.py --profile` | done `6a7c52e` |
 | D-e | ~~legacy-`kind` path in a specific instance~~ | moved-to-instance |
-| F21 | What to do with the instance benchmark reports under `_audits/` | redaction or move |
-| F22 | What a new wiki should inherit of the kit's own history | `instantiate.py` reset step + test |
+| F21 | Instance benchmark reports | decided + done `7127c00`: removed; no personal-wiki trace anywhere |
+| F22 | What a new wiki inherits | decided: keep all history |
+
+### Release 1.4.0 (2026-10-13)
+
+The 1.3.x ladder plus the owner's decisions ship as kit **1.4.0**: version
+declared in SYSTEM_DESIGN, content-release.json, validators.json,
+instantiate `created_from`, CLAUDE.md and README; CHANGELOG section 1.4.0.
+Released when PR #9 is merged with CI green; the tag `v1.4.0` (and the
+missing `v1.3.0` on `e492df9`) is the owner's to push.
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → K1a → K1b → **K1c → K1d** → H0 (owner) → W1 → O1 → O2 → O3/O4 → O5 → O6 → O7 → O8 → W3 → W4 → M2 → R1 → R2.
 `H*`, `M1`, `U*` are outside the agent loop: they wait for the operator or

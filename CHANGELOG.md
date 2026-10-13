@@ -3,7 +3,20 @@
 Release history. The registers (`CORPUS_STATE.json`) stay live truth for
 counts; this file records what each kit version changed and why.
 
-## Unreleased (1.3.x) — perspectives complete, independent kit
+## 1.4.0 — perspectives complete, independent kit
+
+- **No trace of personal wikis.** Instance benchmark reports removed;
+  history kept with neutral names; a guard test scans every tracked file.
+  Author-confirmation authority is an explicit `author_actors` setting in
+  `evidence-sources.json` instead of a name built into the kernel.
+- **Profiles at setup.** `instantiate.py --profile <id>` (repeatable).
+- **Stricter profiles.** `tighten: [object-labels, relation-type,
+  record-visibility]`, enforced by `wiki_profiles.py check`; nothing can
+  loosen a rule. No new example profiles (owner decision).
+- **Label aliases.** Optional `LABEL_ALIASES.json`; search reaches records
+  through an alias and says so; never rewrites or merges.
+- The pre-commit gate is executable on macOS/Linux; tests close every
+  database handle.
 
 - **Independent project.** The kit no longer names or depends on the archive
   it was extracted from: the MCP server is `wiki-governance`, schemas carry

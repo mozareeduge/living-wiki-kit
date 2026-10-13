@@ -1,7 +1,7 @@
 ---
 id: wiki-handoff-2026-10-13-independence-and-1-3-x
 type: handoff
-title: "Kit independence + ladder 1.3.x (lenses, profiles, six practices, setup polish, fresh-wiki CI)"
+title: "Kit 1.4.0: independence, ladder 1.3.x, owner decisions (privacy, tightening, aliases, setup profiles)"
 branch: ccr-f635c748-jbckhg
 corpus_snapshot: wiki-corpus-empty
 status: active
@@ -38,6 +38,12 @@ Task truth stays `Plans.md`.
 | `cc69d22` | O12 + independence naming across shipped files; `build_pack` closes its DB |
 | `383a080` | Q1–Q3: prefix everywhere, current-year run ids, review-first commit, setup script fixed |
 | `03fc25c` | Q6: `scripts/release_smoke.py` + CI job `fresh-wiki` |
+| `7127c00` | Privacy: instance benchmark reports removed, history neutralised, `author_actors` replaces a built-in name, guard scans every file |
+| `6a7c52e` | D-d: `instantiate.py --profile` |
+| `0e89eb2` | D-c: optional label aliases (retrieval only) |
+| `16d0447` | D-b: profile `tighten` rules enforced by `wiki_profiles.py check` |
+| `7b9b46d` | F24: tests close every sqlite handle; pre-commit hook executable |
+| (release) | Kit 1.4.0: version declarations, CHANGELOG, Plans, this handoff |
 
 ## 3. Decisions taken in this session
 
@@ -56,7 +62,7 @@ Task truth stays `Plans.md`.
 ## 4. Validation (re-run before hand-off)
 
 ```bash
-python -m pytest tests scripts/tests scripts/capture/tests -q   # 476 passed, 2 xfailed
+python -m pytest tests scripts/tests scripts/capture/tests -q   # 498 passed, 2 xfailed
 python scripts/check_against_baseline.py                        # OK: validators clean
 python scripts/wiki_validate.py --repo . --format json          # exit 0
 python scripts/wiki_state.py --repo . check                     # exit 0
@@ -65,22 +71,30 @@ python scripts/wiki_profiles.py check                           # 0 active (prof
 python scripts/release_smoke.py                                 # RELEASE SMOKE PASS (9 steps)
 ```
 
-The repo's git hooks are not executable in this checkout (`core.hooksPath`
-set, files lack `+x`), so `check_against_baseline.py` was run by hand
-before every commit.
+Until `7b9b46d` the pre-commit hook was not executable, so
+`check_against_baseline.py` was run by hand before each commit; since then
+the hook runs it.
 
-## 5. Unresolved
+## 5. Owner decisions taken (second batch, 2026-10-13)
 
-- **F21** (owner): instance benchmark reports under `_audits/` hold machine
-  paths and private filenames in this public repo.
-- **F22** (owner): a new wiki inherits the kit's own history (`.maws/`,
-  `Plans.md`, kit handoffs, kit audits, `openspec/`).
-- **F24** (minor): other tools still leave sqlite connections open.
-- Owner decisions D-a … D-d (see `Plans.md`).
-- `setup-after-clone.ps1` was fixed and checked statically only; no
-  PowerShell was available here.
+- "No trace of my personal wikis" → F21 done (see `7127c00`).
+- "Leave out more profiles" → D-a: no new example profiles.
+- "Don't remove histories" → F22: a new wiki keeps the kit's history.
+- "Close the old PR" → PR #8 closed with a pointer to #9.
+- "Do everything else and finish the new version" → D-b, D-c, D-d, F24
+  built; kit declared 1.4.0.
 
-## 6. Negative constraints
+## 6. Unresolved
+
+- CI on PR #9 waits for the self-hosted runner `owner-pc` (repo variable
+  `CI_RUNNER`); start it, or point `CI_RUNNER` at `ubuntu-latest`.
+- Tags `v1.3.0` (on `e492df9`) and `v1.4.0` (on the merge of #9) must be
+  pushed by the owner; this session's git proxy refuses tag pushes.
+- Git history before `7127c00` and the GitHub repo description still carry
+  the old names; changing history needs a force-push (not done).
+- `setup-after-clone.ps1` was fixed and checked statically only.
+
+## 7. Negative constraints
 
 - Do not add instance data or instance-specific names to shipped files; the
   independence guard test will fail.
@@ -88,9 +102,8 @@ before every commit.
   authority; tests in O9–O11 pin this.
 - Do not reintroduce a name-rewrite table in `instantiate.py`.
 
-## 7. Next exact operation
+## 8. Next exact operation
 
-Watch the PR's first CI run: both jobs `validate` and `fresh-wiki` must be
-green, which completes Q6. Then merge, tag `v1.3.0` on `e492df9` (or cut
-1.3.1 from the merge, owner's call), and take the owner's answers on F21,
-F22 and D-a … D-d.
+Bring the runner online so PR #9's two jobs (`validate`, `fresh-wiki`) run;
+when green, mark the PR ready, merge, and tag `v1.4.0` on the merge commit
+(plus `v1.3.0` on `e492df9`).
