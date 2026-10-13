@@ -40,6 +40,22 @@
         "may-argue",
         "blocked"
       ]
+    },
+    "relation_type": {
+      "description": "Optional relation language (relation before type: may be absent). Read by lenses to foreground; never evidence.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
     }
   },
   "additionalProperties": true

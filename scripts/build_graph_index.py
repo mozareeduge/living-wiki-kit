@@ -53,6 +53,18 @@ def normalize_label(raw: str) -> str:
     return re.sub(r"\s+", " ", s).casefold()
 
 
+def parse_relation_types(value: str) -> list[str]:
+    """`relation_type` value -> written types (scalar or flow list `[a, b]`)."""
+    v = value.strip()
+    if v.startswith("[") and v.endswith("]"):
+        v = v[1:-1]
+        items = v.split(",")
+    else:
+        items = [v]
+    out = [i.strip().strip("\"'") for i in items]
+    return [i for i in out if i and i not in ("null", "~")]
+
+
 def parse_labels(text: str) -> list[str]:
     """Raw `labels:` items from a record's frontmatter block.
 
@@ -111,6 +123,14 @@ def build(root: Path) -> tuple[int, int]:
         -- label_source is 'frontmatter' or 'legacy-kind' (compatibility: a
         -- retired kind value surfaced for search, visibly marked).
         CREATE INDEX labels_norm ON labels(label_norm);
+        CREATE TABLE relation_types (
+            relation_id TEXT NOT NULL, type_raw TEXT NOT NULL,
+            type_norm TEXT NOT NULL,
+            PRIMARY KEY (relation_id, type_norm));
+        -- Optional relation language (`relation_type` on a relation-object;
+        -- relation before type, so many have none). Read by lenses to
+        -- foreground; never evidence, never an edge.
+        CREATE INDEX relation_types_norm ON relation_types(type_norm);
         """
     )
     id_to_path: dict[str, Path] = {}
@@ -176,6 +196,7 @@ def build(root: Path) -> tuple[int, int]:
 
     nodes = edges = 0
     label_rows = 0
+    relation_type_rows = 0
     for rid, md, zone, fm, body in records:
         rel = md.relative_to(root).as_posix()
         con.execute(
@@ -203,6 +224,13 @@ def build(root: Path) -> tuple[int, int]:
                 "INSERT OR IGNORE INTO labels VALUES (?,?,?,?)",
                 (rid, legacy_kind, normalize_label(legacy_kind), "legacy-kind"))
             label_rows += cur.rowcount
+
+        if str(fm.get("type", "")).strip() == "relation-object":
+            for raw in parse_relation_types(str(fm.get("relation_type", ""))):
+                cur = con.execute(
+                    "INSERT OR IGNORE INTO relation_types VALUES (?,?,?)",
+                    (rid, raw, normalize_label(raw)))
+                relation_type_rows += cur.rowcount
 
         def add_edge(field: str, target: str, tkind: str) -> None:
             nonlocal edges
@@ -242,6 +270,7 @@ def build(root: Path) -> tuple[int, int]:
         [("built_at_source", "build_graph_index.py"),
          ("nodes", str(nodes)), ("edges", str(edges)),
          ("label_rows", str(label_rows)),
+         ("relation_type_rows", str(relation_type_rows)),
          ("zones", ",".join(CANONICAL_ZONES))],
     )
     con.commit()

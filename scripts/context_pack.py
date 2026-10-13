@@ -186,27 +186,6 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
             if len(entries) >= max_records:
                 break
 
-    # Attach content under the global token budget.
-    spent = 0
-    per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
-    for e in entries:
-        if e.get("candidate"):
-            sp = e.get("source_passage") or {}
-            text = (f"{e.get('title', '')}\n{e.get('candidate_text', '')}\n"
-                    f"passage: {sp.get('quote', '')} ({sp.get('path', '')})")
-        else:
-            p = root / e["path"]
-            try:
-                text = p.read_text(encoding="utf-8", errors="ignore")
-            except OSError:
-                text = ""
-        body = text[:per_cap_chars]
-        est = len(body) // CHARS_PER_TOKEN
-        e["content"] = body
-        e["content_truncated"] = len(text) > len(body)
-        e["tokens_est"] = est
-        spent += est
-
     lens_id: str | None = None
     lens_record: dict | None = None
     if lens is not None or accepted_only:
@@ -227,7 +206,39 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
             lens_record = dict(lens_record)
             lens_record["candidate_visibility"] = "exclude"
             lens_record["authority_mode"] = "accepted-only"
-        entries = apply_lens(entries, lens_record, lens_id or "accepted-only")
+
+    fg_sections = [str(x) for x in ((lens_record or {}).get("foreground_sections") or [])]
+
+    # Attach content under the global token budget.
+    spent = 0
+    per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
+    for e in entries:
+        if e.get("candidate"):
+            sp = e.get("source_passage") or {}
+            text = (f"{e.get('title', '')}\n{e.get('candidate_text', '')}\n"
+                    f"passage: {sp.get('quote', '')} ({sp.get('path', '')})")
+        else:
+            p = root / e["path"]
+            try:
+                text = p.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                text = ""
+        body = text[:per_cap_chars]
+        est = len(body) // CHARS_PER_TOKEN
+        e["content"] = body
+        if fg_sections and not e.get("candidate"):
+            # Presentation order only: content stays exactly as written.
+            order, hits = section_order(text, fg_sections)
+            e["section_order"] = order
+            e["sections_foregrounded"] = hits
+        e["content_truncated"] = len(text) > len(body)
+        e["tokens_est"] = est
+        spent += est
+
+    if lens_record is not None:
+        joins = lens_relation_joins(con, lens_record.get("foreground_relations") or [])
+        entries = apply_lens(entries, lens_record, lens_id or "accepted-only",
+                             relation_joins=joins)
 
     return {
         "meta": {
@@ -276,12 +287,60 @@ def _raise_unknown_lens(root: Path, lens_id: str):
                      + (f" (known: {', '.join(known)})" if known else ""))
 
 
-def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
+SECTION_HEAD = re.compile(r"^##\s+(.+?)\s*#*\s*$", re.MULTILINE)
+
+
+def section_order(text: str, foreground: list[str]) -> tuple[list[str], list[str]]:
+    """(presentation order, foregrounded headings) for a record's `##` sections.
+
+    Headings the lens names come first, in the lens's order; the rest follow
+    as written. Matching is case- and space-insensitive; headings are
+    returned as written.
+    """
+    heads = SECTION_HEAD.findall(text)
+    key = {bgi.normalize_label(h): h for h in reversed(heads)}
+    hits = [key[k] for k in dict.fromkeys(bgi.normalize_label(f) for f in foreground)
+            if k in key]
+    rest = [h for h in heads if h not in hits]
+    return hits + rest, hits
+
+
+def lens_relation_joins(con, foreground_relations: list) -> dict[str, list[str]]:
+    """node id -> foregrounded relation types it takes part in (the relation too).
+
+    Reads the graph index's non-evidence `relation_types` table and the
+    relation's resolved `participants`. Empty when the lens names none.
+    """
+    wanted = {bgi.normalize_label(str(x)) for x in foreground_relations}
+    wanted.discard("")
+    if not wanted:
+        return {}
+    try:
+        rows = con.execute(
+            "SELECT relation_id, type_norm FROM relation_types").fetchall()
+    except Exception:  # index built before relation types existed; rebuild it
+        return {}
+    joins: dict[str, set[str]] = {}
+    for rel_id, norm in rows:
+        if norm not in wanted:
+            continue
+        joins.setdefault(rel_id, set()).add(norm)
+        for (pid,) in con.execute(
+                "SELECT resolved_id FROM edges WHERE src_id=? AND "
+                "field='fm:participants' AND resolved_id IS NOT NULL", (rel_id,)):
+            joins.setdefault(pid, set()).add(norm)
+    return {k: sorted(v) for k, v in joins.items()}
+
+
+def apply_lens(entries: list[dict], lens: dict, lens_id: str,
+               relation_joins: dict[str, list[str]] | None = None) -> list[dict]:
     """Foreground per a lens; never alters authority, never silently drops.
 
     Entries carrying authority == "candidate" are dropped ONLY when the lens
     explicitly says candidate_visibility == "exclude" (the accepted-only
     view, always explicit). Everything else passes through annotated.
+    `relation_joins` (node id -> foregrounded relation types) adds a reason
+    per relation type; it never adds or removes an entry.
     """
     exclude = lens.get("candidate_visibility") == "exclude"
     fg = {bgi.normalize_label(str(x)) for x in (lens.get("foreground_labels") or [])}
@@ -301,6 +360,12 @@ def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
             if cand_norms & fg:
                 e["reason"] = reason + f" (foregrounded by lens {lens_id})"
                 e["foregrounded"] = True
+        rel_types = (relation_joins or {}).get(str(e.get("id")))
+        if rel_types:
+            e["reason"] = str(e.get("reason", "")) + "".join(
+                f" (lens {lens_id} foregrounds relation `{t}`)" for t in rel_types)
+            e["foregrounded"] = True
+            e["foregrounded_relations"] = list(rel_types)
         out.append(e)
     return out
 

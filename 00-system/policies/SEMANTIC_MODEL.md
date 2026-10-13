@@ -42,6 +42,12 @@ an evidence-bearing relation or claim, not as a label and never as a
 mandatory kind. No new classification record type exists; the kernel's
 relation/claim machinery is sufficient.
 
+A relation-object may name its relation language in an optional
+`relation_type` (`rehearses`, `supports`, …). Relation before type still
+holds: a relation without one is complete. The written value is never
+rewritten; the search layer indexes it (normalized) only so lenses can
+foreground it. Like a label, it organizes attention and is never evidence.
+
 ## Profiles configure the practice; they do not define the truth
 
 Profiles (`00-system/configuration/profiles/`) bundle suggestions —
@@ -54,7 +60,13 @@ object to fit its vocabulary; unknown labels always remain allowed.
 
 Lenses (`00-system/configuration/lenses/`) configure retrieval and
 presentation for a persona or task. Defaults: candidates included,
-authority annotated. A lens may prioritize, group, and format; it must never
+authority annotated. `foreground_labels` and `foreground_relations` add an
+inspectable reason to the records they match (a relation's type foregrounds
+the relation and every record it joins); `foreground_sections` sets the
+order in which a record's sections are presented, never its content. A
+pack's membership is the same with or without a lens (the explicit
+accepted-only view is the one exception).
+A lens may prioritize, group, and format; it must never
 silently hide contradictory evidence, promote candidate material, treat a
 label as evidence, suppress non-adjudicated records, or change authority.
 Authority-only views must be explicit.
