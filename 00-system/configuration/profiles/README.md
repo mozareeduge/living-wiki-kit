@@ -23,6 +23,14 @@ profile-neutral and fully functional.
 - Nothing else: no record is added, removed or reordered, and no authority
   changes. With no active profile the pack is exactly what it was.
 
+## Making rules stricter
+
+A profile may list `tighten: [object-labels, relation-type, record-visibility]`
+(any subset). While it is active, `python scripts/wiki_profiles.py check`
+fails on every record that breaks one of those rules and names the record
+and the profile. The set is closed: nothing in a profile can loosen a rule.
+The shipped examples tighten nothing.
+
 ## Inactive examples
 
 - [[practice-research]] — long-horizon inquiry

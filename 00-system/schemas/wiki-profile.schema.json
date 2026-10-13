@@ -17,7 +17,8 @@
     "suggested_lenses": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
     "suggested_outputs": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
     "preferred_lens": {"type": ["string", "null"], "default": null},
-    "preferred_output": {"type": ["string", "null"], "default": null}
+    "preferred_output": {"type": ["string", "null"], "default": null},
+    "tighten": {"type": "array", "uniqueItems": true, "default": [], "items": {"enum": ["object-labels", "relation-type", "record-visibility"]}, "description": "Kernel rules this profile makes stricter while active (closed set, enforced by wiki_profiles.py check). Nothing here can loosen a rule."}
   },
   "additionalProperties": false
 }

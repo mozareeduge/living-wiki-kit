@@ -61,9 +61,12 @@ Profiles (`00-system/configuration/profiles/`) bundle suggestions —
 vocabulary, relation language, lenses, outputs — for a practice, domain,
 collaboration shape, or compliance context. They compose additively and may
 never weaken kernel rules: the profile schema accepts advisory keys only, so
-no key can switch off validation, authority or evidence rules. Tightening is
-not implemented: no profile key yet makes a kernel rule stricter (a
-compliance profile that needs one is an open decision). A profile never
+no key can switch off validation, authority or evidence rules. A profile may
+make rules stricter while it is active, from a closed set listed in
+`tighten`: `object-labels` (every object carries a label), `relation-type`
+(every relation names its type) and `record-visibility` (every canonical
+record declares `visibility`). `wiki_profiles.py check` enforces the union
+of the active profiles' rules. A profile never
 requires an object to fit its vocabulary; unknown labels always remain
 allowed.
 

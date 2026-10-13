@@ -65,13 +65,15 @@ def test_object_page_profiles_section_is_not_an_instance_profile() -> None:
     assert "not an instance profile" in text
 
 
-def test_profile_tightening_is_not_claimed_before_it_exists() -> None:
-    """F18: no mechanism lets a profile tighten kernel rules yet; the docs
-    must not promise one (weakening is what the schema rejects)."""
+def test_profile_tightening_is_described_as_it_exists() -> None:
+    """F18 then D-b: the docs describe tightening exactly as built (a closed
+    set of rules enforced by `wiki_profiles.py check`), never as open-ended."""
     for rel in ("00-system/policies/SEMANTIC_MODEL.md", "scripts/wiki_profiles.py"):
         text = _read(rel).lower()
         assert "may tighten kernel rules" not in text, rel
-        assert "tightening is not implemented" in text, rel
+        assert "tightening is not implemented" not in text, rel
+        for rule in ("object-labels", "relation-type", "record-visibility"):
+            assert rule in text, (rel, rule)
 
 
 def test_evidence_audit_docstring_names_the_durable_queue() -> None:
