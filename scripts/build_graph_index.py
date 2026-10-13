@@ -29,6 +29,9 @@ FM_BLOCK = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 FM_FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*?)\s*$", re.MULTILINE)
 WIKILINK = re.compile(r"\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 ID_TOKEN = re.compile(r"\b(?:mw|p)-[a-z0-9]{6,}(?:-[a-z0-9]+)*\b")
+# Any hyphenated token; kept as an id edge only when it names a known record
+# (instance IDs are `<prefix>-<layer>-<slug>` for any prefix, F19).
+WORD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._]|-(?=[A-Za-z0-9]))*")
 PATH_TOKEN = re.compile(
     r"\b(?:02-sources|03-objects|04-notes|05-claims|06-relations)/[^\s\"']+?\.md")
 
@@ -225,7 +228,10 @@ def build(root: Path) -> tuple[int, int]:
         for field, value in fm.items():
             for target in WIKILINK.findall(value):
                 add_edge(f"fm:{field}", target, "link")
-            for token in ID_TOKEN.findall(value):
+            tokens = dict.fromkeys(ID_TOKEN.findall(value))
+            tokens.update(dict.fromkeys(
+                t for t in WORD_TOKEN.findall(value) if t in id_to_path))
+            for token in tokens:
                 if token != rid:
                     add_edge(f"fm:{field}", token, "id")
             for pmatch in PATH_TOKEN.findall(value):
