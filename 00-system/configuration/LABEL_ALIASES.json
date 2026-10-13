@@ -1,0 +1,4 @@
+{
+  "note": "Optional instance label aliases for retrieval only: labels in one group match each other in search, and the reason names the alias. Never rewrites a written label, never merges records. A label may belong to one group only. Example: {\"poetry\": [\"poem\", \"poems\"]}",
+  "aliases": {}
+}

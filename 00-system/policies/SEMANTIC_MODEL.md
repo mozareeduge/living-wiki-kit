@@ -34,6 +34,13 @@ line-breaks, no exact duplicates. An unfamiliar label is always valid. The
 search layer may normalize labels for indexing (NFKC, trim, case-fold) but
 must never rewrite the written label and never auto-merge synonyms.
 
+An instance may declare label aliases in
+`00-system/configuration/LABEL_ALIASES.json` (`{"aliases": {"poetry":
+["poem", "poems"]}}`). Aliases are retrieval-only: a search for one member
+reaches records labelled with another, and the reason names the alias. They
+never rewrite a label, never merge records, never become evidence, and a
+label belongs to one group only.
+
 ## Substantive classification uses relations and claims
 
 When a classification carries meaning — *session X is a rehearsal of work

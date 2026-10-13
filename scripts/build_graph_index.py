@@ -53,6 +53,41 @@ def normalize_label(raw: str) -> str:
     return re.sub(r"\s+", " ", s).casefold()
 
 
+ALIASES_REL = Path("00-system/configuration/LABEL_ALIASES.json")
+
+
+def load_label_aliases(root: Path) -> dict[str, tuple[str, set[str]]]:
+    """Instance label aliases: normalized label -> (group name, group norms).
+
+    `LABEL_ALIASES.json` is `{"aliases": {"<preferred>": ["<alias>", ...]}}`.
+    Retrieval-only: aliases never rewrite a written label, never merge
+    records and never enter the graph. Missing file or empty groups -> {}.
+    Raises ValueError naming the problem (non-list group, a label in two
+    groups).
+    """
+    import json
+    f = root / ALIASES_REL
+    if not f.is_file():
+        return {}
+    try:
+        groups = json.loads(f.read_text(encoding="utf-8")).get("aliases", {})
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise ValueError(f"{ALIASES_REL.as_posix()}: unreadable ({exc})")
+    if not isinstance(groups, dict):
+        raise ValueError(f"{ALIASES_REL.as_posix()}: `aliases` must be an object")
+    out: dict[str, tuple[str, set[str]]] = {}
+    for name, members in groups.items():
+        if not isinstance(members, list):
+            raise ValueError(f"{ALIASES_REL.as_posix()}: group {name!r} must list its aliases")
+        norms = {normalize_label(str(x)) for x in [name, *members]} - {""}
+        for n in norms:
+            if n in out and out[n][0] != name:
+                raise ValueError(f"{ALIASES_REL.as_posix()}: label {n!r} is in two "
+                                 f"groups ({out[n][0]!r}, {name!r})")
+            out[n] = (str(name), norms)
+    return out
+
+
 def parse_relation_types(value: str) -> list[str]:
     """`relation_type` value -> written types (scalar or flow list `[a, b]`)."""
     v = value.strip()

@@ -137,6 +137,17 @@ def _build_pack(con, root: Path, seed: str, hops: int, query: str | None,
         # retrieval aid, never evidence — the reason says MATCHED, never IS.
         qtokens = {bgi.normalize_label(t) for t in query.split()} | {bgi.normalize_label(query)}
         qtokens.discard("")
+        # Instance aliases (LABEL_ALIASES.json): a label in the same group as
+        # a query token also matches, and the reason names the alias.
+        try:
+            amap = bgi.load_label_aliases(root)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
+        via: dict[str, str] = {}
+        for t in sorted(qtokens):
+            for member in sorted(amap.get(t, ("", set()))[1]):
+                if member not in qtokens:
+                    via.setdefault(member, t)
         try:
             label_rows = con.execute(
                 "SELECT node_id, label_raw, label_norm, label_source FROM labels").fetchall()
@@ -145,12 +156,14 @@ def _build_pack(con, root: Path, seed: str, hops: int, query: str | None,
         for nid, raw, norm, source in sorted(label_rows, key=lambda r: (r[0], r[2])):
             if nid in used or len(entries) >= max_records:
                 continue
-            if norm in qtokens:
+            if norm in qtokens or norm in via:
                 used.add(nid)
                 row = con.execute("SELECT path, title FROM nodes WHERE id=?", (nid,)).fetchone()
                 if not row:
                     continue
                 reason = f"label: `{raw}` matched query context"
+                if norm not in qtokens:
+                    reason += f" via alias `{via[norm]}` (LABEL_ALIASES.json)"
                 if source == "legacy-kind":
                     reason += " (legacy kind compatibility)"
                 entries.append({"id": nid, "path": row[0], "title": row[1],
