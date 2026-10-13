@@ -53,6 +53,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True, help='instance name, e.g. "My Wiki"')
     ap.add_argument("--prefix", required=True, help="record-ID prefix, e.g. pmw")
+    ap.add_argument("--profile", action="append", default=None, metavar="ID",
+                    help="activate a practice profile from 00-system/configuration/"
+                         "profiles/ (repeatable; order kept). Omit to stay "
+                         "profile-neutral, or to keep the profiles a rerun already has")
     args = ap.parse_args()
 
     prefix = args.prefix.strip().lower()
@@ -98,6 +102,31 @@ def main() -> int:
                   f"record_prefix={existing.get('record_prefix')!r}); "
                   "refusing to reseed", file=sys.stderr)
             return 2
+
+    # Profiles: every requested id must exist, validate and not be retired;
+    # refused here, before anything is written.
+    profiles = None
+    if args.profile is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import wiki_profiles as wp
+        avail = wp.available(ROOT)
+        profiles = []
+        for pid in args.profile:
+            pid = pid.strip()
+            doc = avail.get(pid)
+            if doc is None:
+                print(f"ERROR: unknown profile {pid!r} (available: "
+                      f"{', '.join(sorted(avail)) or 'none'})", file=sys.stderr)
+                return 2
+            record, errs = wp.read_profile(doc, ROOT / "00-system/schemas")
+            if errs or record.get("status") == "retired":
+                print(f"ERROR: profile {pid!r} cannot be activated: "
+                      f"{'; '.join(errs) or 'retired'}", file=sys.stderr)
+                return 2
+            if pid not in profiles:
+                profiles.append(pid)
+    elif instance_path.exists():
+        profiles = list(existing.get("active_profiles") or [])
 
     corpus_old = "wiki-corpus-empty"
     corpus_new = f"{prefix}-corpus-empty"
@@ -162,7 +191,7 @@ def main() -> int:
         "created_from": "living-wiki-kit 1.3.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
-        "active_profiles": [],
+        "active_profiles": profiles or [],
     }
     out = ROOT / "00-system/registers/INSTANCE.json"
     out.write_text(json.dumps(instance, indent=2) + "\n", encoding="utf-8")

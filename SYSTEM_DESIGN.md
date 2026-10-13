@@ -149,7 +149,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_release.py` | release controller: a release manifest from a passing release profile and receipts | available (unexercised) |
 | `sync_intake_registers.py` | after `wiki_state.py rebuild`: refreshes holdings counts, the three entry-page markers and (with `--accept-corpus-change`) the content-release corpus pin; dry run by default | operational |
 | `repair_truncated_filenames.py` | restores source-record `filename` values cut at the first space to `basename(original_path)`; dry run by default, lists anything needing a human | operational |
-| `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers; refuses to reseed a populated instance | operational |
+| `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers, optional `--profile` activation (validated before writing); refuses to reseed a populated instance | operational |
 | `release_smoke.py` | fresh-wiki release check (CI job `fresh-wiki`): copies the kit's tracked files to a temp dir, instantiates a wiki, runs both validators, the four kernel gates and the census (`CENSUS CLEAN`), then re-instantiates and requires a byte-identical tree; names the first failing step; never writes in the repo | operational |
 | `report_holdings.py` | read-only 7-section census audit (counts, contradictions, proposals, claims, register staleness, mojibake, verdict); prints `CENSUS CLEAN` or `CENSUS DRIFT`; writes only to `_audits/runtime/` | operational |
 | `retier_holdings.py` | migration tool for adopting the census: dry-run by default, `--apply` only on a clean tree and refuses on manifest/state disagreement | operational |

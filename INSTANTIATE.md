@@ -34,6 +34,12 @@ This rewrites ID patterns in validators/capture core/docs, renames
 `00-system/registers/INSTANCE.json`. Review its diff with `git diff` before
 committing.
 
+Optional: activate practice profiles at the same time, for example
+`--profile practice-research --profile practice-creative` (repeatable, order
+kept; see `00-system/configuration/profiles/`). An unknown id is refused
+before anything is written. Without `--profile` the wiki stays
+profile-neutral; you can edit `active_profiles` in `INSTANCE.json` later.
+
 ## 3. Edit the instance-facing pages
 
 - `HOME.md` — subject, routes, entry points (replace the kit's examples)

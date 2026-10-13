@@ -8,7 +8,8 @@ weaken kernel invariants, and unknown labels always remain allowed.
 Files here with `status: example` are **inactive illustrations** that ship
 with the kit so a new instance can see the shape. Activate by listing ids in
 `active_profiles` in `00-system/registers/INSTANCE.json` (created by
-`scripts/instantiate.py`; empty by default). The empty kit stays
+`scripts/instantiate.py`, which takes `--profile <id>` to activate them at
+setup; empty by default). The empty kit stays
 profile-neutral and fully functional.
 
 ## What an active profile changes in a context pack
