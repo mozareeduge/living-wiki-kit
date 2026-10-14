@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   validate:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -24,12 +20,17 @@ jobs:
       - run: python -m pip install -r requirements.txt -r requirements-governance.txt pytest
       - name: Validate against the accepted baseline
         run: python scripts/check_against_baseline.py
-      - name: Kernel gates (validate, state, evidence, profiles)
-        run: |
-          python scripts/wiki_validate.py --repo . --format json
-          python scripts/wiki_state.py --repo . check
-          python scripts/wiki_evidence.py --repo . check
-          python scripts/wiki_profiles.py check
+      # One command per step, no forced shell: runs the same under bash on
+      # GitHub-hosted Linux and PowerShell on a self-hosted Windows runner,
+      # and every command's exit code fails the job.
+      - name: "Kernel gate: wiki_validate"
+        run: python scripts/wiki_validate.py --repo . --format json
+      - name: "Kernel gate: wiki_state check"
+        run: python scripts/wiki_state.py --repo . check
+      - name: "Kernel gate: wiki_evidence check"
+        run: python scripts/wiki_evidence.py --repo . check
+      - name: "Kernel gate: wiki_profiles check"
+        run: python scripts/wiki_profiles.py check
       - name: Test suite (validators, gates, context compiler, candidate layer, reconciliation, capture)
         run: python -m pytest tests scripts/tests scripts/capture/tests -q
 
