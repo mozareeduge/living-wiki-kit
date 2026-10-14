@@ -75,7 +75,7 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     this.readerOpen=open;
     for(const leaf of this.app.workspace.getLeavesOfType('lwf-field-view')) {
       const main=leaf.view.contentEl.querySelector('.bbf-main');
-      if(main)main.classList.toggle('reader-open',open);
+      if(main){main.classList.toggle('reader-open',open);if(leaf.view.svg)leaf.view.onResize();}
     }
   };
   const oldFocus=FieldView.prototype.focusObject;
@@ -91,6 +91,8 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     button(rail,'HEALTH',()=>this.plugin.activate('lwf-health-view'));
     const note=this.contentEl.createEl('div',{cls:'lwf-contract',text:'Archive view · projected edges are navigation, never evidence · candidates remain marked'});
     note.setAttribute('role','note');
+    this.resizeObserver=new ResizeObserver(()=>this.onResize());
+    this.resizeObserver.observe(this.contentEl.querySelector('#bbfGraphSvg'));
   };
   const oldVisible=FieldView.prototype.nodeVisible;
   FieldView.prototype.nodeVisible=function(id) {
@@ -118,6 +120,7 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     View.prototype.onClose=function(){
       this.readToken=(this.readToken||0)+1;
       if(this.renderComponent)this.renderComponent.unload();
+      if(this.resizeObserver)this.resizeObserver.disconnect();
       if(oldClose)oldClose.call(this);
       if(this.svg){this.svg=null;this.root=null;}
     };

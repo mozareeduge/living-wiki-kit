@@ -9018,7 +9018,10 @@ var require_extensions = __commonJS({
         this.readerOpen = open;
         for (const leaf of this.app.workspace.getLeavesOfType("lwf-field-view")) {
           const main = leaf.view.contentEl.querySelector(".bbf-main");
-          if (main) main.classList.toggle("reader-open", open);
+          if (main) {
+            main.classList.toggle("reader-open", open);
+            if (leaf.view.svg) leaf.view.onResize();
+          }
         }
       };
       const oldFocus = FieldView2.prototype.focusObject;
@@ -9037,6 +9040,8 @@ var require_extensions = __commonJS({
         button(rail, "HEALTH", () => this.plugin.activate("lwf-health-view"));
         const note = this.contentEl.createEl("div", { cls: "lwf-contract", text: "Archive view \xB7 projected edges are navigation, never evidence \xB7 candidates remain marked" });
         note.setAttribute("role", "note");
+        this.resizeObserver = new ResizeObserver(() => this.onResize());
+        this.resizeObserver.observe(this.contentEl.querySelector("#bbfGraphSvg"));
       };
       const oldVisible = FieldView2.prototype.nodeVisible;
       FieldView2.prototype.nodeVisible = function(id) {
@@ -9070,6 +9075,7 @@ var require_extensions = __commonJS({
         View.prototype.onClose = function() {
           this.readToken = (this.readToken || 0) + 1;
           if (this.renderComponent) this.renderComponent.unload();
+          if (this.resizeObserver) this.resizeObserver.disconnect();
           if (oldClose2) oldClose2.call(this);
           if (this.svg) {
             this.svg = null;
@@ -9886,14 +9892,6 @@ var FieldView = (function() {
       e.source = byId[e.source];
       e.target = byId[e.target];
     });
-    var clusterCenters = {
-      central: [this.width / 2, this.height / 2],
-      quran: [this.width * 0.22, this.height * 0.35],
-      norse: [this.width * 0.78, this.height * 0.3],
-      irish: [this.width * 0.05, this.height * 0.7],
-      american: [this.width * 0.95, this.height * 0.55],
-      lyric: [this.width * 0.5, this.height * 0.9]
-    };
     this.sim = d3.forceSimulation(nodes).force("link", d3.forceLink(allForceLinks).id(function(d) {
       return d.id;
     }).distance(function(d) {
@@ -9906,7 +9904,7 @@ var FieldView = (function() {
       return nodeMetrics(d).collideR + 18;
     })).force("cluster", function(alpha) {
       nodes.forEach(function(d) {
-        var c = clusterCenters[d.cluster] || clusterCenters.central;
+        var c = [self2.width / 2, self2.height / 2];
         d.vx += (c[0] - d.x) * 0.035 * alpha;
         d.vy += (c[1] - d.y) * 0.035 * alpha;
       });
@@ -10464,6 +10462,7 @@ var FieldView = (function() {
       }
       var item = document.createElement("button");
       item.className = "bbf-route-item" + (i === events.length - 1 ? " current" : "");
+      item.title = ev.label;
       item.textContent = ev.label || ev.id;
       item.addEventListener("click", function() {
         self2.plugin.openReader(ev.id);

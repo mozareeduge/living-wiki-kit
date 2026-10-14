@@ -519,16 +519,6 @@ var FieldView = (function () {
     }));
 
     projectedLinks.forEach(function (e) { e.source = byId[e.source]; e.target = byId[e.target]; });
-    // Cluster centers
-    var clusterCenters = {
-      central: [this.width / 2, this.height / 2],
-      quran: [this.width * 0.22, this.height * 0.35],
-      norse: [this.width * 0.78, this.height * 0.3],
-      irish: [this.width * 0.05, this.height * 0.7],
-      american: [this.width * 0.95, this.height * 0.55],
-      lyric: [this.width * 0.5, this.height * 0.9]
-    };
-
     this.sim = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(allForceLinks).id(function (d) { return d.id; })
         .distance(function (d) { return d.kind === 'projected' ? 110 : 92; })
@@ -539,7 +529,7 @@ var FieldView = (function () {
       .force('collide', d3.forceCollide().radius(function (d) { return nodeMetrics(d).collideR + 18; }))
       .force('cluster', function (alpha) {
         nodes.forEach(function (d) {
-          var c = clusterCenters[d.cluster] || clusterCenters.central;
+          var c = [self.width / 2, self.height / 2];
           d.vx += (c[0] - d.x) * 0.035 * alpha;
           d.vy += (c[1] - d.y) * 0.035 * alpha;
         });
@@ -1165,6 +1155,7 @@ var FieldView = (function () {
       }
       var item = document.createElement('button');
       item.className = 'bbf-route-item' + (i === events.length - 1 ? ' current' : '');
+      item.title = ev.label;
       item.textContent = ev.label || ev.id;
       item.addEventListener('click', function () { self.plugin.openReader(ev.id); });
       routeEl.appendChild(item);
