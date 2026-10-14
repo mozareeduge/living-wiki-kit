@@ -1,0 +1,9 @@
+{
+  "id": "living-wiki-field",
+  "name": "Living Wiki Field",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Evidence-aware Field, Reader, Route, View, Review and Related interface for living-wiki-kit.",
+  "author": "Living Wiki Kit contributors",
+  "isDesktopOnly": true
+}

@@ -33,6 +33,17 @@ jobs:
         run: python scripts/wiki_profiles.py check
       - name: Test suite (validators, gates, context compiler, candidate layer, reconciliation, capture)
         run: python -m pytest tests scripts/tests scripts/capture/tests -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Field archive projection and candidate boundaries
+        run: node --test tools/obsidian-living-wiki-field/model.test.js
+      - name: Install locked Field build tool
+        run: npm ci --prefix tools/obsidian-living-wiki-field
+      - name: Build single-file Obsidian plugin
+        run: npm run build --prefix tools/obsidian-living-wiki-field
+      - name: Field bundle is current
+        run: git diff --exit-code -- tools/obsidian-living-wiki-field/main.js
 
   fresh-wiki:
     # Release gate (Q6): a brand-new wiki made from this commit passes every

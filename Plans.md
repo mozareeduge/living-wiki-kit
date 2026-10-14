@@ -232,6 +232,12 @@ another lane and never block the S/W/R chain except where `Depends` says so.
 
 ## Continuity (MAWS)
 
+### Field UI completion — 2026-10-14
+
+The owner requested the previously planned graph and note-view interface. The kit now carries `tools/obsidian-living-wiki-field/`: Field, Reader, Route, View, Review and Health, plus an installer and an isolated fictional walkthrough generator. The existing interface is adapted; archive record IDs, evidence pointers, candidate boundaries and local validation are the new integration work. Current acceptance evidence is kept in the active MAWS thread and the Field README.
+
+Generative orientation/comparison/review cards are **parked at the owner's request**. They belong to a separate workbench, have no dependency on this release, and must not be resumed automatically. Preserve provenance, bounded cost, deterministic fallback and owner adjudication if that idea is reopened.
+
 Work state for this ladder lives in the portable `.maws/` thread (shared by
 Claude Code, Hermes and Codex). `Plans.md` stays the task truth; `.maws/`
 records *where we are* (phase, decisions, evidence, next operation). Resume

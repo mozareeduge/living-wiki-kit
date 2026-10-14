@@ -1,0 +1,228 @@
+{
+  "schema": "maws.thread.v2",
+  "maws_version": "2.0.0-rc1",
+  "thread_id": "kit-finish-obsidian-20261014",
+  "title": "Finish kit release and Obsidian experience",
+  "objective": "Verify and repair the current release on Windows, finish an Obsidian interface using existing archive components, provide a verified walkthrough vault, and complete eligible release gates.",
+  "status": "active",
+  "phase": "execute",
+  "summary": "UI complete: bundled Field/Reader/Route/View/Review/Health works in native Obsidian, archive hashes unchanged. Core 1.4 released; PR10 carries UI. Next commit final packaging, obtain final CI and fresh-generator evidence, merge UI and deliver walkthrough package.",
+  "blockers": [],
+  "decisions": [
+    "User clarified UI means poem-derived Field/Reader/Route/View, not generative workbench. Scope follows existing Phase 4 Field plan.",
+    "Generative assistance idea parked; no automatic resumption. Saved user-facing parked note and Plans.md backlog entry."
+  ],
+  "artifacts": [],
+  "evidence_refs": [
+    "deterministic:pass:../windows-tests.log",
+    "native-host:pass:../../outputs/field-live-verification.json"
+  ],
+  "policy": {
+    "wip_limit": 1,
+    "max_open_subagents": 1,
+    "max_subagent_spawns_per_item": 1,
+    "max_thread_review_spawns": 1,
+    "max_full_verification_runs": 1,
+    "max_repair_rounds_per_item": 2,
+    "parallel_write_agents": 0,
+    "scope_frozen": true
+  },
+  "work": {
+    "active_item": "walkthrough-release",
+    "items": [
+      {
+        "id": "windows-release",
+        "title": "Prove and repair kit 1.4.0 on Windows",
+        "outcome": "All existing release gates and full test suite pass on Windows; runner status and CI resolved or precisely diagnosed.",
+        "status": "done",
+        "depends_on": [],
+        "verification": "deterministic",
+        "gate": null,
+        "created_at": "2026-10-14T14:33:43Z",
+        "claimed_at": "2026-10-14T14:34:11Z",
+        "closed_at": "2026-10-14T14:37:39Z",
+        "repair_rounds": 0,
+        "subagent_spawns": 0,
+        "evidence": [
+          "deterministic:pass:../windows-tests.log"
+        ]
+      },
+      {
+        "id": "obsidian-ui",
+        "title": "Finish native Obsidian workbench",
+        "outcome": "Installed interface for record browsing, evidence trace, candidate review and live status with no canonical write path; reusable installation, focused tests and build.",
+        "status": "done",
+        "depends_on": [
+          "windows-release"
+        ],
+        "verification": "observational",
+        "gate": null,
+        "created_at": "2026-10-14T14:33:43Z",
+        "claimed_at": "2026-10-14T14:37:39Z",
+        "closed_at": "2026-10-14T15:26:08Z",
+        "repair_rounds": 3,
+        "subagent_spawns": 1,
+        "evidence": [
+          "native-host:pass:../../outputs/field-live-verification.json"
+        ]
+      },
+      {
+        "id": "walkthrough-release",
+        "title": "Install and verify walkthrough and release",
+        "outcome": "A ready demo vault opens in Obsidian; release gates pass on final candidate; changes committed and reviewable; walkthrough plan delivered.",
+        "status": "active",
+        "depends_on": [
+          "obsidian-ui"
+        ],
+        "verification": "observational",
+        "gate": null,
+        "created_at": "2026-10-14T14:33:43Z",
+        "claimed_at": "2026-10-14T15:26:08Z",
+        "closed_at": null,
+        "repair_rounds": 0,
+        "subagent_spawns": 0,
+        "evidence": []
+      }
+    ]
+  },
+  "permits": [
+    {
+      "id": "agent-5dcad91710",
+      "kind": "review",
+      "scope": "item",
+      "item_id": "obsidian-ui",
+      "reason": "Read-only review of plugin evidence and candidate boundaries, installation isolation and generator safety before live acceptance; no implementation delegation.",
+      "status": "closed",
+      "opened_at": "2026-10-14T15:00:56Z",
+      "consumed_at": null,
+      "consumed_agent_type": null,
+      "consumed_tool_use_id": null,
+      "closed_at": "2026-10-14T15:06:22Z",
+      "result": "completed",
+      "override_reason": null
+    }
+  ],
+  "verification": {
+    "permits": [
+      {
+        "id": "verify-171f987b5a",
+        "scope": "full",
+        "name": "windows-release-1.4.0",
+        "fingerprint": "1c51622d546be5455f13d964157b5fa8a0204f8a",
+        "status": "closed",
+        "opened_at": "2026-10-14T14:34:11Z",
+        "override_reason": null,
+        "closed_at": "2026-10-14T14:37:11Z"
+      },
+      {
+        "id": "verify-00aa07a709",
+        "scope": "full",
+        "name": "final-field-release",
+        "fingerprint": "2a8431c1af90db3818b9de65b560e93076fb7f0d",
+        "status": "closed",
+        "opened_at": "2026-10-14T15:03:33Z",
+        "override_reason": "Final release candidate adds an adapted Field plugin and changes the baseline object validator after the initial 1.4.0 run; populated demo exposed a real kindless-object rejection. Required final regression and fresh-instance release check on changed code.",
+        "closed_at": "2026-10-14T15:06:22Z"
+      },
+      {
+        "id": "verify-b2e219cb15",
+        "scope": "full",
+        "name": "final-field-release-reviewed",
+        "fingerprint": "35ae43a1724375ae13f6fb6a1e164f0fd6500668",
+        "status": "closed",
+        "opened_at": "2026-10-14T15:08:03Z",
+        "override_reason": "The earlier final permit was closed unused after independent review. Five review repairs and the populated-object validator fix are now staged. This final changed candidate requires the full existing regression suite and fresh-instance gate; earlier 1.4.0 evidence is reused only for unchanged context.",
+        "closed_at": "2026-10-14T15:09:49Z"
+      },
+      {
+        "id": "verify-0818b37bf0",
+        "scope": "focused",
+        "name": "fictional-demo-generator",
+        "fingerprint": "247750c",
+        "status": "closed",
+        "opened_at": "2026-10-14T15:10:34Z",
+        "override_reason": null,
+        "closed_at": "2026-10-14T15:26:08Z"
+      },
+      {
+        "id": "verify-03048fcf31",
+        "scope": "full",
+        "name": "final-native-field-ci",
+        "fingerprint": "d71bcec4bae9dd672831f70236d2cdc2afd8eb8b",
+        "status": "closed",
+        "opened_at": "2026-10-14T15:26:55Z",
+        "override_reason": "User-requested final release gate on the native-corrected single-file bundle and locked build. Earlier passing full regression is retained; CI is required for this exact changed commit before merge, with no repeated local full suite.",
+        "closed_at": "2026-10-14T15:31:05Z"
+      },
+      {
+        "id": "verify-edac50729a",
+        "scope": "full",
+        "name": "release-ci-camera-layout",
+        "fingerprint": "b8134609520e49872f8045f1c067908ab677bf77",
+        "status": "open",
+        "opened_at": "2026-10-14T15:31:05Z",
+        "override_reason": "Final camera and ResizeObserver correction changes the native view after d71bcec passed. CI on the exact latest commit is required before the owner-requested release merge; no further local full suite."
+      }
+    ],
+    "records": [
+      {
+        "permit_id": "verify-171f987b5a",
+        "scope": "full",
+        "name": "windows-release-1.4.0",
+        "fingerprint": "1c51622d546be5455f13d964157b5fa8a0204f8a",
+        "result": "pass",
+        "evidence": "Windows: 496 passed, 2 skipped, 2 xfailed; baseline and four kernel gates exit 0; nine fresh-wiki steps PASS.",
+        "at": "2026-10-14T14:37:11Z"
+      },
+      {
+        "permit_id": "verify-00aa07a709",
+        "scope": "full",
+        "name": "final-field-release",
+        "fingerprint": "2a8431c1af90db3818b9de65b560e93076fb7f0d",
+        "result": "unverified",
+        "evidence": "No full suite was run under this permit. Independent review found five repairs before final testing; candidate fingerprint will be refreshed after those changes.",
+        "at": "2026-10-14T15:06:22Z"
+      },
+      {
+        "permit_id": "verify-b2e219cb15",
+        "scope": "full",
+        "name": "final-field-release-reviewed",
+        "fingerprint": "35ae43a1724375ae13f6fb6a1e164f0fd6500668",
+        "result": "pass",
+        "evidence": "Final candidate tree 35ae43a: Python 505 passed, 4 skipped, 2 xfailed; seven Field model tests passed; nine fresh-wiki smoke steps passed; baseline and all four kernel gates passed. Native Obsidian walkthrough remains unobserved pending normal-restart approval.",
+        "at": "2026-10-14T15:09:49Z"
+      },
+      {
+        "permit_id": "verify-0818b37bf0",
+        "scope": "focused",
+        "name": "fictional-demo-generator",
+        "fingerprint": "247750c",
+        "result": "pass",
+        "evidence": "Fresh fictional demo generated from committed kit at 247750c; all four governance checks passed. Later native tests verified the installed final bundled UI and unchanged archive bytes.",
+        "at": "2026-10-14T15:26:08Z"
+      },
+      {
+        "permit_id": "verify-03048fcf31",
+        "scope": "full",
+        "name": "final-native-field-ci",
+        "fingerprint": "d71bcec4bae9dd672831f70236d2cdc2afd8eb8b",
+        "result": "pass",
+        "evidence": "CI 38589417511 on exact commit d71bcec passed validate and fresh-wiki; includes full Python suite, eight Node model cases, npm locked build and bundle freshness. Final camera-size UI change b813460 has native acceptance but needs its own CI.",
+        "at": "2026-10-14T15:31:05Z"
+      }
+    ]
+  },
+  "counters": {
+    "subagent_spawns": 1,
+    "thread_review_spawns": 0,
+    "full_verification_runs": 4,
+    "scope_additions_after_freeze": 0,
+    "repair_rounds": 3
+  },
+  "host": {
+    "last": "claude",
+    "handoff_to": null
+  },
+  "created_at": "2026-10-14T14:33:08Z",
+  "updated_at": "2026-10-14T17:30:48Z"
+}
