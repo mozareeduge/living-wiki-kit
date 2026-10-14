@@ -138,6 +138,8 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 
 | Script | Role | Status |
 |---|---|---|
+| `install_obsidian_field.py` | installs the local read-only Field/Reader/Route/View/Review/Health plugin into an existing vault without changing archive records or other plugins | operational |
+| `create_field_demo.py` | creates an isolated fictional walkthrough vault, retains kit history, initializes governed fixture records, installs Field and requires all four governance checks to pass; refuses existing destinations | operational |
 | `validate_repo.py` | structure, frontmatter identity, dup IDs, manifest/state, SHA-256 of originals, wikilinks, entry-page freshness gate (labelled snapshot/count markers + layer-count agreement on HOME/README/SYSTEM_DESIGN/CLAUDE vs the registers and record directories), holdings census helper (`held_artifact_count` / `holdings_by_tier` in `CORPUS_STATE.json` against `_originals/` and `HOLDINGS_POLICY.json`, enforced in `validate()`), mojibake guard on every source record, register refresh-policy gate | operational |
 | `validate_content_release.py` | populated-layer gate: minimum counts, claim fields, orphan records, Base YAML, benchmark | operational |
 | `check_against_baseline.py` | shared local-hook/CI gate: fail only on NEW errors vs `.githooks/known-baseline-errors.txt`; fails closed on validator timeout, launch failure or unparseable output | operational |

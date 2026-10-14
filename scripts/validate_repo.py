@@ -206,12 +206,14 @@ def validate_live_record_schema(rel: str, fm: dict, errors: list[str]) -> None:
         return
 
     if rel.startswith("03-objects/"):
-        require_fields(rel, fm, ("id", "type", "title", "kind", "status"), errors)
+        require_fields(rel, fm, ("id", "type", "title", "status"), errors)
         if fm.get("type") != "object":
             errors.append(f"{rel}: object type must be 'object'")
         folder = rel.split("/", 2)[1]
         expected_kind = OBJECT_KIND_BY_DIR.get(folder)
-        if expected_kind and fm.get("kind") != expected_kind:
+        # The open object schema retires mandatory kind. Preserve the legacy
+        # directory check only when a record explicitly carries legacy kind.
+        if expected_kind and "kind" in fm and fm.get("kind") != expected_kind:
             errors.append(
                 f"{rel}: object kind must be {expected_kind!r} for 03-objects/{folder}/, "
                 f"got {fm.get('kind')!r}"
