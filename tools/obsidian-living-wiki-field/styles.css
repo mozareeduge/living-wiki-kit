@@ -1034,3 +1034,5 @@
 .lwf-case-outcome button.mod-cta { background: var(--bbf-amber); color: var(--bbf-bg); border-color: var(--bbf-amber); height: 44px; padding: 0 22px; font: 600 15px 'LWF Public Sans', system-ui, sans-serif; }
 .bbf-root .node[data-case="true"] .bbf-node-core { animation: lwf-pulse 2.4s ease-in-out infinite; }
 @keyframes lwf-pulse { 0%, 100% { stroke-opacity: 1; stroke-width: 2px; } 50% { stroke-opacity: .25; stroke-width: 6px; } }
+.lwf-case-card button { font: 500 14px 'LWF Public Sans', system-ui, sans-serif; height: 36px; padding: 0 14px; }
+.lwf-case-outcome button.mod-cta { margin-top: 18px; } .lwf-case { padding-bottom: 80px; }

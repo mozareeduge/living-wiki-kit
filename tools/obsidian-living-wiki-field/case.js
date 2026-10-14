@@ -2,16 +2,20 @@
 // A guided "case": one claim, the passage it cites, and a verdict the reader chooses.
 // The case is data in the vault (WALKTHROUGH.md frontmatter `case:`). The verdict lives in plugin settings only;
 // nothing here writes to the archive.
-const {ItemView,TFile} = require('obsidian');
+const {ItemView,TFile,parseYaml} = require('obsidian');
 
 const STOP = new Set(['the','a','an','of','in','on','at','to','and','or','is','was','were','be','after','before','this','that','it','by','for','with','as']);
 const words = text => String(text || '').toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}']+/gu) || [];
 const button = (el,text,fn,cls) => { const b=el.createEl('button',{text,cls}); b.addEventListener('click',fn); return b; };
 
-function caseOf(plugin) {
+async function caseOf(plugin) {
   const model=plugin.getModel();
   const home=model.byPath['WALKTHROUGH.md'];
-  const spec=home && home.frontmatter && home.frontmatter.case;
+  const file=home && plugin.app.vault.getAbstractFileByPath('WALKTHROUGH.md');
+  if(!(file instanceof TFile)) return null;
+  const m=/^---\r?\n([\s\S]*?)\r?\n---/.exec(await plugin.app.vault.cachedRead(file));
+  let spec=null;
+  try { spec=m && (parseYaml(m[1]) || {}).case; } catch(e) { return null; }
   if(!spec || !spec.claim_id) return null;
   const claim=model.nodes.find(n=>n.recordId===spec.claim_id);
   return claim ? {spec,claim,model} : null;
@@ -46,7 +50,7 @@ class CaseView extends ItemView {
     const plugin=this.plugin,root=this.contentEl;
     root.empty();
     const wrap=root.createEl('div',{cls:'lwf-panel lwf-case'});
-    const c=caseOf(plugin);
+    const c=await caseOf(plugin);
     if(!c){
       wrap.createEl('h1',{text:'No case in this vault'});
       wrap.createEl('p',{text:'A case is a guided question about one claim. This vault does not define one.'});
@@ -110,8 +114,8 @@ function install(PluginClass,FieldView) {
     await oldLoad.call(this);
     this.registerView('lwf-case-view',leaf=>new CaseView(leaf,this));
     this.addCommand({id:'open-Case',name:'Open the case',callback:()=>this.activate('lwf-case-view')});
-    this.app.workspace.onLayoutReady(()=>{
-      if(caseOf(this) && !(this.settings.caseVerdicts && Object.keys(this.settings.caseVerdicts).length) && !this.settings.caseSeen) {
+    this.app.workspace.onLayoutReady(async()=>{
+      if(await caseOf(this) && !(this.settings.caseVerdicts && Object.keys(this.settings.caseVerdicts).length) && !this.settings.caseSeen) {
         this.settings.caseSeen=true; this.persist();
         this.activate('lwf-case-view');
       }
@@ -120,8 +124,8 @@ function install(PluginClass,FieldView) {
   const oldBuild=FieldView.prototype.buildGraph;
   FieldView.prototype.buildGraph=function() {
     oldBuild.call(this);
-    const c=this.nodeSel && caseOf(this.plugin);
-    if(c) this.nodeSel.attr('data-case',d=>d.recordId===c.spec.claim_id?'true':null);
+    if(!this.nodeSel) return;
+    caseOf(this.plugin).then(c=>{ if(c && this.nodeSel) this.nodeSel.attr('data-case',d=>d.recordId===c.spec.claim_id?'true':null); });
   };
   const oldUnload=PluginClass.prototype.onunload;
   PluginClass.prototype.onunload=function() { oldUnload.call(this); this.app.workspace.detachLeavesOfType('lwf-case-view'); };
