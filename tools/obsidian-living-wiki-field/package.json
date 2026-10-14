@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "esbuild main-source.js --bundle --platform=node --format=cjs --external:obsidian --external:electron --outfile=main.js",
+    "build": "esbuild main-source.js --bundle --platform=node --format=cjs --external:obsidian --external:electron --loader:.ttf=dataurl --outfile=main.js",
     "test": "node --test model.test.js"
   },
   "devDependencies": {

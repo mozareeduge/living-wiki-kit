@@ -6,6 +6,15 @@ var obsidian = require('obsidian');
 
 // ── D3 Loader ───────────────────────────────────────────────────────────────
 var d3 = require('./vendor/d3.min.js');
+var FONT_NEWSREADER = require('./fonts/Newsreader.ttf');
+var FONT_PUBLIC_SANS = require('./fonts/PublicSans.ttf');
+function loadFonts() {
+  if (typeof FontFace === 'undefined' || document.fonts.check('16px "LWF Newsreader"')) return;
+  [['LWF Newsreader', FONT_NEWSREADER, '200 800'], ['LWF Public Sans', FONT_PUBLIC_SANS, '100 900']].forEach(function (f) {
+    var face = new FontFace(f[0], 'url(' + f[1] + ')', { weight: f[2] });
+    face.load().then(function () { document.fonts.add(face); }).catch(function () {});
+  });
+}
 function loadD3() { return Promise.resolve(d3); }
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -14,6 +23,8 @@ var TYPE_COLORS = {
   RNO: '#8ab4f8', MNO: '#fdd663', FO: '#81c995',
   NameO: '#f28b82', RefO: '#c58af9', RelO: '#ff8b3d'
 };
+var TYPE_LABEL = { RNO: 'Note', MNO: 'Map', FO: 'Field', NameO: 'Name', RefO: 'Source', RelO: 'Relation' };
+var typeLabel = function (t) { return TYPE_LABEL[t] || t; };
 var ROUTE_MAX = 11;
 var ROUTE_VISIBLE_MAX = 10;
 
@@ -78,6 +89,7 @@ var LivingWikiFieldPlugin = (function () {
 
   Class.prototype.onload = function () {
     var self = this;
+    loadFonts();
     this.model = null;
     this.activeId = null;
     this.routeEvents = [];
@@ -235,25 +247,24 @@ var FieldView = (function () {
     this.contentEl.innerHTML = [
       '<div class="bbf-threshold" id="bbfThreshold">',
       '  <div class="bbf-threshold-card">',
-      '    <h1>LIVING WIKI</h1>',
-      '    <div class="bbf-sub">A LIVING GENETIC ARCHIVE</div>',
-      '    <div class="bbf-author">the archive operator</div>',
-      '    <div class="bbf-th-actions"><button data-enter="map">Enter the field</button></div>',
+      '    <h1>Living Wiki</h1>',
+      '    <div class="bbf-sub">Every claim, with the evidence behind it.</div>',
+      '    <div class="bbf-th-actions"><button data-enter="map">Open the archive</button></div>',
       '  </div>',
       '</div>',
       '<div class="bbf-app-frame">',
       '  <nav class="bbf-rail">',
-      '    <button class="bbf-rail-btn" data-action="field">FIELD</button>',
-      '    <button class="bbf-rail-btn" data-action="view">VIEW</button>',
-      '    <button class="bbf-rail-btn" data-action="index">INDEX</button>',
-      '    <button class="bbf-rail-btn" data-action="about">ABOUT</button>',
+      '    <button class="bbf-rail-btn" data-action="field">Map</button>',
+      '    <button class="bbf-rail-btn" data-action="view">Filter</button>',
+      '    <button class="bbf-rail-btn" data-action="index">List</button>',
+      '    <button class="bbf-rail-btn" data-action="about">Guide</button>',
       '  </nav>',
       '  <main class="bbf-main" id="bbfMainLayout">',
       '    <section class="bbf-map-wrap">',
-      '      <div class="bbf-map-title"><h1>LIVING WIKI</h1><div>LIVING GENETIC ARCHIVE</div></div>',
+      '      <div class="bbf-map-title"><h1>Living Wiki</h1><div>Evidence map</div></div>',
       '      <div class="bbf-map-tools">',
-      '        <button class="bbf-tool-btn" id="bbfFieldBtn">Field</button>',
-      '        <button class="bbf-tool-btn" data-action="view">View</button>',
+      '        <button class="bbf-tool-btn" id="bbfFieldBtn">Fit map</button>',
+      '        <button class="bbf-tool-btn" data-action="view">Filter</button>',
       '      </div>',
       '      <svg class="bbf-graph-svg" id="bbfGraphSvg"></svg>',
       '      <div class="bbf-field-prompt" id="bbfFieldPrompt"></div>',
@@ -289,58 +300,45 @@ var FieldView = (function () {
       '  <div class="bbf-drawer-foot"><button class="bbf-tool-btn" id="bbfClearRoute">Clear Route</button><button class="bbf-tool-btn" data-close="bbfRouteDrawer">Done</button></div>',
       '</aside>',
       '<div class="bbf-about-panel" id="bbfAboutPanel">',
-      '  <div class="bbf-about-head"><span>About the Work</span><button class="bbf-about-close" id="bbfAboutClose">×</button></div>',
+      '  <div class="bbf-about-head"><span>How to read this map</span><button class="bbf-about-close" id="bbfAboutClose">×</button></div>',
       '  <nav class="bbf-about-nav">',
-      '    <button class="bbf-about-nav-btn" data-about-section="about-statement">Statement</button>',
+      '    <button class="bbf-about-nav-btn" data-about-section="about-statement">Idea</button>',
       '    <span class="bbf-about-nav-sep">·</span>',
-      '    <button class="bbf-about-nav-btn" data-about-section="about-how">Read</button>',
+      '    <button class="bbf-about-nav-btn" data-about-section="about-how">Controls</button>',
       '    <span class="bbf-about-nav-sep">·</span>',
-      '    <button class="bbf-about-nav-btn" data-about-section="about-grammar">Grammar</button>',
+      '    <button class="bbf-about-nav-btn" data-about-section="about-grammar">Shapes</button>',
       '    <span class="bbf-about-nav-sep">·</span>',
-      '    <button class="bbf-about-nav-btn" data-about-section="about-source">Source</button>',
-      '    <span class="bbf-about-nav-sep">·</span>',
-      '    <button class="bbf-about-nav-btn" data-about-section="about-author">Author</button>',
+      '    <button class="bbf-about-nav-btn" data-about-section="about-source">Memory</button>',
       '  </nav>',
       '  <div class="bbf-about-body" id="bbfAboutBody">',
       '    <section class="bbf-about-section" id="about-statement">',
-      '      <div class="bbf-about-section-label">Statement</div>',
-      '      <div class="bbf-prose"><p>The Living Wiki is a living genetic archive by the archive operator. It gives the materials of inquiry a spatial and textual form. A source can return as a scene. A name can keep its pressure. A relation can remain visible before explanation.</p></div>',
+      '      <div class="bbf-about-section-label">The idea</div>',
+      '      <div class="bbf-prose"><p>Original documents never change. Every claim points back to the passage that supports it. AI suggestions stay <strong>candidates</strong> until a person accepts them. This map is a lens on that archive; it never edits it.</p></div>',
       '    </section>',
       '    <section class="bbf-about-section" id="about-how">',
-      '      <div class="bbf-about-section-label">How to Read</div>',
+      '      <div class="bbf-about-section-label">Controls</div>',
       '      <div class="bbf-about-tiles">',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">FIELD</div><div class="bbf-about-tile-desc">Interact with objects. Follow relations.</div></div>',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">READ</div><div class="bbf-about-tile-desc">The selected object takes textual form here.</div></div>',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">INDEX</div><div class="bbf-about-tile-desc">The object field appears as an ordered inventory.</div></div>',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">VIEW</div><div class="bbf-about-tile-desc">Govern what remains visible.</div></div>',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">SOLO</div><div class="bbf-about-tile-desc">Narrow the graph around the selected object.</div></div>',
-      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">HIDE</div><div class="bbf-about-tile-desc">Quiet selected objects from the visible surface.</div></div>',
-      '        <div class="bbf-about-tile span-2"><div class="bbf-about-tile-key">ROUTE</div><div class="bbf-about-tile-desc">Keep the trace of movement.</div></div>',
+      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">Map</div><div class="bbf-about-tile-desc">Click a record to read it. Drag to rearrange.</div></div>',
+      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">Filter</div><div class="bbf-about-tile-desc">Hide record kinds you are not working with.</div></div>',
+      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">List</div><div class="bbf-about-tile-desc">Search every record by title or kind.</div></div>',
+      '        <div class="bbf-about-tile"><div class="bbf-about-tile-key">Route</div><div class="bbf-about-tile-desc">The trail of records you opened, in order.</div></div>',
+      '        <div class="bbf-about-tile span-2"><div class="bbf-about-tile-key">Dashed ring</div><div class="bbf-about-tile-desc">A candidate: suggested, not yet accepted. Open it to see its evidence.</div></div>',
       '      </div>',
       '    </section>',
       '    <section class="bbf-about-section" id="about-grammar">',
-      '      <div class="bbf-about-section-label">Object Grammar</div>',
-      '      <p class="bbf-about-grammar-intro">The object types in the Living Wiki are visual roles. Each type gives a pressure a working form inside the field.</p>',
+      '      <div class="bbf-about-section-label">Shapes</div>',
       '      <div class="bbf-about-grammar-cards">',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">RNO · Research Note Object</div><div class="bbf-about-grammar-desc">A Research Note Object gives source pressure a returnable body.</div></div>',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">MNO · Mapping Note Object</div><div class="bbf-about-grammar-desc">A Mapping Note Object is a partial map of the archive.</div></div>',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">FO · Field Object</div><div class="bbf-about-grammar-desc">A Field Object gives recurrence an address.</div></div>',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">NameO · Name Object</div><div class="bbf-about-grammar-desc">A Name Object treats a name as a field event.</div></div>',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">RefO · Reference Object</div><div class="bbf-about-grammar-desc">A Reference Object makes source support traceable.</div></div>',
-      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">RelO · Relation Object</div><div class="bbf-about-grammar-desc">A Relation Object gives relation a body before explanation.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Note</div><div class="bbf-about-grammar-desc">A claim, summary or finding with its evidence.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Map</div><div class="bbf-about-grammar-desc">A partial overview that groups other records.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Field</div><div class="bbf-about-grammar-desc">A recurring topic that records gather around.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Name</div><div class="bbf-about-grammar-desc">A person, place or term, tracked across sources.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Source</div><div class="bbf-about-grammar-desc">A preserved original document or receipt.</div></div>',
+      '        <div class="bbf-about-grammar-card"><div class="bbf-about-grammar-abbr">Relation</div><div class="bbf-about-grammar-desc">A stated link between two records.</div></div>',
       '      </div>',
       '    </section>',
       '    <section class="bbf-about-section" id="about-source">',
-      '      <div class="bbf-about-section-label">Source and Code</div>',
-      '      <div class="bbf-prose"><p>The Living Wiki is a living genetic archive. Its data model, graph behavior, reader surface, route memory, and interface states belong to the form of the work.</p></div>',
-      '      <div class="bbf-about-source-rows">',
-      '        <div class="bbf-about-source-row"><div class="bbf-about-source-key">Live work</div><div class="bbf-about-source-val">Obsidian vault</div></div>',
-      '        <div class="bbf-about-source-row"><div class="bbf-about-source-key">Version</div><div class="bbf-about-source-val">v1.0.0</div></div>',
-      '      </div>',
-      '    </section>',
-      '    <section class="bbf-about-section" id="about-author">',
-      '      <div class="bbf-about-section-label">Author</div>',
-      '      <div class="bbf-prose"><p>Records keep their evidence, identity and history. The interface helps you explore them without changing authority.</p></div>',
+      '      <div class="bbf-about-section-label">Map memory</div>',
+      '      <div class="bbf-prose"><p>Warm halos mark what you opened recently. Worn paths show what you return to. Everything outside your current neighbourhood softens. All of it is stored in this plugin only, never in the archive.</p></div>',
       '    </section>',
       '  </div>',
       '</div>',
@@ -521,7 +519,7 @@ var FieldView = (function () {
     projectedLinks.forEach(function (e) { e.source = byId[e.source]; e.target = byId[e.target]; });
     this.sim = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(allForceLinks).id(function (d) { return d.id; })
-        .distance(function (d) { return d.kind === 'projected' ? 110 : 92; })
+        .distance(function (d) { return (d.kind === 'projected' ? 110 : 92) * (nodes.length < 40 ? 1.7 : 1); })
         .strength(function (d) { return d.kind === 'projected' ? 0.08 : 0.42; }))
       .force('charge', d3.forceManyBody().strength(function (d) {
         return d.type === 'RelO' ? -90 : d.type === 'RefO' ? -150 : -260;
@@ -538,15 +536,15 @@ var FieldView = (function () {
     // Base edges
     this.baseSel = this.baseLayer.selectAll('line').data(baseLinks).join('line')
       .attr('class', 'bbf-link-base')
-      .attr('stroke', '#5d503c')
-      .attr('stroke-opacity', 0.18)
-      .attr('stroke-width', 0.65);
+      .attr('stroke', 'var(--bbf-edge)')
+      .attr('stroke-opacity', 0.55)
+      .attr('stroke-width', 1);
 
     // Projected edges
     this.projSel = this.projectedLayer.selectAll('line').data(projectedLinks).join('line')
       .attr('class', 'bbf-link-proj')
-      .attr('stroke', '#b79045')
-      .attr('stroke-opacity', 0.14)
+      .attr('stroke', 'var(--bbf-edge-projected)')
+      .attr('stroke-opacity', 0.35)
       .attr('stroke-width', function (d) { return Math.min(3, 0.55 + d.relos.length * 0.32); });
 
     // Projected hit areas
@@ -604,7 +602,7 @@ var FieldView = (function () {
       .attr('class', 'bbf-node-label')
       .attr('text-anchor', 'middle')
       .attr('y', function (d) { return nodeMetrics(d).labelOffset; })
-      .text(function (d) { return d.shortLabel || d.label; });
+      .text(function (d) { var t = String(d.shortLabel || d.label).replace(/^\[C\]\s*/, '').replace(/^Candidate( claim)?:\s*/i, ''); return t.length > 26 ? t.slice(0, 25) + '…' : t; });
 
     this.nodeSel.append('title').text(function (d) { return d.label; });
 
@@ -612,7 +610,7 @@ var FieldView = (function () {
     this.nodeSel
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('aria-label', function (d) { return d.type + ': ' + d.label; })
+      .attr('aria-label', function (d) { return typeLabel(d.type) + ': ' + d.label; })
       .on('mouseenter', function (ev, d) {
         if (isMobile()) return;
         clearTimeout(self.plugin.previewTimer);
@@ -742,16 +740,14 @@ var FieldView = (function () {
     var focusIds = focus ? new Set(focus.ids) : null;
 
     this.nodeSel.selectAll('text.bbf-node-label')
-      .attr('font-size', Math.max(9, Math.min(10.5, 10.5 / Math.max(1, k))) + 'px')
+      .style('font-size', Math.max(10, Math.min(13, 13 / Math.max(1, k))) + 'px')
       .attr('display', function (d) {
         if (!self.nodeVisible(d.id)) return 'none';
         if (d.id === self.plugin.activeId) return null;
         if (focusIds && focusIds.has(d.id)) return null;
-        if (k < 0.85) return 'none';
-        if (d.type === 'RefO' || d.type === 'RelO') {
-          if (isMobile() || k < 1.15) return 'none';
-        }
-        return null;
+        if (d.candidate) return null;
+        if (d.type === 'RefO' || d.type === 'RelO') return k < 1.6 ? 'none' : null;
+        return k < 1.2 ? 'none' : null;
       })
       .classed('quiet', function (d) { return d.type === 'NameO' || d.type === 'RefO'; });
   };
@@ -820,7 +816,7 @@ var FieldView = (function () {
     if (!visible.length || this.width < 10 || this.height < 10) return;
     var bounds = this.getNodeBounds(visible, isMobile() ? 44 : 88);
     var pad = isMobile() ? 44 : 88;
-    var k = Math.max(0.55, Math.min((this.width - pad * 2) / bounds.width, (this.height - pad * 2) / bounds.height, 0.92));
+    var k = Math.max(0.55, Math.min((this.width - pad * 2) / bounds.width, (this.height - pad * 2) / bounds.height, isMobile() ? 0.92 : 1.7));
     var cy = this.height / 2;
     var tx = this.width / 2 - k * bounds.cx;
     var ty = cy - k * bounds.cy;
@@ -947,7 +943,7 @@ var FieldView = (function () {
     var self = this;
     this.nodeSel.select('.bbf-node-focus-ring')
       .transition().duration(prefersReducedMotion() ? 0 : 420)
-      .attr('stroke', function (d) { return d.id === coreId ? '#e2bc69' : 'transparent'; })
+      .attr('stroke', function (d) { return d.id === coreId ? 'var(--bbf-focus)' : 'transparent'; })
       .attr('stroke-opacity', function (d) { return d.id === coreId ? 0.82 : 0; })
       .attr('stroke-width', function (d) { return d.id === coreId ? 1.35 : 1; });
   };
@@ -999,7 +995,7 @@ var FieldView = (function () {
     var self = this;
     var wear = this.plugin.fieldTrace.wear;
     this.wearSel
-      .attr('stroke', '#c49a45')
+      .attr('stroke', 'var(--bbf-focus)')
       .attr('stroke-width', function (d) {
         var key = d.source.id < d.target.id ? d.source.id + '::' + d.target.id : d.target.id + '::' + d.source.id;
         var count = wear[key] || 0;
@@ -1029,7 +1025,7 @@ var FieldView = (function () {
     }
     this.routeMemoryLayer.selectAll('line.route-segment').data(segments).join('line')
       .attr('class', 'route-segment')
-      .attr('stroke', '#c49a45')
+      .attr('stroke', 'var(--bbf-focus)')
       .attr('stroke-opacity', 0.35)
       .attr('stroke-width', 1.5)
       .attr('stroke-dasharray', '4,3');
@@ -1189,7 +1185,7 @@ var FieldView = (function () {
     }
     var meta = document.createElement('div');
     meta.className = 'bbf-meta';
-    meta.textContent = nd.type + ' · ' + nd.id;
+    meta.textContent = typeLabel(nd.type) + ' · ' + nd.id;
     readerEl.appendChild(meta);
 
     var title = document.createElement('div');
@@ -1236,13 +1232,13 @@ var FieldView = (function () {
     var n = 0;
     model.nodes.forEach(function (nd) {
       if (n >= 300) return;
-      if (query && nd.label.toLowerCase().indexOf(query) === -1 && nd.type.toLowerCase().indexOf(query) === -1) return;
+      if (query && nd.label.toLowerCase().indexOf(query) === -1 && typeLabel(nd.type).toLowerCase().indexOf(query) === -1) return;
       n++;
       var row = document.createElement('div');
       row.className = 'bbf-object-row';
       var otype = document.createElement('span');
       otype.className = 'bbf-otype';
-      otype.textContent = nd.type;
+      otype.textContent = typeLabel(nd.type);
       row.appendChild(otype);
       var label = document.createElement('span');
       label.className = 'bbf-olabel';
@@ -1263,7 +1259,7 @@ var FieldView = (function () {
       var row = document.createElement('div');
       row.className = 'bbf-toggle-row';
       var label = document.createElement('span');
-      label.textContent = t;
+      label.textContent = typeLabel(t);
       row.appendChild(label);
       var sw = document.createElement('div');
       sw.className = 'bbf-switch' + (!self.plugin.hiddenTypes[t] ? ' on' : '');
@@ -1316,9 +1312,9 @@ var FieldView = (function () {
     var self = this;
     this.plugin.onboardingActive = true;
     var stages = [
-      { text: 'Enter from anywhere.', groups: NOTE_TYPES, projected: false },
-      { text: 'Objects appear with sources, names, notes, and relations.', groups: NOTE_TYPES, projected: true },
-      { text: 'The route begins where focus begins.', groups: NOTE_TYPES, projected: true }
+      { text: 'Start anywhere on the map.', groups: NOTE_TYPES, projected: false },
+      { text: 'Each record keeps its sources, names and relations.', groups: NOTE_TYPES, projected: true },
+      { text: 'Your route is kept as you read.', groups: NOTE_TYPES, projected: true }
     ];
     var stageIdx = 0;
 
@@ -1383,6 +1379,7 @@ var ReaderView = (function () {
   Class.prototype.getIcon = function () { return 'book-open'; };
 
   Class.prototype.onOpen = function () {
+    this.contentEl.addClass('bbf-root', 'bbf-pane');
     this.body = this.contentEl.createEl('div', { cls: 'bbf-reader' });
     this.refresh();
   };
@@ -1418,6 +1415,7 @@ var RouteView = (function () {
   Class.prototype.getIcon = function () { return 'route'; };
 
   Class.prototype.onOpen = function () {
+    this.contentEl.addClass('bbf-root', 'bbf-pane');
     this.body = this.contentEl.createEl('div', { cls: 'bbf-route' });
     this.refresh();
   };
@@ -1453,6 +1451,7 @@ var IndexView = (function () {
   Class.prototype.getIcon = function () { return 'list'; };
 
   Class.prototype.onOpen = function () {
+    this.contentEl.addClass('bbf-root', 'bbf-pane');
     this.body = this.contentEl.createEl('div', { cls: 'bbf-view' });
     this.refresh();
   };
@@ -1469,7 +1468,7 @@ var IndexView = (function () {
       var cb = lab.createEl('input', { type: 'checkbox' });
       cb.checked = !plugin.hiddenTypes[t];
       cb.addEventListener('change', function () { plugin.toggleType(t, !cb.checked); });
-      lab.createEl('span', { text: t + '  (' + cnt + ')' });
+      lab.createEl('span', { text: typeLabel(t) + '  (' + cnt + ')' });
     });
     var ihead = el.createEl('div', { cls: 'bbf-pane-head' });
     ihead.createEl('span', { text: 'INDEX — notes' });
@@ -1481,7 +1480,7 @@ var IndexView = (function () {
       var n = 0;
       model.nodes.forEach(function (nd) {
         if (n >= 300) return;
-        if (q && nd.label.toLowerCase().indexOf(q) === -1 && nd.type.toLowerCase().indexOf(q) === -1) return;
+        if (q && nd.label.toLowerCase().indexOf(q) === -1 && typeLabel(nd.type).toLowerCase().indexOf(q) === -1) return;
         n++;
         var row = list.createEl('div', { cls: 'bbf-row' });
         var lab = row.createEl('span', { cls: 'bbf-row-label', text: nd.label });

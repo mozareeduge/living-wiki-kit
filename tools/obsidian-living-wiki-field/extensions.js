@@ -87,9 +87,9 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     // Enter directly; the inherited poetic threshold remains available in About.
     const threshold=this.contentEl.querySelector('#bbfThreshold'); if(threshold)threshold.remove();
     const rail=this.contentEl.querySelector('.bbf-rail') || this.contentEl;
-    button(rail,'REVIEW',()=>this.plugin.activate('lwf-review-view'));
-    button(rail,'HEALTH',()=>this.plugin.activate('lwf-health-view'));
-    const note=this.contentEl.createEl('div',{cls:'lwf-contract',text:'Archive view · projected edges are navigation, never evidence · candidates remain marked'});
+    button(rail,'Review',()=>this.plugin.activate('lwf-review-view'));
+    button(rail,'Health',()=>this.plugin.activate('lwf-health-view'));
+    const note=this.contentEl.createEl('div',{cls:'lwf-contract',text:'Lines are navigation, not evidence. Dashed rings are candidates.'});
     note.setAttribute('role','note');
     this.resizeObserver=new ResizeObserver(()=>this.onResize());
     this.resizeObserver.observe(this.contentEl.querySelector('#bbfGraphSvg'));
@@ -105,7 +105,9 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     if(this.nodeSel) this.nodeSel.attr('data-candidate',d=>d.candidate?'true':'false')
       .attr('aria-label',d=>d.label+' · '+d.recordType+' · '+d.authority)
       .selectAll('title').data(d=>[d]).join('title').text(d=>d.label+' · '+d.recordType+' · '+d.authority);
-    if(this.nodeSel)this.nodeSel.select('text').text(d=>(d.candidate?'[C] ':'')+(d.label.length>32?d.label.slice(0,31)+'…':d.label));
+    if(this.nodeSel)this.nodeSel.select('text').text(d=>{const t=String(d.label).replace(/^Candidate( claim)?:\s*/i,'');return t.length>22?t.slice(0,21)+'…':t;});
+    clearTimeout(this.fitTimer);
+    this.fitTimer=setTimeout(()=>{if(!this.plugin.activeId && this.svg)this.fitVisibleField({duration:400});},1500);
     if(this.projSel)this.projSel.attr('stroke-dasharray','3 6');
   };
   FieldView.prototype.refresh=function(force) {
@@ -197,11 +199,11 @@ async function renderReader(view,root,id) {
   view.renderComponent=new Component();view.renderComponent.load();
   const plugin=view.plugin,model=plugin.getModel(),node=model.byPath[id];
   if(!node) {textBlock(root,'p','Select a record in Field or Index.');return;}
-  textBlock(root,'div',(node.candidate?'CANDIDATE · ':'')+node.recordType+' · '+node.authority,'lwf-evidence-badge');
+  textBlock(root,'div',(node.candidate?'Candidate · not yet accepted':'Accepted record')+' · '+node.recordType+' · '+node.authority,'lwf-evidence-badge'+(node.candidate?' is-candidate':''));
   textBlock(root,'h2',node.label);
-  textBlock(root,'p','Status: '+node.status+' · Permission: '+node.permission);
+  textBlock(root,'p','Status: '+node.status+' · Permission: '+node.permission,'lwf-status');
   const nav=root.createEl('div',{cls:'lwf-evidence-links'});
-  textBlock(nav,'h3','Trace and related records');
+  textBlock(nav,'h3','Where this comes from');
   const focus=buildFocusSet(plugin.app,model,id);
   for(const target of (focus ? focus.neighborIds : [])) {
     const n=model.byPath[target];button(nav,n.label+' · '+n.recordType,()=>plugin.openReader(target));
@@ -227,6 +229,8 @@ async function renderReader(view,root,id) {
     await MarkdownRenderer.render(plugin.app,text,prose,file.path,view.renderComponent);
     if(view.readToken!==token)return;
     prose.querySelectorAll('input[type="checkbox"]').forEach(el=>el.disabled=true);
+    const first=prose.querySelector('h1');
+    if(first && first.textContent.trim()===String(node.label).trim())first.remove();
     prose.addEventListener('click',e=>{
       const link=e.target.closest('a.internal-link');
       if(!link)return;e.preventDefault();e.stopPropagation();
@@ -255,7 +259,7 @@ async function renderReader(view,root,id) {
 class ReviewView extends ItemView {
   constructor(leaf,plugin){super(leaf);this.plugin=plugin;}
   getViewType(){return 'lwf-review-view';} getDisplayText(){return 'Review';} getIcon(){return 'clipboard-list';}
-  async onOpen(){this.onOuterChange();}
+  async onOpen(){this.contentEl.addClass('bbf-root','bbf-pane');this.onOuterChange();}
   onOuterChange(){
     const root=this.contentEl;root.empty();root.addClass('lwf-panel');
     textBlock(root,'h1','Review queue');
@@ -276,7 +280,7 @@ class ReviewView extends ItemView {
 class HealthView extends ItemView {
   constructor(leaf,plugin){super(leaf);this.plugin=plugin;}
   getViewType(){return 'lwf-health-view';} getDisplayText(){return 'Archive health';} getIcon(){return 'shield-check';}
-  async onOpen(){await this.onOuterChange();}
+  async onOpen(){this.contentEl.addClass('bbf-root','bbf-pane');await this.onOuterChange();}
   async onOuterChange(){
     const root=this.contentEl;root.empty();root.addClass('lwf-panel');textBlock(root,'h1','Archive health');
     try {
