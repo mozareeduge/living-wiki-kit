@@ -38,6 +38,12 @@ jobs:
           node-version: "22"
       - name: Field archive projection and candidate boundaries
         run: node --test tools/obsidian-living-wiki-field/model.test.js
+      - name: Install locked Field build tool
+        run: npm ci --prefix tools/obsidian-living-wiki-field
+      - name: Build single-file Obsidian plugin
+        run: npm run build --prefix tools/obsidian-living-wiki-field
+      - name: Field bundle is current
+        run: git diff --exit-code -- tools/obsidian-living-wiki-field/main.js
 
   fresh-wiki:
     # Release gate (Q6): a brand-new wiki made from this commit passes every

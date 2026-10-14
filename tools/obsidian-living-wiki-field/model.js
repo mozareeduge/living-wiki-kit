@@ -17,7 +17,9 @@ function typeOf(app, file) {
 function buildModel(app) {
   const nodes = [], byPath = Object.create(null), byRecord = Object.create(null);
   const duplicates = new Set(), relations = Object.create(null), unresolved = [];
-  const files = app.vault.getMarkdownFiles().filter(f => !/^(?:tools|scripts|\.maws|\.claude|openspec|_audits|_exports|_search|_originals)\//.test(f.path));
+  const files = app.vault.getMarkdownFiles().filter(f => !/^(?:tools|scripts|\.maws|\.claude|openspec|_audits|_exports|_search|_originals)\//.test(f.path))
+    .filter(f => app.livingWikiIncludeDocuments || (!/^00-system\/|^07-genesis\/handoffs\//.test(f.path) &&
+      (f.path.includes('/') || ['HOME.md','WALKTHROUGH.md'].includes(f.path))));
   for (const file of files) {
     const fm = meta(app, file);
     const n = {id:file.path, file, type:typeOf(app,file), label:fm.title || file.basename,

@@ -43,3 +43,8 @@ test('candidate authority on recorded notes is visible and filterable',()=>{
   const m=buildModel(appFor({'03-objects/a.md':{type:'object',authority_tier:'candidate'},'05-claims/c.md':{type:'claim-object',certainty:'candidate'},'06-relations/r.md':{type:'relation-object',relation_status:'candidate'}}));
   for(const n of m.nodes){assert.equal(n.candidate,true);assert.equal(matches(n,{candidate:'candidate'}),true);assert.equal(matches(n,{candidate:'recorded'}),false);}
 });
+test('archive focus defaults to knowledge records; system documents remain an explicit option',()=>{
+  const app=appFor({'README.md':{},'HOME.md':{},'00-system/manual.md':{},'07-genesis/handoffs/h.md':{},'03-objects/a.md':{type:'object'}});
+  assert.deepEqual(buildModel(app).nodes.map(n=>n.id),['HOME.md','03-objects/a.md']);
+  app.livingWikiIncludeDocuments=true;assert.equal(buildModel(app).nodes.length,5);
+});

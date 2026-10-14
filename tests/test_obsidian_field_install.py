@@ -2,6 +2,7 @@ from pathlib import Path
 import importlib.util
 import pytest
 import os
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('field_install', ROOT / 'scripts/install_obsidian_field.py')
@@ -22,6 +23,7 @@ def test_install_preserves_archive_and_existing_plugins(tmp_path):
     dest = tmp_path / '.obsidian/plugins/living-wiki-field'
     assert all((dest / name).is_file() for name in installer.FILES)
     assert 'cdn.jsdelivr.net' not in (dest / 'main.js').read_text(encoding='utf-8')
+    assert not re.search(r'require\([\'\"]\./', (dest / 'main.js').read_text(encoding='utf-8'))
 
 def test_install_refuses_missing_vault_without_creating_it(tmp_path):
     target = tmp_path / 'missing'

@@ -7,6 +7,7 @@ _proposals/generated/
 scripts/__pycache__/
 scripts/capture/__pycache__/
 *.pyc
+tools/obsidian-living-wiki-field/node_modules/
 
 # Proposals log is a runtime queue (durable state lives in adjudicated records)
 # _proposals/proposals.jsonl  # keep committed but inert; uncomment to ignore

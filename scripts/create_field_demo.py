@@ -81,7 +81,7 @@ def create(destination: pathlib.Path) -> pathlib.Path:
     install(destination)
     obs = destination / '.obsidian'
     (obs / 'community-plugins.json').write_text('["living-wiki-field"]\n', encoding='utf-8')
-    (obs / 'app.json').write_text(json.dumps({'showInlineTitle': True, 'defaultViewMode': 'preview', 'restrictedMode': False}), encoding='utf-8')
+    (obs / 'app.json').write_text(json.dumps({'showInlineTitle': True, 'defaultViewMode': 'preview'}), encoding='utf-8')
     for args in [('scripts/wiki_validate.py', '--repo', '.', '--format', 'json'),
                  ('scripts/wiki_state.py', '--repo', '.', 'check'), ('scripts/wiki_evidence.py', '--repo', '.', 'check'),
                  ('scripts/wiki_profiles.py', 'check')]:

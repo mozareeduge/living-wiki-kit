@@ -24,6 +24,10 @@ UI state is stored only in `.obsidian/plugins/living-wiki-field/data.json`. All 
 
 ## Verification and limits
 
+The distributed `main.js` is a single-file bundle, as required by the host loader. Rebuild it with `npm ci` followed by `npm run build` inside this plugin directory. The locked development dependency is esbuild 0.25.9 (MIT); it is not needed to use the installed plugin.
+
+Field defaults to knowledge records, original witnesses and entry pages. Enable **Include system documents** in plugin settings to add manuals, system records and handoffs. These always remain available through Obsidian's normal file navigation. Long graph labels are shortened visually; their full titles remain in the Reader and accessible node descriptions.
+
 `node --test tools/obsidian-living-wiki-field/model.test.js` exercises participant IDs, source traces, duplicate identity, candidate boundaries and bounded projection. `python -m pytest tests/test_obsidian_field_install.py -q` tests installation isolation. `node --check` checks the UI scripts. Live Obsidian acceptance covers graph, Reader, Route, filters, Review and Health.
 
 The desktop graph is optimized for a local working archive. Index pages show up to 300 matching records; narrow the filter to inspect larger inventories. Hyperedges above forty participants stay as star connections to avoid quadratic expansion. Route memory is navigation history, never a historical claim. Mobile capture remains in the separate governed capture client; this desktop UI is not a mobile Git client. Generative assistance cards are deferred.

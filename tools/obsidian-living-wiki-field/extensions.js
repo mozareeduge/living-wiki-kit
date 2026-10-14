@@ -11,7 +11,8 @@ function textBlock(el,tag,text,cls) { return el.createEl(tag,{text:String(text =
 function install(PluginClass,FieldView,ReaderView,IndexView) {
   const oldLoad=PluginClass.prototype.onload;
   PluginClass.prototype.onload=async function() {
-    this.settings={python:process.platform==='win32'?'python':'python3',...await this.loadData()};
+    this.settings={python:process.platform==='win32'?'python':'python3',includeDocuments:false,...await this.loadData()};
+    this.app.livingWikiIncludeDocuments=this.settings.includeDocuments;
     this.routeEvents=this.settings.routeEvents || [];
     this.filters={}; this.app.livingWikiProposals=[]; this.health=null; this.recordsError=null;
     oldLoad.call(this);
@@ -55,7 +56,7 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
   PluginClass.prototype.refreshAll=function() { oldRefresh.call(this); this.persist(); };
   const oldClose=PluginClass.prototype.onunload;
   PluginClass.prototype.onunload=function() {
-    oldClose.call(this); delete this.app.livingWikiProposals;
+    oldClose.call(this); delete this.app.livingWikiProposals;delete this.app.livingWikiIncludeDocuments;
     for(const type of ['lwf-review-view','lwf-health-view']) this.app.workspace.detachLeavesOfType(type);
     if(this.validationProcess) this.validationProcess.kill();
   };
@@ -102,7 +103,7 @@ function install(PluginClass,FieldView,ReaderView,IndexView) {
     if(this.nodeSel) this.nodeSel.attr('data-candidate',d=>d.candidate?'true':'false')
       .attr('aria-label',d=>d.label+' · '+d.recordType+' · '+d.authority)
       .selectAll('title').data(d=>[d]).join('title').text(d=>d.label+' · '+d.recordType+' · '+d.authority);
-    if(this.nodeSel)this.nodeSel.select('text').text(d=>(d.candidate?'[C] ':'')+d.label);
+    if(this.nodeSel)this.nodeSel.select('text').text(d=>(d.candidate?'[C] ':'')+(d.label.length>32?d.label.slice(0,31)+'…':d.label));
     if(this.projSel)this.projSel.attr('stroke-dasharray','3 6');
   };
   FieldView.prototype.refresh=function(force) {
@@ -306,7 +307,11 @@ function runCheck(plugin,args) {
 }
 class FieldSettings extends PluginSettingTab {
   constructor(app,plugin){super(app,plugin);this.plugin=plugin;}
-  display(){this.containerEl.empty();new Setting(this.containerEl).setName('Python interpreter').setDesc('Local Python used only for the four governance checks.').addText(t=>t.setValue(this.plugin.settings.python).onChange(v=>{this.plugin.settings.python=v.trim();this.plugin.persist();}));}
+  display(){
+    this.containerEl.empty();
+    new Setting(this.containerEl).setName('Python interpreter').setDesc('Local Python used only for the four governance checks.').addText(t=>t.setValue(this.plugin.settings.python).onChange(v=>{this.plugin.settings.python=v.trim();this.plugin.persist();}));
+    new Setting(this.containerEl).setName('Include system documents').setDesc('Show manuals, system records and handoffs in Field. Native Obsidian navigation always keeps them available.').addToggle(t=>t.setValue(this.plugin.settings.includeDocuments).onChange(v=>{this.plugin.settings.includeDocuments=v;this.plugin.app.livingWikiIncludeDocuments=v;this.plugin.model=null;this.plugin.refreshAll();}));
+  }
 }
 const originalInstall=install;
 module.exports.install=function(PluginClass,...views){

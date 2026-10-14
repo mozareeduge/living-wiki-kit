@@ -897,3 +897,11 @@
 .bbf-root .node[data-candidate="true"] .bbf-node-core { stroke: #e2bc69; stroke-width: 2px; stroke-dasharray: 3 2; }
 .bbf-reader .bbf-prose { direction: auto; unicode-bidi: plaintext; }
 .lwf-error { color: var(--text-error); }
+.bbf-root { color: var(--bbf-text); }
+.bbf-root button { background: #161310; color: #e7e1d7; border: 1px solid #3a342b; border-radius: 6px; box-shadow: none; }
+.bbf-root button:hover { background: #29221b; color: #f2d09c; }
+.bbf-root select, .bbf-root input { background: #161310; color: #e7e1d7; border-color: #3a342b; max-width: 100%; }
+.bbf-root .bbf-reader { color: #e7e1d7; }
+.bbf-root .bbf-reader h2, .bbf-root .bbf-reader h3 { color: #e7e1d7; }
+.bbf-root .bbf-reader a { color: #d7b86c; }
+.bbf-root .bbf-reader button { font: 12px system-ui; max-width: 100%; }

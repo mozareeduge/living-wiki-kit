@@ -16,6 +16,8 @@ its routes, its current state.
 
 ## If you are reading the kit itself
 
+The optional [[tools/obsidian-living-wiki-field/README|Obsidian Field interface]] provides spatial navigation, evidence reading, route memory, candidate review and current governance checks. Create a fictional walkthrough with `python scripts/create_field_demo.py --destination <new-folder>` or install it in an existing wiki with `python scripts/install_obsidian_field.py --vault <vault-folder>`.
+
 1. [[SYSTEM_DESIGN|System design]] — what a living genetic archive is here
 2. [[INSTANTIATE|Instantiation guide]] — make a new wiki
 3. `SETUP_GUIDE_WINDOWS.md` — install Git, Obsidian, Python, QMD
