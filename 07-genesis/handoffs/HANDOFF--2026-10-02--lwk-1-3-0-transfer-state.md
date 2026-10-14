@@ -28,8 +28,8 @@ Verified 2026-10-02 01:22 local. Every number below was re-run, not recalled.
 | Branch | `system/2026-09-20--next-version-plan` — pushed and in sync with origin (tip includes this handoff; verify with `git status -sb`; local `.maws/` runtime files may show as modified, that is not branch drift) |
 | PR | **#7**, `OPEN`, **`DRAFT`**, `MERGEABLE`, `mergeStateStatus: UNSTABLE` |
 | Base | `origin/main` @ `02399e7` |
-| Instance (private) | `github.com/mozareeduge/mozare-wiki`, local `Documents/Personal Formal Documents/mozare-wiki/mozare-wiki` |
-| Local path | `C:\Users\Zarinpal\Documents\Personal Formal Documents\living-wiki-kit` |
+| Instance (private) | `github.com/mozareeduge/source-instance`, local `<local instance checkout>` |
+| Local path | `<local checkout>` |
 | Tools used | Python 3.11.9, `gh` 2.96.0 (authenticated as `mozareeduge`), `qmd` via npm shim, Windows + `core.autocrlf=true` |
 
 **One-line status: every rung of the 1.3.0 ladder is `cc:done`. The code is
@@ -180,7 +180,7 @@ prevent.
 
 `_audits/2026-10-01--semantic-benchmark/` — `README.md`, `report.json`, `report.md`.
 
-| | baseline 2026-09-20 (`mozare-wiki` `9a2dd09`) | run 2026-10-01 |
+| | baseline 2026-09-20 (`source-instance` `9a2dd09`) | run 2026-10-01 |
 |---|---|---|
 | Cases passing | **3 / 30** | **12 / 30** (4×) |
 | Threshold | 27 | 27 (unchanged) |
@@ -209,7 +209,7 @@ prevent.
 
 ### 7.2 Owner, in Obsidian (~1 min)
 H3 is `cc:done exc. live-toggle`. The plugin **is** installed at
-`mozare-wiki/.obsidian/plugins/black-bird-field/` and **is** registered in
+`<instance>/.obsidian/plugins/<field-plugin>/` and **is** registered in
 `.obsidian/community-plugins.json`; all four modes (Field / Reader / Route /
 Index) are present in the installed `main.js` **v2.0.0**. Only the in-app ribbon
 confirmation remains.
@@ -217,7 +217,7 @@ confirmation remains.
 **Plugin home decided: external + version-pinned, not vendored into the kit.**
 Reason: `.obsidian/plugins/` is gitignored so nothing tracks it, and drift already
 exists — the **installed copy is v2.0.0** while the **external source**
-(`Documents/.../blackbirdpoem-field-extraction/black-bird-field/`) is **v1.0.0**.
+(`<external plugin source>/`) is **v1.0.0**.
 Reconcile or re-pin deliberately.
 
 ### 7.3 M1 — finish embeddings, then re-run the benchmark
@@ -232,16 +232,16 @@ that counts.
 
 ```bash
 # the case config is NOT in the kit (finding F2) - copy it read-only from the instance
-cp "../mozare-wiki/mozare-wiki/00-system/configuration/semantic-benchmark-v1.1.0.json" \
+cp "../<instance>/00-system/configuration/semantic-benchmark-v1.1.0.json" \
    00-system/configuration/
 python scripts/run-semantic-benchmark.py --output _audits/<date>--semantic-benchmark/report.json
 ```
 
 ### 7.4 Operator lane (never an agent)
-- **H1** — adjudicate the proposal queue in `mozare-wiki`
+- **H1** — adjudicate the proposal queue in `source-instance`
   (`_audits/evidence-audit-20260919-234541.json`, incl. the
   `prop-20260906-154145-567` refile decision). `cc:todo`.
-- **H2** — resolve the ~306 residual schema errors in `mozare-wiki`; the count
+- **H2** — resolve the ~306 residual schema errors in `source-instance`; the count
   must strictly decrease and the baseline re-register in the same commit.
   `cc:todo`.
 - **U2** — G-series workbench UI cards. `blocked` (needs H3 + a free P08-02 lane).
@@ -251,7 +251,7 @@ python scripts/run-semantic-benchmark.py --output _audits/<date>--semantic-bench
   instance has it). Decide: ship a starter case set, or document the benchmark as
   instance-only.
 - **F9** — the kit's MCP server reads QMD collection names from config;
-  `mozare-wiki`'s copy still hardcodes `mozare-*`. Port `qmd_collections()` back
+  `source-instance`'s copy still hardcodes `instance-*`. Port `qmd_collections()` back
   so both files stay identical. **Open.**
 - **F1** — `schema_drift_fixer.py` LF-normalises despite a "format-preserving"
   docstring. Pinned by a test; fix only if an instance drops `text=auto`.
@@ -297,7 +297,7 @@ python scripts/run-semantic-benchmark.py --output _audits/<date>--semantic-bench
 - The same applies to `qmd` (it prints an "N documents need embeddings" warning to
   stderr). Redirect stderr, or read stdout separately.
 - The `gh` token has **no billing scope** → 404 on all `/settings/billing` APIs.
-- `mozare-wiki` is **private** and is **read-only** unless the owner explicitly
+- `source-instance` is **private** and is **read-only** unless the owner explicitly
   orders an instance lane. Do not write into it by default.
 - Do **not** `git add -A` here: `.maws/` runtime state and stray `01-inbox/` test
   output will be swept in.
@@ -310,7 +310,7 @@ python scripts/run-semantic-benchmark.py --output _audits/<date>--semantic-bench
 ## 10. Suggested next session
 
 ```bash
-cd "C:/Users/Zarinpal/Documents/Personal Formal Documents/living-wiki-kit"
+cd "<local checkout>"
 git config core.hooksPath .githooks
 git switch system/2026-09-20--next-version-plan && git pull --ff-only
 python -m pytest tests scripts/tests scripts/capture/tests -q

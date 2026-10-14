@@ -4,7 +4,7 @@
 Reports over the disposable graph index + candidate projections:
 distinct labels, most-used, singletons, post-normalization duplicates,
 spelling/case variants, namespace distribution, legacy-kind-derived labels,
-unlabeled objects, candidate-vs-canonical usage.
+unlabeled objects, candidate-vs-canonical usage, instance alias groups.
 
 Attention tool only: reads, never writes, never merges, never repairs.
 
@@ -20,6 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_graph_index as bgi  # noqa: E402
 import candidate_projection as _cp  # noqa: E402
 
 
@@ -56,7 +57,24 @@ def build_report(root: Path) -> dict:
         for lb in c.get("labels", []):
             candidate_labels[str(lb)] += 1
 
+    try:
+        amap = bgi.load_label_aliases(root)
+    except ValueError as exc:
+        amap = {}
+        alias_error = str(exc)
+    else:
+        alias_error = None
+    groups: dict[str, set[str]] = {}
+    for _, (name, norms) in amap.items():
+        groups[name] = norms
+    alias_groups = [{"preferred": name, "members": sorted(norms),
+                     "objects": len({nid for n in norms
+                                     for nid in by_norm.get(n, {}).get("nodes", set())})}
+                    for name, norms in sorted(groups.items())]
+
     return {
+        "alias_groups": alias_groups,
+        "alias_error": alias_error,
         "nodes_indexed": nodes,
         "labeled_nodes": len(labeled_nodes),
         "unlabeled_nodes": nodes - len(labeled_nodes),
@@ -93,6 +111,13 @@ def render_text(report: dict) -> str:
     lines.append(f"  namespaces: {json.dumps(report['namespace_distribution'], ensure_ascii=False)}")
     lines.append("  legacy-kind-derived: "
                  + (", ".join(report["legacy_kind_derived"]) or "(none)"))
+    if report.get("alias_error"):
+        lines.append(f"  aliases: ERROR {report['alias_error']}")
+    else:
+        lines.append("  aliases (LABEL_ALIASES.json, retrieval only, never merged): "
+                     + ("; ".join(f"{g['preferred']} = {', '.join(g['members'])} "
+                                  f"({g['objects']} objects)" for g in report["alias_groups"])
+                        or "(none)"))
     lines.append("  candidate usage: "
                  + (json.dumps(report["candidate_label_usage"], ensure_ascii=False) or "(none)"))
     return "\n".join(lines)

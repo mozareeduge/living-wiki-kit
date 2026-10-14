@@ -58,6 +58,7 @@ class HoldingsTier(unittest.TestCase):
 class ScalarBinding(unittest.TestCase):
     def test_values_bind_into_sqlite(self):
         conn = sqlite3.connect(":memory:")
+        self.addCleanup(conn.close)
         conn.execute("CREATE TABLE t(v TEXT)")
         for value in (["en", "fa"], {"a": 1}, datetime.date(2026, 9, 16), datetime.datetime(2026, 9, 16, 12, 0), "x", 3, None):
             conn.execute("INSERT INTO t VALUES(?)", (_scalar(value),))

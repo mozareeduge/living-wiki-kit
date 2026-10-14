@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Mozare Wiki capture record front matter (1.2.0, schema 1.0.0)",
+  "title": "Living Wiki capture record front matter (1.2.0, schema 1.0.0)",
   "description": "Reference shape for mw-cap-* front matter. The enforcing validator is validate_record() in scripts/capture/wiki_capture.py; this file documents the contract for clients.",
   "type": "object",
   "required": ["id", "type", "title", "status", "capture_kind", "captured_at", "capture_channel", "language_hint", "raw_media_available", "sha256", "bytes", "duplicate_of", "transcription_state", "transcription_reviewed", "quality_flags", "promoted_to", "schema_version"],

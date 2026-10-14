@@ -29,6 +29,9 @@ FM_BLOCK = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 FM_FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*?)\s*$", re.MULTILINE)
 WIKILINK = re.compile(r"\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 ID_TOKEN = re.compile(r"\b(?:mw|p)-[a-z0-9]{6,}(?:-[a-z0-9]+)*\b")
+# Any hyphenated token; kept as an id edge only when it names a known record
+# (instance IDs are `<prefix>-<layer>-<slug>` for any prefix, F19).
+WORD_TOKEN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._]|-(?=[A-Za-z0-9]))*")
 PATH_TOKEN = re.compile(
     r"\b(?:02-sources|03-objects|04-notes|05-claims|06-relations)/[^\s\"']+?\.md")
 
@@ -48,6 +51,53 @@ def normalize_label(raw: str) -> str:
     """
     s = unicodedata.normalize("NFKC", raw).strip()
     return re.sub(r"\s+", " ", s).casefold()
+
+
+ALIASES_REL = Path("00-system/configuration/LABEL_ALIASES.json")
+
+
+def load_label_aliases(root: Path) -> dict[str, tuple[str, set[str]]]:
+    """Instance label aliases: normalized label -> (group name, group norms).
+
+    `LABEL_ALIASES.json` is `{"aliases": {"<preferred>": ["<alias>", ...]}}`.
+    Retrieval-only: aliases never rewrite a written label, never merge
+    records and never enter the graph. Missing file or empty groups -> {}.
+    Raises ValueError naming the problem (non-list group, a label in two
+    groups).
+    """
+    import json
+    f = root / ALIASES_REL
+    if not f.is_file():
+        return {}
+    try:
+        groups = json.loads(f.read_text(encoding="utf-8")).get("aliases", {})
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise ValueError(f"{ALIASES_REL.as_posix()}: unreadable ({exc})")
+    if not isinstance(groups, dict):
+        raise ValueError(f"{ALIASES_REL.as_posix()}: `aliases` must be an object")
+    out: dict[str, tuple[str, set[str]]] = {}
+    for name, members in groups.items():
+        if not isinstance(members, list):
+            raise ValueError(f"{ALIASES_REL.as_posix()}: group {name!r} must list its aliases")
+        norms = {normalize_label(str(x)) for x in [name, *members]} - {""}
+        for n in norms:
+            if n in out and out[n][0] != name:
+                raise ValueError(f"{ALIASES_REL.as_posix()}: label {n!r} is in two "
+                                 f"groups ({out[n][0]!r}, {name!r})")
+            out[n] = (str(name), norms)
+    return out
+
+
+def parse_relation_types(value: str) -> list[str]:
+    """`relation_type` value -> written types (scalar or flow list `[a, b]`)."""
+    v = value.strip()
+    if v.startswith("[") and v.endswith("]"):
+        v = v[1:-1]
+        items = v.split(",")
+    else:
+        items = [v]
+    out = [i.strip().strip("\"'") for i in items]
+    return [i for i in out if i and i not in ("null", "~")]
 
 
 def parse_labels(text: str) -> list[str]:
@@ -108,6 +158,14 @@ def build(root: Path) -> tuple[int, int]:
         -- label_source is 'frontmatter' or 'legacy-kind' (compatibility: a
         -- retired kind value surfaced for search, visibly marked).
         CREATE INDEX labels_norm ON labels(label_norm);
+        CREATE TABLE relation_types (
+            relation_id TEXT NOT NULL, type_raw TEXT NOT NULL,
+            type_norm TEXT NOT NULL,
+            PRIMARY KEY (relation_id, type_norm));
+        -- Optional relation language (`relation_type` on a relation-object;
+        -- relation before type, so many have none). Read by lenses to
+        -- foreground; never evidence, never an edge.
+        CREATE INDEX relation_types_norm ON relation_types(type_norm);
         """
     )
     id_to_path: dict[str, Path] = {}
@@ -134,7 +192,7 @@ def build(root: Path) -> tuple[int, int]:
             rel_to_id[md.stem.lower()] = rid
 
     # Alias pass over ALL other .md files (entry pages, registers, indexes):
-    # resolution-only mapping so wikilinks like [[the-black-bird]] resolve.
+    # resolution-only mapping so wikilinks like [[the-first-session]] resolve.
     # These files do NOT become nodes (canonical zones only).
     for md in sorted(root.rglob("*.md")):
         rel = md.relative_to(root).as_posix().lower()
@@ -173,6 +231,7 @@ def build(root: Path) -> tuple[int, int]:
 
     nodes = edges = 0
     label_rows = 0
+    relation_type_rows = 0
     for rid, md, zone, fm, body in records:
         rel = md.relative_to(root).as_posix()
         con.execute(
@@ -201,6 +260,13 @@ def build(root: Path) -> tuple[int, int]:
                 (rid, legacy_kind, normalize_label(legacy_kind), "legacy-kind"))
             label_rows += cur.rowcount
 
+        if str(fm.get("type", "")).strip() == "relation-object":
+            for raw in parse_relation_types(str(fm.get("relation_type", ""))):
+                cur = con.execute(
+                    "INSERT OR IGNORE INTO relation_types VALUES (?,?,?)",
+                    (rid, raw, normalize_label(raw)))
+                relation_type_rows += cur.rowcount
+
         def add_edge(field: str, target: str, tkind: str) -> None:
             nonlocal edges
             target = target.strip()
@@ -225,7 +291,10 @@ def build(root: Path) -> tuple[int, int]:
         for field, value in fm.items():
             for target in WIKILINK.findall(value):
                 add_edge(f"fm:{field}", target, "link")
-            for token in ID_TOKEN.findall(value):
+            tokens = dict.fromkeys(ID_TOKEN.findall(value))
+            tokens.update(dict.fromkeys(
+                t for t in WORD_TOKEN.findall(value) if t in id_to_path))
+            for token in tokens:
                 if token != rid:
                     add_edge(f"fm:{field}", token, "id")
             for pmatch in PATH_TOKEN.findall(value):
@@ -236,6 +305,7 @@ def build(root: Path) -> tuple[int, int]:
         [("built_at_source", "build_graph_index.py"),
          ("nodes", str(nodes)), ("edges", str(edges)),
          ("label_rows", str(label_rows)),
+         ("relation_type_rows", str(relation_type_rows)),
          ("zones", ",".join(CANONICAL_ZONES))],
     )
     con.commit()

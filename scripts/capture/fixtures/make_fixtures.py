@@ -100,16 +100,16 @@ def main() -> int:
     wc.set_state(f, "processing", "fixture")
     wc.set_state(f, "processing-failed", "fixture")
     dup = wc.capture_text("متن فارسی برای آزمون", "obsidian", "fa")["id"]        # duplicate
-    wc.set_state(dup, "reviewed", "Mohammad", note="dup triage")
+    wc.set_state(dup, "reviewed", "Owner", note="dup triage")
     r = wc.capture_text("reviewed note", "claude-mobile", "en")["id"]            # reviewed
     wc.set_state(r, "processing", "fixture")
     wc.set_state(r, "needs-review", "fixture")
-    wc.set_state(r, "reviewed", "Mohammad", note="checked")
+    wc.set_state(r, "reviewed", "Owner", note="checked")
     p = wc.capture_text("promoted note", "obsidian", "en")["id"]                 # promoted
     wc.set_state(p, "processing", "fixture")
     wc.set_state(p, "needs-review", "fixture")
-    wc.set_state(p, "reviewed", "Mohammad", note="good")
-    wc.set_state(p, "promoted", "Mohammad", target="04-notes/research/x.md")
+    wc.set_state(p, "reviewed", "Owner", note="good")
+    wc.set_state(p, "promoted", "Owner", target="04-notes/research/x.md")
     export_valid(root)
 
     # ---- invalid set: copies of a valid record, each broken one way ----

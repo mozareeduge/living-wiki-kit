@@ -20,11 +20,11 @@ schema_version: 1.0.0
 
 ## Remaining (in order)
 1. Merge PR #6 after operator review.
-2. B4 (operator-gated): adopt the census in mozare-wiki. Needs the tier decision for 447 held
+2. B4 (operator-gated): adopt the census in source-instance. Needs the tier decision for 447 held
    records; recommended `pending-registration`. They ARE ingested (original + record +
    derivative, ~3.9M words, intake 2026-09-04 commit 3bb89f7); only the frozen release
    manifest omits them.
-3. C3 (operator-gated): tag mozare-wiki's 13 registers with refresh_policy; operator decides
+3. C3 (operator-gated): tag source-instance's 13 registers with refresh_policy; operator decides
    archive vs refresh per register.
 4. Z1 archive the openspec change; Z2 run `report_holdings.py` in both repos, expect CENSUS CLEAN.
 

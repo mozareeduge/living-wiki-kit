@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mozare Wiki governance MCP server — capability-scoped vNext surface.
+"""Living Wiki governance MCP server — capability-scoped vNext surface.
 
 Default profile: read (no writes).
 Capture profile: adds noncanonical capture/proposal operations only.

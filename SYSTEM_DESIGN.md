@@ -2,7 +2,7 @@
 id: kit-system-design
 type: system-document
 title: "Living Wiki Kit — Operational System Design"
-system_version: "1.3.0"
+system_version: "1.4.0"
 schema_version: "1.0.0"
 status: operational-release
 created: 2026-09-10
@@ -14,8 +14,9 @@ source_of_truth: true
 
 ## 1. What this kit is
 
-This repository is a **generalized extraction** of the mozare-wiki operational
-system: a private, Git-versioned, Obsidian-readable archive pattern that
+This repository is an **independent, reusable system** (it began as the
+generalization of one operational archive and is now developed on its own):
+a private, Git-versioned, Obsidian-readable archive pattern that
 preserves not only current statements but *how works, concepts, claims, and
 directions changed* — a "living genetic archive."
 
@@ -144,17 +145,18 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_state.py` | kernel state: `rebuild` regenerates `SYSTEM_STATE.json`, the manifest and the accepted-evidence index from source records; `check` fails on drift; `set-axis` changes an authored axis only through `state-transitions.json` | operational |
 | `wiki_evidence.py` | accepted-evidence universe (`ACCEPTED_EVIDENCE_INDEX.jsonl`): registered sources plus durably promoted captures; `check` fails on drift | operational |
 | `wiki_proposals.py` | durable candidate proposals (`_proposals/records/`) and separate immutable adjudications (`_proposals/adjudications/`); lists pending | available (unexercised) |
-| `wiki_profiles.py` | instance profiles: `check` validates the active stack (unknown/retired profiles, weakening keys, slot conflicts), `compose` prints the additive composition; profiles configure attention, never truth | operational |
+| `wiki_profiles.py` | instance profiles: `check` validates the active stack (unknown/retired profiles, weakening keys, slot conflicts) and enforces the rules active profiles tighten (`object-labels`, `relation-type`, `record-visibility`), `compose` prints the additive composition; profiles configure attention and may only make rules stricter | operational |
 | `wiki_release.py` | release controller: a release manifest from a passing release profile and receipts | available (unexercised) |
 | `sync_intake_registers.py` | after `wiki_state.py rebuild`: refreshes holdings counts, the three entry-page markers and (with `--accept-corpus-change`) the content-release corpus pin; dry run by default | operational |
 | `repair_truncated_filenames.py` | restores source-record `filename` values cut at the first space to `basename(original_path)`; dry run by default, lists anything needing a human | operational |
-| `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers; refuses to reseed a populated instance | operational |
+| `instantiate.py` | stamps a new instance from the kit: record-ID prefix, corpus-state id, the three entry markers, optional `--profile` activation (validated before writing); refuses to reseed a populated instance | operational |
+| `release_smoke.py` | fresh-wiki release check (CI job `fresh-wiki`): copies the kit's tracked files to a temp dir, instantiates a wiki, runs both validators, the four kernel gates and the census (`CENSUS CLEAN`), then re-instantiates and requires a byte-identical tree; names the first failing step; never writes in the repo | operational |
 | `report_holdings.py` | read-only 7-section census audit (counts, contradictions, proposals, claims, register staleness, mojibake, verdict); prints `CENSUS CLEAN` or `CENSUS DRIFT`; writes only to `_audits/runtime/` | operational |
 | `retier_holdings.py` | migration tool for adopting the census: dry-run by default, `--apply` only on a clean tree and refuses on manifest/state disagreement | operational |
-| `build_graph_index.py` | deterministic graph index (nodes, edges, resolved aliases) over frontmatter, wikilinks and relation participants into `_search/graph.db` — disposable, rebuildable; object labels indexed raw + normalized in a dedicated non-evidence table | operational |
-| `context_pack.py` | governed context packer (CLI, also served read-only as the MCP tool `wiki_context_pack`): lexical hits plus label matches plus graph neighbourhood into ≤ 30 records / ≤ 16k tokens, each with a selection reason; no model in retrieval | operational |
+| `build_graph_index.py` | deterministic graph index (nodes, edges, resolved aliases) over frontmatter, wikilinks and relation participants into `_search/graph.db` — disposable, rebuildable; object labels and optional relation types (`relation_type`) indexed raw + normalized in dedicated non-evidence tables; participants resolve by record id in any instance prefix | operational |
+| `context_pack.py` | governed context packer (CLI, also served read-only as the MCP tool `wiki_context_pack`): lexical hits plus label matches plus graph neighbourhood into ≤ 30 records / ≤ 16k tokens, each with a selection reason; an optional lens foregrounds labels, relation types and section order without changing membership or authority; active profiles add seed-label reasons and offer their suggested lenses, never applied; no model in retrieval | operational |
 | `candidate_projection.py` | candidate object projection: eligible `object-create` proposals project into disposable `_search/candidate_projections.json` (visible + marked candidate in packs/search); never writes canonical zones; adjudication decides projection fate | operational |
-| `report_labels.py` | read-only label audit over the graph index + projections (distinct counts, variants, namespaces, legacy-kind-derived, unlabeled, candidate usage); attention tool, never repairs | operational |
+| `report_labels.py` | read-only label audit over the graph index + projections (distinct counts, variants, namespaces, legacy-kind-derived, unlabeled, candidate usage, instance alias groups from `LABEL_ALIASES.json`); attention tool, never repairs | operational |
 | `migrate_object_kinds.py` | legacy-`kind` migration toward labels + `legacy_kind`: dry-run default, `--apply` only on a clean tree, never automatic on populated instances | operational |
 | `reconcile_runner.py` | incremental-reconciliation core: `plan --mode full|incremental --class RC-0…RC-4`, class-carrying `run-receipt.json`, exact-once verify, escalation to full on loss/>30% drift and to human above 3 conflicts; called by the reconcile/intake skills | operational |
 | `evidence_audit.py` | candidate-layer audit against `proposal_schema.json`: a proposal whose `source_passage` cannot be verified is reported `rejected-audit`; never edits the queue | operational |
@@ -163,11 +165,12 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_mcp_server.py` | governance MCP (stdio, UTF-8), profile-scoped: `--profile read` (default) = `wiki_read_text`, `wiki_get_record`, `wiki_search` (portable FTS5 floor + optional QMD over the collections in `qmd-collections-v1.1.0.json`), `wiki_resolve_id`, `wiki_get_source`, `wiki_state`, `wiki_context_pack`; `--profile capture` adds the capture tools and `wiki_propose` / `wiki_propose_from_capture` (immutable candidate records in `_proposals/records/`). No profile writes canonical records | operational |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
-| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); baseline 3/30 lexical-only recorded in `mozare-wiki` 2026-09-20 | operational |
+| `run-semantic-benchmark.py` | QMD retrieval benchmark against an expected-path set (deterministic `--no-rerank`); the case set is instance data (`--config`), so a fresh kit has none to run | operational |
 | `run_faithfulness_benchmark.py` | faithfulness evaluation loop: answer from retrieved records, then entailment-check each claim against the sources | available (unexercised) |
 | `file-to-md/to_md.py` | converts pdf/docx/pptx/xlsx/html/epub to clean md with a provenance header — the derivative-extraction step of intake; OCR routing rules in `.claude/skills/wiki-file-to-md/SKILL.md` | operational |
 | `check_research_spans.py` | citation-span audit over an external research quarantine | available (unexercised) |
-| `create-backup.ps1` | Windows helper: zip backup of the repo to `_wiki_backups/` | operational |
+| `create-backup.ps1` | Windows helper: zip backup of the repo to `Documents\Wiki-Backups` outside the repo (`-Destination` to change) | operational |
+| `setup-after-clone.ps1` | Windows one-shot setup after cloning: Python dependencies, both validators and the governance gates; optional QMD search setup (`-SkipQmd`) and Obsidian Git plugin (`-SkipObsidianPlugin`) | available (unexercised) |
 | `configure-search.ps1` / `refresh-search.ps1` / `search-wiki.ps1` / `verify-install.ps1` | Windows helpers: QMD config/refresh, verify-install, search wrapper; every QMD call scoped through `qmd_scope.py` (`configure-search.ps1` exercised end-to-end on an isolated index 2026-10-02; the others not yet) | available (unexercised) |
 | `qmd_scope.py` (+ `qmd_scoped_update.mjs`) | Keeps every QMD operation inside this instance's own collections (names from `qmd-collections-v1.1.0.json`): scoped `update` / `embed`, `-c` flags for queries, and `check-owned` refusing a name another wiki already registered. The QMD index is machine-wide; bare `qmd update` / `qmd embed -f` would touch every wiki on the machine. Pinned by `tests/test_qmd_scope.py`; scoped update and the collision refusal exercised on an isolated index | operational |
 

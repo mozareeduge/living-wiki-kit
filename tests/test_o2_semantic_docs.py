@@ -55,3 +55,28 @@ def test_no_doc_presents_legacy_kinds_as_exhaustive() -> None:
                 ".claude/skills/wiki-write/SKILL.md"):
         text = _read(rel)
         assert "collection, concept, institution" not in text, rel
+
+
+def test_object_page_profiles_section_is_not_an_instance_profile() -> None:
+    """§29: an object page's `## Profiles` section and the instance's
+    configuration profiles are different things; the policy says so."""
+    text = " ".join(SEM.read_text(encoding="utf-8").lower().split())
+    assert "an object page's `## profiles` section" in text
+    assert "not an instance profile" in text
+
+
+def test_profile_tightening_is_described_as_it_exists() -> None:
+    """F18 then D-b: the docs describe tightening exactly as built (a closed
+    set of rules enforced by `wiki_profiles.py check`), never as open-ended."""
+    for rel in ("00-system/policies/SEMANTIC_MODEL.md", "scripts/wiki_profiles.py"):
+        text = _read(rel).lower()
+        assert "may tighten kernel rules" not in text, rel
+        assert "tightening is not implemented" not in text, rel
+        for rule in ("object-labels", "relation-type", "record-visibility"):
+            assert rule in text, (rel, rule)
+
+
+def test_evidence_audit_docstring_names_the_durable_queue() -> None:
+    head = (ROOT / "scripts" / "evidence_audit.py").read_text(encoding="utf-8")[:600]
+    assert "_proposals/records/" in head
+    assert "Reads _proposals/proposals.jsonl," not in head

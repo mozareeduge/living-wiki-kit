@@ -46,20 +46,17 @@ TARGET_GLOBS = [
     ".mcp.json",
 ]
 
-MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-)")
-MOZARE_WORDS = [
-    ("mozare-wiki", "this-wiki"),
-    ("Mozare Wiki", "This Wiki"),
-    ("mozare", "wiki"),
-    ("Mozare", "Wiki"),
-    ("MOZARE", "WIKI"),
-]
+MW_ID = re.compile(r"\bmw-(?=src-|cap-|corpus-|evidence-|patch-|obj-|rel-|claim-)")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True, help='instance name, e.g. "My Wiki"')
     ap.add_argument("--prefix", required=True, help="record-ID prefix, e.g. pmw")
+    ap.add_argument("--profile", action="append", default=None, metavar="ID",
+                    help="activate a practice profile from 00-system/configuration/"
+                         "profiles/ (repeatable; order kept). Omit to stay "
+                         "profile-neutral, or to keep the profiles a rerun already has")
     args = ap.parse_args()
 
     prefix = args.prefix.strip().lower()
@@ -106,6 +103,31 @@ def main() -> int:
                   "refusing to reseed", file=sys.stderr)
             return 2
 
+    # Profiles: every requested id must exist, validate and not be retired;
+    # refused here, before anything is written.
+    profiles = None
+    if args.profile is not None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import wiki_profiles as wp
+        avail = wp.available(ROOT)
+        profiles = []
+        for pid in args.profile:
+            pid = pid.strip()
+            doc = avail.get(pid)
+            if doc is None:
+                print(f"ERROR: unknown profile {pid!r} (available: "
+                      f"{', '.join(sorted(avail)) or 'none'})", file=sys.stderr)
+                return 2
+            record, errs = wp.read_profile(doc, ROOT / "00-system/schemas")
+            if errs or record.get("status") == "retired":
+                print(f"ERROR: profile {pid!r} cannot be activated: "
+                      f"{'; '.join(errs) or 'retired'}", file=sys.stderr)
+                return 2
+            if pid not in profiles:
+                profiles.append(pid)
+    elif instance_path.exists():
+        profiles = list(existing.get("active_profiles") or [])
+
     corpus_old = "wiki-corpus-empty"
     corpus_new = f"{prefix}-corpus-empty"
     entry_pages = ("HOME.md", "README.md", "SYSTEM_DESIGN.md", "CLAUDE.md")
@@ -125,8 +147,6 @@ def main() -> int:
                 continue
             text = path.read_text(encoding="utf-8")
             new = MW_ID.sub(f"{prefix}-", text)
-            for old, repl in MOZARE_WORDS:
-                new = new.replace(old, repl)
             if path.name in entry_pages:
                 new = new.replace(
                     f"Current corpus snapshot: `{corpus_old}`",
@@ -168,10 +188,10 @@ def main() -> int:
         "id": f"{prefix}-instance",
         "name": args.name,
         "record_prefix": prefix,
-        "created_from": "living-wiki-kit 1.3.0",
+        "created_from": "living-wiki-kit 1.4.0",
         "instantiated": date.today().isoformat(),
         "authority_hierarchy_version": "1.0.0",
-        "active_profiles": [],
+        "active_profiles": profiles or [],
     }
     out = ROOT / "00-system/registers/INSTANCE.json"
     out.write_text(json.dumps(instance, indent=2) + "\n", encoding="utf-8")
@@ -197,7 +217,9 @@ def main() -> int:
     print("  1. Review: git diff")
     print("  2. Edit HOME.md and README.md for your subject")
     print("  3. python scripts/validate_repo.py --full")
-    print("  4. git add -A && git commit -m 'bootstrap: instantiate'")
+    print("  4. git status --short   (review: kit files + what instantiate wrote)")
+    print("  5. git add -- . && git commit -m 'bootstrap: instantiate'")
+    print("     (first commit only; later changes stage named paths)")
     return 0
 
 

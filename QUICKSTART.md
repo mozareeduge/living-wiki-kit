@@ -9,9 +9,10 @@ in `INSTANTIATE.md` (instances), `SETUP_GUIDE_WINDOWS.md` (Windows), and
 ```bash
 cp -r living-wiki-kit/ my-wiki/ && cd my-wiki/
 rm -rf .git && git init && git config core.hooksPath .githooks
-python scripts/instantiate.py --name "My Wiki" --prefix pmw
+python scripts/instantiate.py --name "My Wiki" --prefix pmw   # optional: --profile practice-research
 python scripts/validate_repo.py --full   # must PASS
-git add -A && git commit -m "bootstrap: instantiate My Wiki"
+git status --short                      # review: kit files + what instantiate wrote, nothing else
+git add -- . && git commit -m "bootstrap: instantiate My Wiki"
 ```
 
 ## 2. Run the governance gates

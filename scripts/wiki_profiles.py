@@ -3,9 +3,11 @@
 
 A profile suggests vocabulary, relation language, lenses and outputs for a
 practice/domain/collaboration/compliance context. Profiles compose
-additively, may tighten kernel rules, and can NEVER weaken them: the schema
-accepts advisory keys only, so there is no key through which a profile could
-disable validation, authority, or evidence rules.
+additively and can NEVER weaken kernel rules: the schema accepts advisory
+keys only, so there is no key through which a profile could disable
+validation, authority, or evidence rules. A profile may make rules stricter
+through `tighten` (a closed set: object-labels, relation-type,
+record-visibility); `check` enforces the union of the active profiles' rules.
 
 Active set: `active_profiles` in 00-system/registers/INSTANCE.json
 (absent file or key means []; the empty kit stays profile-neutral).
@@ -27,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gov_kernel.schemas import validate_record  # noqa: E402
+import build_graph_index as bgi  # noqa: E402  (frontmatter + label parsing)
 
 PROFILES_DIRNAME = Path("00-system/configuration/profiles")
 SCHEMAS_DIRNAME = Path("00-system/schemas")
@@ -129,17 +132,14 @@ def read_profile(doc: Path, schema_dir: Path) -> tuple[dict, list[str]]:
     return record, errs
 
 
-def compose(root: Path) -> tuple[dict, list[str]]:
-    """Compose active profiles. Returns (composed, findings); findings
-    non-empty means: unknown/retired/invalid profile, a weakening attempt
-    (unknown control key), or an un-overridden slot conflict."""
+def active_records(root: Path) -> tuple[list[tuple[str, dict]], list[str]]:
+    """Valid active profiles in activation order, plus findings for the
+    ones skipped (unknown, invalid, retired)."""
     schema_dir = root / SCHEMAS_DIRNAME
     avail = available(root)
-    active = load_active_ids(root)
-    overrides = load_overrides(root)
     findings: list[str] = []
     records: list[tuple[str, dict]] = []
-    for pid in active:
+    for pid in load_active_ids(root):
         doc = avail.get(pid)
         if doc is None:
             findings.append(f"unknown profile: {pid!r}")
@@ -152,7 +152,15 @@ def compose(root: Path) -> tuple[dict, list[str]]:
             findings.append(f"{pid}: retired profile cannot be activated")
             continue
         records.append((pid, record))
+    return records, findings
 
+
+def compose(root: Path) -> tuple[dict, list[str]]:
+    """Compose active profiles. Returns (composed, findings); findings
+    non-empty means: unknown/retired/invalid profile, a weakening attempt
+    (unknown control key), or an un-overridden slot conflict."""
+    overrides = load_overrides(root)
+    records, findings = active_records(root)
     composed: dict = {"active_profiles": [pid for pid, _ in records]}
     for key in LIST_KEYS:
         seen: list[str] = []
@@ -161,6 +169,11 @@ def compose(root: Path) -> tuple[dict, list[str]]:
                 if item not in seen:
                     seen.append(item)
         composed[key] = seen
+    tighten: dict[str, list[str]] = {}
+    for pid, rec in records:
+        for rule in rec.get("tighten") or []:
+            tighten.setdefault(rule, []).append(pid)
+    composed["tighten"] = {r: tighten[r] for r in TIGHTEN_RULES if r in tighten}
     for key in SINGLE_KEYS:
         claimants = [(pid, rec[key]) for pid, rec in records if rec.get(key)]
         if not claimants:
@@ -177,8 +190,49 @@ def compose(root: Path) -> tuple[dict, list[str]]:
     return composed, findings
 
 
+TIGHTEN_RULES = ("object-labels", "relation-type", "record-visibility")
+_TIGHTEN_ZONES = ("02-sources/records", "03-objects", "04-notes", "05-claims", "06-relations")
+
+
+def tightening_findings(root: Path) -> list[str]:
+    """Records breaking a rule that an active profile tightened. One line per
+    (record, rule), naming the profile(s). Only adds requirements."""
+    composed, _ = compose(root)
+    rules = composed.get("tighten") or {}
+    if not rules:
+        return []
+    out: list[str] = []
+    for zone in _TIGHTEN_ZONES:
+        zdir = root / zone
+        if not zdir.is_dir():
+            continue
+        for md in sorted(zdir.rglob("*.md")):
+            text = md.read_text(encoding="utf-8", errors="ignore")
+            fm = bgi.parse_frontmatter(text)
+            if not str(fm.get("id", "")).strip():
+                continue
+            rel = md.relative_to(root).as_posix()
+            rtype = str(fm.get("type", "")).strip()
+            missing = {
+                "object-labels": rtype == "object" and not bgi.parse_labels(text),
+                "relation-type": rtype == "relation-object"
+                and not bgi.parse_relation_types(str(fm.get("relation_type", ""))),
+                "record-visibility": not str(fm.get("visibility", "")).strip(),
+            }
+            what = {"object-labels": "object has no labels",
+                    "relation-type": "relation has no relation_type",
+                    "record-visibility": "record has no visibility"}
+            for rule in TIGHTEN_RULES:
+                if rule in rules and missing[rule]:
+                    out.append(f"{rel}: {what[rule]} (tighten {rule}, "
+                               f"profile {', '.join(rules[rule])})")
+    return out
+
+
 def cmd_check(root: Path) -> int:
     composed, findings = compose(root)
+    if not findings:
+        findings = tightening_findings(root)
     if findings:
         print("profile check FAILED:")
         for f in findings:

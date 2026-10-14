@@ -2,7 +2,7 @@
 
 ## Why
 
-The ref-wiki instance suffered a governance incident on 2026-09-16. Its
+The other-wiki instance suffered a governance incident on 2026-09-16. Its
 entry documents (README.md, HOME.md, SYSTEM_DESIGN.md §1, CLAUDE.md, and the
 wiki-reconcile skill) still described the 2026-09-10 seed state—11 sources,
 intake paused, Horizon C open—six days after the corpus had reached 103
@@ -25,13 +25,13 @@ The incident exposed five kit-level causes:
    new instance.
 4. **A shipped template contradicts its validator.**
    TEMPLATE_source-record.md omits the required `filename` field. This caused
-   a debugging round in zarinpal-product-wiki on 2026-09-14.
+   a debugging round in another-local-wiki on 2026-09-14.
 5. **The intake workflow does not carry the refresh duty.** It updates the
    manifest and corpus state without requiring the entry markers to change in
    the same bounded intake.
 
-The validator design was exercised in ref-wiki PRs #3–#7, including an
-end-to-end hook rejection, and merged at ref-wiki main db27adf. This change
+The validator design was exercised in other-wiki PRs #3–#7, including an
+end-to-end hook rejection, and merged at other-wiki main db27adf. This change
 ports that evidence into the kit while tightening the weak edges found in
 review: all four state-bearing entry documents are covered; markers are
 labelled rather than accepted as arbitrary numerals; every layer-count

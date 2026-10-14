@@ -5,8 +5,9 @@ Git-versioned, Obsidian-readable wikis that preserve sources immutably and
 record how works, concepts, claims, and relations change over time, under a
 strict evidence-authority governance model.
 
-Extracted and generalized from the operational mozare-wiki system (v1.2.1),
-so new wikis can be instantiated in minutes with the same guarantees.
+An independent project: the kit is developed and released on its own, and
+every wiki made from it is a separate repository that the kit never reaches
+into. New wikis can be instantiated in minutes with the same guarantees.
 
 ## Start here
 
@@ -35,15 +36,14 @@ registers.
 
 ## Kit version
 
-`1.3.0` — governance kernel + adaptive semantics. The kernel port (fail-closed
-`wiki_validate` gate, `SYSTEM_STATE.json`, accepted-evidence index, durable
-proposal/adjudication records, intake sync, profile-scoped MCP server) and the
-adaptive semantic layer (open objects with labels instead of a closed kind
-enum, composable profiles, persona lenses, candidate projections visible by
-default) land in the kit. Proposals validate at the door against a 17-kind
-vocabulary with mandatory evidence passages; reconciliation runs staged
-(RC-0…RC-4) with class-carrying receipts. See `CHANGELOG.md` for the full
-release history.
+`1.4.0` — perspectives complete, an independent kit. Lenses highlight
+relationships (optional `relation_type`) and set section order; active
+profiles explain why records surface and offer their lenses; six practices
+(one in Persian) run on the unchanged kernel; profiles can make rules
+stricter from a closed set; label aliases help search meet your vocabulary;
+`instantiate.py --profile` chooses profiles at setup; every change is
+checked by creating a fresh wiki in CI. Built on `1.3.0` (governance kernel
++ adaptive semantics). See `CHANGELOG.md` for the full release history.
 
 ## The authority rule
 
@@ -60,6 +60,6 @@ python scripts/validate_content_release.py   # once the wiki layer is populated
 
 ## License / reuse
 
-Personal research instrument of Mohammad Zare, extracted for reuse. If you
+A reusable research instrument. If you
 instantiate a wiki from this kit, keep the governance invariants
 (`SYSTEM_DESIGN.md` §5) intact — they are the system.

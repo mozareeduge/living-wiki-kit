@@ -1,7 +1,7 @@
 # Plans.md — living-wiki-kit
 
-> **Project**: living-wiki-kit (kit 1.2.0 → 1.3.0)
-> **Last updated**: 2026-09-25 (hand-off: `07-genesis/handoffs/HANDOFF--2026-09-25--k1-kernel-port.md`)
+> **Project**: living-wiki-kit (kit 1.3.0 → 1.4.0)
+> **Last updated**: 2026-10-13 (hand-off: `07-genesis/handoffs/HANDOFF--2026-10-13--independence-and-1-3-x.md`)
 > **Spec (1.3.0)**: `../living-wiki-kit next-phase spec DRAFT.md` (phases 0–5) and
 > `../workbench-ui-spec.md` (G-series) — verified against the repos 2026-09-20;
 > current-state evidence in `07-genesis/handoffs/HANDOFF--2026-09-20--kit-rollout-state.md`.
@@ -13,13 +13,28 @@
 
 ---
 
+## Decision 2026-10-13 — the kit is an independent project
+
+The owner decided that living-wiki-kit is independent from the archive it
+was extracted from. Consequences, binding from now on:
+
+- The kit's ladder holds only work that finishes **in this repository**.
+  Rungs that ran in, or wait on, a particular instance (M1, H1, H2, H3, U2,
+  the instance halves of F9/F10, owner decision D-e) belong to that
+  instance's own plan. They stay below as history with status
+  `moved-to-instance`.
+- No shipped file names another project; history (handoffs, audits,
+  archived specs, this file, CHANGELOG) may. Pinned by
+  `tests/test_kit_independence.py`.
+- "Keep byte-identical with the instance copy" no longer constrains kit code.
+
 ## North Star
 
 **No unchecked number, no undeclared document, no stale register presented as
 current.**
 
 The archive already refuses to let a source be altered. It does not yet refuse
-to let a *count* be wrong. `mozare-wiki` holds 544 artifacts, registers 97, and
+to let a *count* be wrong. `source-instance` holds 544 artifacts, registers 97, and
 447 source records claim `status: registered` while absent from the register
 that every document calls live truth — and `validate_repo.py --full` prints
 `PASS`. This ladder closes that, and stops the 1.1.0 entry-page gate from
@@ -49,7 +64,7 @@ Measured 2026-09-17. Full evidence in `proposal.md`.
 
 ## Ladder 1.2.0 — census truth (closed)
 
-B4 and C3 were operator-gated and ran in `mozare-wiki` (instance commits
+B4 and C3 were operator-gated and ran in `source-instance` (instance commits
 `13a0175` B4, `140a043` C3, `6102114` Z2; census merged as `e892fae`;
 Z2 CENSUS CLEAN 97/447/544 recorded in
 `07-genesis/handoffs/HANDOFF--2026-09-20--kit-rollout-state.md`). Their rows below are
@@ -65,12 +80,12 @@ updated to match; they were not re-run from this repo.
 | B1 | `[lane:gate] [tdd:required] [size:S]` `check_entry_pages` learns the exact marker `Artifacts held: <held_artifact_count>`; skipped when the key is absent | (a) RED pasted, one named failure per entry page, (b) `N/N passed`, (c) test proves the error quotes the value observed in **raw** page text, (d) local PASS only after B2 — state that, do not work around it | A4 | cc:done |
 | B2 | `[lane:gate] [size:M]` Add `Artifacts held: 0` to the four entry pages; `instantiate.py` seeds all three markers; `INSTANTIATE.md` §3.5 documents the third | (a) `grep -c` prints 1 on each of the four pages, (b) suite `N/N passed` incl. extended instantiator smoke, (c) `validate_repo.py --full` PASS, (d) idempotent rerun still byte-identical | B1 | cc:done |
 | B3 | `[lane:doc] [size:S]` Kit 1.2.0: bump SYSTEM_DESIGN `system_version`, `content-release.json`, `instantiate.py` `created_from`, CLAUDE.md bullet, README note — atomically; no `schema_version` touched | (a) no stray `1.1.0` outside `schema_version`/openspec, (b) both validators PASS, (c) baseline `OK: validators clean.`, (d) PR + CI green + local main SHA == remote main SHA (both pasted) | B2 | cc:done |
-| B4 | `[lane:instance] [size:M]` **operator-gated** Adopt in `mozare-wiki`: copy shipped validator + retier tool + policy, dry-run (expect 447), operator tier decision, `--apply`, set `544`, rewrite the four pages to the three labelled markers, delete `Source artifacts: 94`, handoff | (a) `validate_repo.py --full` PASS with gate active, (b) `grep -l "^status: registered" \| wc -l` == `97`, (c) state prints `97 544 544`, (d) all three markers on four pages, no `Source artifacts: 94` anywhere, (e) diff of `_originals/` + manifest empty, (f) handoff exists | B3 | cc:done (in `mozare-wiki`) |
-| C1 | `[lane:gate] [tdd:required] [size:S]` Mojibake guard extended from manifest rows to `aliases`/`original_path`/`filename`/`title` of every source record | (a) RED pasted, one named failure per offending field, (b) `N/N passed`, (c) kit PASS, (d) review note states the exact hit count in a throwaway `mozare-wiki` clone, clone deleted | A1 | cc:done |
+| B4 | `[lane:instance] [size:M]` **operator-gated** Adopt in `source-instance`: copy shipped validator + retier tool + policy, dry-run (expect 447), operator tier decision, `--apply`, set `544`, rewrite the four pages to the three labelled markers, delete `Source artifacts: 94`, handoff | (a) `validate_repo.py --full` PASS with gate active, (b) `grep -l "^status: registered" \| wc -l` == `97`, (c) state prints `97 544 544`, (d) all three markers on four pages, no `Source artifacts: 94` anywhere, (e) diff of `_originals/` + manifest empty, (f) handoff exists | B3 | cc:done (in `source-instance`) |
+| C1 | `[lane:gate] [tdd:required] [size:S]` Mojibake guard extended from manifest rows to `aliases`/`original_path`/`filename`/`title` of every source record | (a) RED pasted, one named failure per offending field, (b) `N/N passed`, (c) kit PASS, (d) review note states the exact hit count in a throwaway `source-instance` clone, clone deleted | A1 | cc:done |
 | C2 | `[lane:gate] [tdd:required] [size:M]` `check_register_policies`: every `00-system/registers/*.md` declares `refresh_policy` ∈ {per-intake, per-release, static} + ISO `updated`; per-intake fails when older than `CORPUS_STATE.updated`; `archive/` exempt; string comparison only | (a) RED pasted, ≥6 named failures (one per rule), (b) `N/N passed`, (c) subprocess test: stale per-intake → nonzero, both dates quoted, (d) kit PASS, (e) test-wiring-auditor verdict pasted | A1 | cc:done |
-| C3 | `[lane:instance] [size:M]` **operator-gated** Apply in `mozare-wiki`: table of 13 registers (current `updated`, proposed policy, tag/refresh/archive), stop for the decision, then tag / refresh / move to `registers/archive/` with a one-line reason each | (a) `grep -L refresh_policy` returns nothing, (b) `validate_repo.py --full` PASS, (c) every archived register has a first-line reason and is in the handoff, (d) a `tag`-only register's diff is exactly one added line | C2, B4 | cc:done (in `mozare-wiki`) |
+| C3 | `[lane:instance] [size:M]` **operator-gated** Apply in `source-instance`: table of 13 registers (current `updated`, proposed policy, tag/refresh/archive), stop for the decision, then tag / refresh / move to `registers/archive/` with a one-line reason each | (a) `grep -L refresh_policy` returns nothing, (b) `validate_repo.py --full` PASS, (c) every archived register has a first-line reason and is in the handoff, (d) a `tag`-only register's diff is exactly one added line | C2, B4 | cc:done (in `source-instance`) |
 | D1 | `[lane:doc] [size:S]` Tier the SYSTEM_DESIGN §6 script table: every row `operational` or `available (unexercised)`; reword README/§1 bullets that oversell the export layer; add a test that fails on an untagged row | (a) suite `N/N passed` incl. table-completeness test, (b) negative check pasted (deleting a status cell fails by name), (c) kit PASS, (d) exactly five `available (unexercised)` rows | A1 | cc:done |
-| E1 | `[lane:gate] [size:M]` `scripts/report_holdings.py`: read-only 7-section audit (counts, contradictions, proposals by status, claims by permission, register staleness, mojibake, verdict), writes only to `_audits/runtime/` | (a) empty kit prints 7 sections + `CENSUS CLEAN`, exit 0, (b) `git status --porcelain` byte-identical before/after, (c) `--json` parses, prints `0 0`, (d) throwaway `mozare-wiki` clone reproduces `97`/`544`/`32` proposals (`20` new)/`24` claims (`1` blocked), clone deleted, (e) suite `N/N passed` | A4 | cc:done |
+| E1 | `[lane:gate] [size:M]` `scripts/report_holdings.py`: read-only 7-section audit (counts, contradictions, proposals by status, claims by permission, register staleness, mojibake, verdict), writes only to `_audits/runtime/` | (a) empty kit prints 7 sections + `CENSUS CLEAN`, exit 0, (b) `git status --porcelain` byte-identical before/after, (c) `--json` parses, prints `0 0`, (d) throwaway `source-instance` clone reproduces `97`/`544`/`32` proposals (`20` new)/`24` claims (`1` blocked), clone deleted, (e) suite `N/N passed` | A4 | cc:done |
 | Z1 | `[lane:doc] [size:S]` Archive the change: fold `specs/holdings-census/spec.md` into `openspec/specs/`, move to `openspec/changes/archive/2026-09-XX-corpus-census-truth/`, check every box | (a) change dir gone, (b) standing spec exists, (c) no unchecked `- [ ]` remains, (d) PASS | all above cc:done | cc:done |
 | Z2 | `[lane:doc] [size:S]` Horizon check: `report_holdings.py` in both repos must print `CENSUS CLEAN`; handoff in each recording the output | (a) both print `CENSUS CLEAN`, (b) two handoffs exist, (c) on `CENSUS DRIFT` the ladder is **not** finished — open follow-up rows instead of declaring completion | Z1 | cc:done |
 
@@ -89,7 +104,7 @@ tagged `[lane:operator]` are never executed by an agent.
 | S1 | `[lane:doc] [size:S]` Doc truth: SYSTEM_DESIGN §6 lists every `scripts/*.py` with a tier (`operational` / `available (unexercised)`) and drops the stale "not yet wired" clause; move `_captures/HANDOFF--2026-09-20--kit-rollout-state.md` to `07-genesis/handoffs/` with frontmatter | (a) kit `validate_repo.py --full` PASS with no no-frontmatter warning for the handoff, (b) a new test fails by name when a `scripts/*.py` file is absent from §6, (c) suite `N/N passed` | — | cc:done |
 | S2 | `[lane:gate] [size:S]` CI runs the whole test suite (`pytest tests`), not only the mutation file | (a) `validate.yml` diff shows the step, (b) local `pytest tests -q` count equals the count CI logs, (c) CI green on the PR | — | cc:done |
 | S3 | `[lane:gate] [tdd:required] [size:M]` Tests for `schema_drift_fixer.py` (path-derivable fix applied, bracket-path guard, semantic fields refused) and a smoke test for `run_faithfulness_benchmark.py` | (a) RED pasted, named failures, (b) GREEN `N/N passed`, (c) kit PASS | — | cc:done |
-| K1a | `[lane:gate] [tdd:required] [size:M]` Port the Governance Kernel core from `mozare-wiki` (v1.2.1 H21 as repaired in mozare-wiki PR #15): `scripts/gov_kernel/`, `wiki_validate/state/evidence/proposals/release.py`, `retrieval/`, `sync_intake_registers.py`, `repair_truncated_filenames.py`, fail-closed `check_against_baseline.py`, 7 schemas, 5 configs, `SYSTEM_STATE.json`; `instantiate.py` renames kernel files and runs `wiki_state.py rebuild` | (a) RED: fresh instance failed `wiki_state.py check`; GREEN in `test_instantiate_seeds_gate_clean_empty_instance`, (b) `wiki_validate` / `wiki_state check` / `wiki_evidence check` exit 0, (c) fresh Windows clone `wiki_state check` exit 0 (LF pinned) | S3 | cc:done (e651c11, 18423f3) |
+| K1a | `[lane:gate] [tdd:required] [size:M]` Port the Governance Kernel core from `source-instance` (v1.2.1 H21 as repaired in source-instance PR #15): `scripts/gov_kernel/`, `wiki_validate/state/evidence/proposals/release.py`, `retrieval/`, `sync_intake_registers.py`, `repair_truncated_filenames.py`, fail-closed `check_against_baseline.py`, 7 schemas, 5 configs, `SYSTEM_STATE.json`; `instantiate.py` renames kernel files and runs `wiki_state.py rebuild` | (a) RED: fresh instance failed `wiki_state.py check`; GREEN in `test_instantiate_seeds_gate_clean_empty_instance`, (b) `wiki_validate` / `wiki_state check` / `wiki_evidence check` exit 0, (c) fresh Windows clone `wiki_state check` exit 0 (LF pinned) | S3 | cc:done (e651c11, 18423f3) |
 | K1b | `[lane:gate] [tdd:required] [size:M]` Kernel MCP server in the kit: `--profile read` default / `capture`; durable proposal records; UTF-8 stdio; `wiki_context_pack`; QMD collection names read from `qmd-collections-v1.1.0.json` (now shipped, generic `wiki-*`); `.mcp.json` registers it | (a) RED 5 failed / GREEN 5 passed `tests/test_mcp_kernel_server.py`, (b) `pytest tests scripts/tests` 213 passed, 2 xfailed, (c) `validate_repo --full` PASS | K1a | cc:done (b5272cb) |
 | K1c | `[lane:gate] [size:S]` Capture tests + fixtures into the kit (`scripts/capture/tests/`, `scripts/capture/fixtures/` incl. deterministic-base `make_fixtures.py`, temp-root MCP tests), and CI runs the kernel gates and every test dir | (a) `validate.yml` runs `wiki_validate.py --format json`, `wiki_state.py --repo . check`, `wiki_evidence.py --repo . check`, `pytest tests scripts/tests scripts/capture/tests`, (b) test run leaves `git status --porcelain` empty, (c) CI green on the exact head | K1b | cc:done (b124d4f: 252 passed, 1 skipped, 2 xfailed; CI billing-blocked, reproduced locally) |
 | K1d | `[lane:doc] [size:S]` Docs + agents for the kernel: rewrite `wiki-intake` SKILL.md to the mechanical path (rebuild → sync → gates, held-item registration), add `.claude/agents/corpus-reader.md` + `evidence-auditor.md`, role contract (OWNER / RESEARCH_SYNTHESIS_AGENT / REPOSITORY_OPERATOR / INDEPENDENT_REVIEWER / RETRIEVAL_CLIENT / CAPTURE_CLIENT) and governance gates in `AGENTS.md` + `CLAUDE.md`; replace every stale `proposals.jsonl` / `wiki_exact` / `wiki_read` description (`AGENTS.md`, `LIFECYCLE.md`, `SETUP_GUIDE_WINDOWS.md`, `SYSTEM_DESIGN.md` §4) | (a) `grep -rn "proposals.jsonl\|wiki_exact" *.md` hits only history/legacy notes, (b) kit PASS + suite green, (c) instantiated copy still passes both gates | K1c | cc:done (a9e256b) |
@@ -106,22 +121,22 @@ tagged `[lane:operator]` are never executed by an agent.
 | O8 | `[lane:gate] [tdd:required] [size:M]` End-to-end semantic acceptance (dossier §69): fixture intake → kindless labeled object proposal → retrieval → relation + claim → two profiles → two lenses → foregrounding differs, no canonical mutation off the promotion path | (a) RED then GREEN, (b) validators + state + evidence green, suite green, diff limited to fixtures/output | O6, O7 | cc:done (O8 test green; final proof below) |
 | W3 | `[lane:gate] [size:M]` Staged reconciliation: every reconcile/intake run first declares a class RC-0…RC-4 (RC-0 mechanism, RC-1 candidate intake: gates only; RC-2 correction on accepted evidence: graph-impact scan; RC-3 new accepted evidence / RC-4 ontology change: `reconcile_runner.py` plan → 8–12-item batches to `corpus-reader` → exact-once verify); `wiki-reconcile` / `wiki-intake` take `--mode incremental\|full`; full mode unchanged; each run writes a receipt with its class (`RECONCILIATION_RECEIPT` schema from the H21 package) | (a) skill text diff, (b) fixture: one new source reconciled in batches without reading every row at once, resumable across sessions, (c) escalation to full on loss or > 30% drift, (d) kit PASS | O8 | cc:done (467d764; 321 passed) |
 | W4 | `[lane:gate] [tdd:required] [size:M]` Phase 3 acceptance test: 50 speculative proposals in (durable records) → each is audited or `rejected-audit`; zero canonical file changes; zero accepted without a separate adjudication record | (a) RED pasted, (b) GREEN, (c) `git status --porcelain` empty outside `_proposals/` | W1 | cc:done (2fbe138; 30 audited + 20 rejected-audit, zero canonical change) |
-| M1 | `[lane:instance] [size:S]` Finish QMD embeddings in `mozare-wiki` (282 documents pending, measured 2026-09-23) | `qmd status` prints `Pending: 0` | — | cc:done (2026-10-02: `qmd embed` → `Embedded 1886 chunks from 271 documents`; `qmd status` has no Pending line, 37,487 vectors. Final 30-case re-run committed `_audits/2026-10-02--semantic-benchmark-final/`: **12/30**, recall@5 0.2949, the same 12 cases as 10-01, so embeddings were not the bottleneck. See F10) |
+| M1 | `[lane:instance] [size:S]` Finish QMD embeddings in `source-instance` (282 documents pending, measured 2026-09-23) | `qmd status` prints `Pending: 0` | — | moved-to-instance (2026-10-02: `qmd embed` → `Embedded 1886 chunks from 271 documents`; `qmd status` has no Pending line, 37,487 vectors. Final 30-case re-run committed `_audits/2026-10-02--semantic-benchmark-final/`: **12/30**, recall@5 0.2949, the same 12 cases as 10-01, so embeddings were not the bottleneck. See F10) |
 | M2 | `[lane:gate] [size:M]` Benchmark metrics: neighborhood recall@K, human rejection rate, evidence-trace completeness added to `run-semantic-benchmark.py`; rerun the 30-case set | (a) metrics in JSON output, (b) score committed under `_audits/`, compared with the 3/30 lexical baseline, (c) suite `N/N passed` | M1, W2 | cc:done (b5a58f6 + 6d2dca1: (a) three metrics in JSON **and** markdown, (b) real 30-case run = **12/30** vs **3/30** baseline — 4x; recall@5 0.3067, rejection 0.8667, trace-complete 0.4; threshold 27 unchanged so the verdict is an honest **FAIL**; score committed `_audits/2026-10-01--semantic-benchmark/`; (c) 46 passed 2 xfailed. Two defects found on the way: a Windows cp1252 decode crash in the runner (real blocker, fixed 6d2dca1) and `human_rejection_rate` being a restatement of recall (docstring corrected). **M1 still owed a final re-run** once embeddings reach `Pending: 0`) |
-| H1 | `[lane:operator] [size:L]` Adjudicate the proposal queue from `_audits/evidence-audit-20260919-234541.json` (incl. `prop-20260906-154145-567` refile decision) | recorded human decisions in `mozare-wiki` | W1 | cc:todo |
-| H2 | `[lane:operator] [size:L]` Resolve the 306 residual schema errors (baseline after 2026-09-23) in `mozare-wiki` (semantic fields), then re-derive with `schema_drift_fixer.py --errors <file>` | validator error count strictly decreases; baseline re-registered in the same commit | — | cc:todo |
-| H3 | `[lane:operator] [size:S]` Enable "Black Bird Field" in Obsidian (Settings → Community plugins) and confirm the four modes; decide plugin home (kit `tools/` vs external, version-pinned) | operator confirmation recorded | — | cc:done exc. live-toggle (2026-10-01: plugin **is** installed at `mozare-wiki/.obsidian/plugins/black-bird-field/` and registered in `community-plugins.json`; all four modes confirmed present in the installed `main.js` v2.0.0 — Field/Reader/Route/Index. Plugin home **decided: external + version-pinned** (installed v2.0.0 vs external source v1.0.0 drift recorded); `.obsidian/plugins/` is gitignored so nothing is version-tracked, which is why the pin must live outside the vault. Remaining: the human in-Obsidian ribbon/toggle confirmation, which cannot be done headlessly) |
+| H1 | `[lane:operator] [size:L]` Adjudicate the proposal queue from `_audits/evidence-audit-20260919-234541.json` (incl. `prop-20260906-154145-567` refile decision) | recorded human decisions in `source-instance` | W1 | moved-to-instance |
+| H2 | `[lane:operator] [size:L]` Resolve the 306 residual schema errors (baseline after 2026-09-23) in `source-instance` (semantic fields), then re-derive with `schema_drift_fixer.py --errors <file>` | validator error count strictly decreases; baseline re-registered in the same commit | — | moved-to-instance |
+| H3 | `[lane:operator] [size:S]` Enable "the field plugin" in Obsidian (Settings → Community plugins) and confirm the four modes; decide plugin home (kit `tools/` vs external, version-pinned) | operator confirmation recorded | — | moved-to-instance (2026-10-01: plugin **is** installed at `<instance>/.obsidian/plugins/<field-plugin>/` and registered in `community-plugins.json`; all four modes confirmed present in the installed `main.js` v2.0.0 — Field/Reader/Route/Index. Plugin home **decided: external + version-pinned** (installed v2.0.0 vs external source v1.0.0 drift recorded); `.obsidian/plugins/` is gitignored so nothing is version-tracked, which is why the pin must live outside the vault. Remaining: the human in-Obsidian ribbon/toggle confirmation, which cannot be done headlessly) |
 | U1 | `[lane:gate] [size:L]` Capture breadth: URL, photo, file (SingleFile adapter) → identical governed capture receipts | (a) one receipt per modality, (b) capture tests green, (c) kit PASS | H3, W1 | cc:done (82cc968: (a) `TestReceiptEquivalence` asserts the three modalities return the same receipt keys, (b) `scripts/capture/tests` 73 passed 2 skipped incl. mutation-checked `TestSchemaParity`, (c) `wiki_validate` / `wiki_state check` / `check_against_baseline` all exit 0. Two defects fixed first: canonical capture schema had not gained `url` (silent drift), and the CLI tests wrote captures into `01-inbox/` (K1c invariant); both pinned by tests now) |
-| U2 | `[lane:instance] [size:L]` G-series workbench UI cards (G-01…G-07 per `workbench-ui-spec.md`) | per-card evidence in the spec | H3; P08-02 lane free | blocked |
-| R1 | `[lane:doc] [size:S]` Kit 1.3.0: bump SYSTEM_DESIGN `system_version`, `content-release.json`, `instantiate.py` `created_from`, CLAUDE.md, README — atomically; add `CHANGELOG.md` and `QUICKSTART.md` | (a) no stray `1.2.0` outside `schema_version`/openspec/archive, (b) both validators PASS, (c) PR + CI green, (d) local main SHA == remote main SHA | S1, S2, S3, W1–W4 | cc:done exc. (c)(d) (b91901e: declarations at 1.3.0 + CHANGELOG + QUICKSTART, suite + validators green; PR #7 pushed; **(c) CI has never run — the account-level Actions block means no job is ever scheduled, see `HANDOFF--2026-10-01--ci-billing-block.md`; "CI green" in earlier notes was wrong; (d) merge waits on owner**) |
-| R2 | `[lane:gate] [size:M]` Release gate: fresh-clone `instantiate.py --name smoke --prefix sm` in a temp dir passes both validators; `report_holdings.py` prints `CENSUS CLEAN` in kit and `mozare-wiki`; handoff in `07-genesis/handoffs/` | (a) instantiate transcript, (b) both CENSUS CLEAN lines, (c) handoff exists | R1 | cc:done exc. merge (R2 handoff filed; fresh-clone smoke PASS + CENSUS CLEAN kit and mozare-wiki@8e71ee3; merge waits on owner) |
+| U2 | `[lane:instance] [size:L]` G-series workbench UI cards (G-01…G-07 per `workbench-ui-spec.md`) | per-card evidence in the spec | H3; P08-02 lane free | moved-to-instance |
+| R1 | `[lane:doc] [size:S]` Kit 1.3.0: bump SYSTEM_DESIGN `system_version`, `content-release.json`, `instantiate.py` `created_from`, CLAUDE.md, README — atomically; add `CHANGELOG.md` and `QUICKSTART.md` | (a) no stray `1.2.0` outside `schema_version`/openspec/archive, (b) both validators PASS, (c) PR + CI green, (d) local main SHA == remote main SHA | S1, S2, S3, W1–W4 | cc:done (2026-10-03: PR #7 merged as `e492df9`, CI run #69 green on `main`; earlier: b91901e: declarations at 1.3.0 + CHANGELOG + QUICKSTART, suite + validators green; PR #7 pushed; **(c) CI has never run — the account-level Actions block means no job is ever scheduled, see `HANDOFF--2026-10-01--ci-billing-block.md`; "CI green" in earlier notes was wrong; (d) merge waits on owner**) |
+| R2 | `[lane:gate] [size:M]` Release gate: fresh-clone `instantiate.py --name smoke --prefix sm` in a temp dir passes both validators; `report_holdings.py` prints `CENSUS CLEAN` in kit and `source-instance`; handoff in `07-genesis/handoffs/` | (a) instantiate transcript, (b) both CENSUS CLEAN lines, (c) handoff exists | R1 | cc:done (merged with PR #7, `e492df9`; R2 handoff filed; fresh-clone smoke PASS + CENSUS CLEAN kit and source-instance@8e71ee3; merge waits on owner) |
 
 ### Routing under MAWS (model policy: Sonnet 5 everywhere)
 
 One model policy for the whole 1.3.0 ladder: **every executor, subagent and
 reviewer runs Sonnet 5** (`model: "sonnet"` on any Agent/Workflow call). No
 haiku on a `gate` rung; no other model unless the operator changes this line.
-Route by work shape (`mozare-work`), one writer per mutable scope:
+Route by work shape (`work-routing`), one writer per mutable scope:
 
 | Rungs | Shape | Executor | Verifier (fresh context) | Checkpoint into `.maws/` |
 |---|---|---|---|---|
@@ -143,15 +158,71 @@ sequentially because they share the register/CI surfaces (operating rule 1).
 - **F2** (fixed 2026-10-02, decision: instance-only) `run_faithfulness_benchmark.py` and `run-semantic-benchmark.py` both read `00-system/configuration/semantic-benchmark-v1.1.0.json`, which the kit does not ship (the empty kit has no benchmark set), so neither can run from a fresh instance until one is supplied. Resolved: case sets are instance data (an empty kit has no corpus to measure); both runners take `--config` and exit with a one-line explanation instead of a traceback; `SEARCH_GUIDE.md` §7 documents the shape. Pinned by `scripts/tests/test_benchmark_config_contract.py`.
 
 - **F3** (fixed S3b 2026-10-02) `schema_drift_fixer.py` keeps one operation per file (`ops[rel] = ...`): two errors on the same file drop all but the last, so a second validate → fix pass is needed. No test pins it; candidate rung `S3b`.
-- **F4** (fixed S3b 2026-10-02) `schema_drift_fixer.py` writes a derived `filename` unquoted and only guards a leading `[` or `{`; a basename containing `: ` or ` #` would produce invalid YAML. Candidate rung `S3b` (quote unsafe values; keep the kit and `mozare-wiki` copies identical).
+- **F4** (fixed S3b 2026-10-02) `schema_drift_fixer.py` writes a derived `filename` unquoted and only guards a leading `[` or `{`; a basename containing `: ` or ` #` would produce invalid YAML. Candidate rung `S3b` (quote unsafe values; keep the kit and `source-instance` copies identical).
 
 - **F5** (fixed K1b) The kit's `configure-search.ps1` read `qmd-collections-v1.1.0.json`, which the kit never shipped; now shipped with generic `wiki-*` names and the MCP server reads it by folder.
 - **F6** (fixed K1a) `instantiate.py` renamed the corpus id without refreshing kernel state, so a fresh instance failed `wiki_state.py check`; it now runs `wiki_state.py rebuild` last.
 - **F7** (fixed K1a) With `core.autocrlf=true` a fresh Windows clone checked `SYSTEM_STATE.json` out as CRLF → `STATE.GENERATED_DRIFT`; LF pinned in `.gitattributes`.
 - **F8** (W1) `evidence_audit.py`, `report_holdings.py` and `tests/test_evidence_audit.py` still read the legacy `_proposals/proposals.jsonl`; the kernel writes `_proposals/records/`.
-- **F9** (fixed 2026-10-02, mozare-wiki `564ad05` on `system/2026-10-02--f9-s3b-kit-sync`, same mozare-* sets resolved, instance suite 200 passed) (sync) The kit's MCP server now reads QMD names from config; `mozare-wiki`'s copy still hardcodes `mozare-*`. Port `qmd_collections()` back so both files stay identical.
-- **F10** (kit side fixed 2026-10-02: `qmd_scope.py`; every kit QMD call scoped to the instance's own collections, collision refused, `<prefix>-*` names on instantiate; exercised on an isolated index) (machine-level) The local QMD index is one `mozare-wiki` collection over all `*.md` plus `ref-wiki` / `zp-*`, not the per-folder collections in `mozare-wiki`'s `qmd-collections-v1.1.0.json`. Effects: SRC-01…04 never run (`Collection not found: mozare-source-records`), canonical questions are swamped by `02-sources/text/*-extracted.md`, and the config-driven MCP QMD layer finds no collection. Fix: run `mozare-wiki/scripts/configure-search.ps1`, `qmd embed`, re-run the benchmark. Not done unilaterally because the index is shared with `ref-wiki` and `zarinpal-product-wiki`.
-- **F10** (K1c) The kit ships the capture core but no capture tests; mozare-wiki's suite found a Linux-only path bug (fixed c0dc845) and a 1-in-3 flaky fixture (fixed there, not yet in the kit).
+- **F9** (fixed 2026-10-02, source-instance `564ad05` on `system/2026-10-02--f9-s3b-kit-sync`, same instance-* sets resolved, instance suite 200 passed) (sync) The kit's MCP server now reads QMD names from config; `source-instance`'s copy still hardcodes `instance-*`. Port `qmd_collections()` back so both files stay identical.
+- **F10** (kit side fixed 2026-10-02: `qmd_scope.py`; every kit QMD call scoped to the instance's own collections, collision refused, `<prefix>-*` names on instantiate; exercised on an isolated index) (machine-level) The local QMD index is one `source-instance` collection over all `*.md` plus `other-wiki` / `other-*`, not the per-folder collections in `source-instance`'s `qmd-collections-v1.1.0.json`. Effects: SRC-01…04 never run (`Collection not found: instance-source-records`), canonical questions are swamped by `02-sources/text/*-extracted.md`, and the config-driven MCP QMD layer finds no collection. Fix: run `source-instance/scripts/configure-search.ps1`, `qmd embed`, re-run the benchmark. Not done unilaterally because the index is shared with `other-wiki` and `another-local-wiki`.
+- **F10b** (K1c, fixed by K1c) The kit ships the capture core but no capture tests; source-instance's suite found a Linux-only path bug (fixed c0dc845) and a 1-in-3 flaky fixture (fixed there, not yet in the kit).
+- **F11** (fixed Q1) `schema_drift_fixer.py` patch ids stayed `mw-patch-…` after `instantiate.py --prefix`.
+- **F12** (fixed Q2) The bootstrap path told new users `git add -A` (instantiate checklist, INSTANTIATE, QUICKSTART).
+- **F13** (fixed Q3) `scripts/setup-after-clone.ps1` was absent from SYSTEM_DESIGN §6; the coverage test now includes `*.ps1` / `*.mjs`.
+- **F14** (fixed O9) Lens `foreground_relations` / `foreground_sections` were declared but read by nothing.
+- **F15** (fixed O10) Active profiles were composed but never reached retrieval.
+- **F16** (fixed O11) Only two of six example profiles were ever exercised.
+- **F17** (fixed O12) "Other Wiki" schema titles/patterns; §29 object-page `## Profiles` vs instance profiles undocumented; stale `evidence_audit.py` docstring.
+- **F18** (fixed O12) Docs promised that profiles "may tighten kernel rules"; no mechanism exists. Docs now say so; the mechanism is owner decision D-b.
+- **F19** (fixed 2026-10-13) The graph index recognised only `mw-`/`p-` id tokens with a 6-char head, so relations naming participants as `mw-obj-…` / `smk-rel-…` never joined anything.
+- **F20** (fixed O11) Four example profiles suggested lenses that did not exist (`lens-operator`, `-investigator`, `-experimenter`, `-archivist`).
+- **F21** (fixed 2026-10-13, owner decision "no trace of my personal wikis") The instance benchmark reports under `_audits/` were removed; history files were kept with neutral names; a guard test scans every tracked file. The kernel's author-confirmation rule no longer keys on a personal name (`author_actors` setting).
+- **F22** (decided 2026-10-13: keep) A new wiki keeps inheriting the kit's history (`.maws/`, `Plans.md`, handoffs, audits, `openspec/`). Owner: "don't remove histories". No reset step.
+- **F23** (fixed Q3) `setup-after-clone.ps1` refused every fresh clone: its root check required `_originals/`, which git never ships empty.
+- **F24** (fixed `7b9b46d`) Leaked sqlite handles: `tests/conftest.py` closes every connection a test opens; 9 → 0 ResourceWarnings. Same commit: `.githooks/pre-commit` tracked as executable so the gate runs on macOS/Linux.
+
+### Ladder 1.3.x — dossier closure + setup polish (all in-repo)
+
+Planned in draft PR #8 (2026-09-29) and carried here after PR #7 merged;
+statuses verified against the tree on 2026-10-13. Binding owner decisions
+still hold: object vocabulary open, candidates visible by default,
+relevance ≠ authority, accepted-only always explicit, 17 proposal kinds.
+
+| ID | Task | Acceptance (pasted in the commit message) | Status |
+|---|---|---|---|
+| F19 | `[lane:gate] [tdd:required] [size:S]` Graph index resolves record ids in any instance prefix | RED 2 failed / GREEN 3 passed `tests/test_graph_ids.py` | cc:done (7f67af7) |
+| O9 | `[lane:gate] [tdd:required] [size:M]` Lenses foreground relation language (`relation_type`, optional) and section order | RED 5 failed / GREEN 6 passed `tests/test_o9_lens_relations.py`; no-lens packs byte-identical before/after; O5 tests untouched + green | cc:done (9cd6584) |
+| O10 | `[lane:gate] [tdd:required] [size:M]` Active profiles' seed labels add reasons; suggested lenses offered in meta, never applied | RED 5 failed / GREEN 7 passed `tests/test_o10_profile_attention.py`; no-profile packs byte-identical | cc:done (e7231a2) |
+| — | `[lane:gate] [tdd:required] [size:S]` Independence: object/claim schemas accept any prefix, no foreign names | RED 6 failed / GREEN `tests/test_kit_independence.py` | cc:done (8ea8cf0) |
+| O11 | `[lane:gate] [tdd:required] [size:M]` Six practices on one unchanged kernel (one in Persian); every suggested lens ships | RED 5 failed / GREEN 8 passed `tests/test_o11_six_contexts.py`; `git diff --cached --stat -- 00-system/schemas scripts/gov_kernel` empty | cc:done (2307ad4) |
+| O12 | `[lane:doc] [size:S]` Doc residue + independence naming in shipped files | RED 3 failed / GREEN 9 passed `tests/test_o2_semantic_docs.py`; shipped-files guard green | cc:done (cc69d22) |
+| Q1 | `[lane:gate] [tdd:required] [size:S]` Instance prefix everywhere incl. patch ids; current year in run ids | RED 2 failed / GREEN `tests/test_q1_instance_prefix.py` | cc:done (383a080) |
+| Q2 | `[lane:doc] [size:S]` Bootstrap commit reviews `git status` first; no `git add -A` | RED / GREEN `tests/test_q2_q3_setup.py` | cc:done (383a080) |
+| Q3 | `[lane:doc] [tdd:required] [size:S]` §6 covers `*.ps1`/`*.mjs`; setup script works on a fresh clone | RED names `setup-after-clone.ps1`; GREEN | cc:done (383a080) |
+| Q4 | S3b (F3 + F4) | done before PR #7 merged (`49febf5`) | cc:done |
+| Q5 | F8 proposals path | already fixed by W1 | cc:withdrawn |
+| Q6 | `[lane:gate] [size:S]` Fresh-wiki release check as CI job `fresh-wiki` (`scripts/release_smoke.py`) | local RELEASE SMOKE PASS (9 steps); negative test fails at `validate_repo --full`; CI log on the PR | cc:done exc. CI log (03fc25c; CI waits on the self-hosted runner) |
+
+**Owner decisions** (all recorded 2026-10-13):
+
+| ID | Decision | Unlocks |
+|---|---|---|
+| D-a | ~~More example profiles~~ | decided 2026-10-13: **no** (practice examples only) |
+| D-b | Profile tightening | done `16d0447`: `tighten: [object-labels, relation-type, record-visibility]`, enforced by `wiki_profiles.py check` |
+| D-c | Label aliases | done `0e89eb2`: optional `LABEL_ALIASES.json`, retrieval-only, reason names the alias |
+| D-d | `instantiate.py --profile` | done `6a7c52e` |
+| D-e | ~~legacy-`kind` path in a specific instance~~ | moved-to-instance |
+| F21 | Instance benchmark reports | decided + done `7127c00`: removed; no personal-wiki trace anywhere |
+| F22 | What a new wiki inherits | decided: keep all history |
+
+### Release 1.4.0 (2026-10-13)
+
+The 1.3.x ladder plus the owner's decisions ship as kit **1.4.0**: version
+declared in SYSTEM_DESIGN, content-release.json, validators.json,
+instantiate `created_from`, CLAUDE.md and README; CHANGELOG section 1.4.0.
+Released when PR #9 is merged with CI green; the tag `v1.4.0` (and the
+missing `v1.3.0` on `e492df9`) is the owner's to push.
 
 **Order the loop takes:** S1 → S2 → S3 → W2 → K1a → K1b → **K1c → K1d** → H0 (owner) → W1 → O1 → O2 → O3/O4 → O5 → O6 → O7 → O8 → W3 → W4 → M2 → R1 → R2.
 `H*`, `M1`, `U*` are outside the agent loop: they wait for the operator or
@@ -189,7 +260,7 @@ diff, so minute-scale polling is waste. Stop the loop when every row is
 
 ## Out of scope for this ladder
 
-- Adjudicating the 20 `new` proposals in `mozare-wiki`. That backlog is the
+- Adjudicating the 20 `new` proposals in `source-instance`. That backlog is the
   archive's real rate limiter and it is human judgment work; no rung touches
   it.
 - Registering any of the 447 held artifacts. This ladder makes their status
@@ -210,4 +281,5 @@ diff, so minute-scale polling is waste. Stop the loop when every row is
 | `cc:done` | Complete, every criterion pasted; awaiting operator confirmation |
 | `pm:approved` | Operator confirmed |
 | `cc:withdrawn` | Terminal; superseded or absorbed elsewhere |
+| `moved-to-instance` | Belongs to a specific instance's own plan since the 2026-10-13 independence decision |
 | `blocked` | Blocked; the reason sits next to the row |

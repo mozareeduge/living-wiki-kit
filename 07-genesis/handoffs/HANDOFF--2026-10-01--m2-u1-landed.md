@@ -95,4 +95,4 @@ python scripts/wiki_state.py --repo . check
 
 Then PR #7 review → GitHub billing fix → CI → merge. Operator lane (M1, H1–H3,
 U2) runs separately. F9 (port config-driven `qmd_collections()` back into
-`mozare-wiki`) remains open.
+`source-instance`) remains open.

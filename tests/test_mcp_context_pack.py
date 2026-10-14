@@ -177,7 +177,7 @@ def test_tool_writes_nothing(wiki, monkeypatch):
 def test_link_to_a_non_canonical_page_is_skipped_not_a_crash(wiki):
     """build_graph_index resolves wikilinks to pages outside the canonical
     zones (registers, audits) without making them nodes. Found on the real
-    mozare-wiki graph (98 such edges): the pack must skip them, not raise
+    populated instance's graph (98 such edges): the pack must skip them, not raise
     TypeError on the missing node row."""
     (wiki / "00-system" / "registers").mkdir(parents=True)
     (wiki / "00-system" / "registers" / "REG.md").write_text(
@@ -194,7 +194,7 @@ def test_link_to_a_non_canonical_page_is_skipped_not_a_crash(wiki):
 def test_token_budget_holds_when_records_are_long(wiki):
     """The per-record cap is already in characters; slicing by cap *
     CHARS_PER_TOKEN again let a pack reach ~4x its budget. Seen live on
-    mozare-wiki: 16,776 estimated tokens against a 16,000 budget."""
+    populated instance: 16,776 estimated tokens against a 16,000 budget."""
     for f in (wiki / "02-sources" / "records").glob("*.md"):
         f.write_text(f.read_text(encoding="utf-8") + ("lorem ipsum " * 20000), encoding="utf-8")
     bgi.build(wiki)

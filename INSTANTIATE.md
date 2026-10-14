@@ -34,9 +34,15 @@ This rewrites ID patterns in validators/capture core/docs, renames
 `00-system/registers/INSTANCE.json`. Review its diff with `git diff` before
 committing.
 
+Optional: activate practice profiles at the same time, for example
+`--profile practice-research --profile practice-creative` (repeatable, order
+kept; see `00-system/configuration/profiles/`). An unknown id is refused
+before anything is written. Without `--profile` the wiki stays
+profile-neutral; you can edit `active_profiles` in `INSTANCE.json` later.
+
 ## 3. Edit the instance-facing pages
 
-- `HOME.md` — subject, routes, entry points (replace mozare examples)
+- `HOME.md` — subject, routes, entry points (replace the kit's examples)
 - `SYSTEM_DESIGN.md` — keep §§2–5 (authority, preservation, record grammar)
   verbatim; rewrite §1's subject description for your topic, but KEEP its
   `Current corpus snapshot:` / `Registered source artifacts:` markers as
@@ -94,9 +100,14 @@ corpus state consistent, no broken links.
 ## 5. First commit
 
 ```bash
-git add -A
+git status --short   # review first: kit files and what instantiate wrote, nothing else
+git add -- .
 git commit -m "bootstrap: instantiate <name> from living-wiki-kit"
 ```
+
+Staging the whole tree is right only here, for the first commit of a new
+repository, and only after the review above. Every later change stages
+named paths (`git add <path> …`), never `git add -A`.
 
 (The pre-commit hook runs the validator automatically.)
 

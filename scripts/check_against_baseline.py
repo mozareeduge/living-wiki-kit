@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Mozare Wiki validators with accepted-debt semantics and fail-closed execution.
+"""Run this wiki's validators with accepted-debt semantics and fail-closed execution.
 
 Known validation findings listed in .githooks/known-baseline-errors.txt remain
 accepted debt. Validator runtime/infrastructure failure never becomes green.

@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_graph_index as bgi  # noqa: E402
-import wiki_profiles as wp  # noqa: E402  (frontmatter parser only; lenses are advisory)
+import wiki_profiles as wp  # noqa: E402  (frontmatter parser + active profiles; advisory only)
 import candidate_projection as _cp  # noqa: E402  (disposable projections; never canonical)
 from gov_kernel.schemas import validate_record  # noqa: E402
 
@@ -98,6 +98,18 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
     if not db.exists():
         raise SystemExit(f"no graph index at {db}; run build_graph_index.py first")
     con = sqlite3_connect(db)
+    try:
+        return _build_pack(con, root, seed, hops, query, max_records,
+                           budget_tokens, search_fn, lens, accepted_only,
+                           include_candidates)
+    finally:
+        con.close()  # an open handle keeps graph.db locked on Windows
+
+
+def _build_pack(con, root: Path, seed: str, hops: int, query: str | None,
+                max_records: int, budget_tokens: int, search_fn,
+                lens: str | dict | None, accepted_only: bool,
+                include_candidates: bool) -> dict:
     seed_row = con.execute("SELECT path, title FROM nodes WHERE id=?", (seed,)).fetchone()
     if not seed_row:
         raise SystemExit(f"seed id {seed!r} not in graph index")
@@ -125,6 +137,17 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
         # retrieval aid, never evidence — the reason says MATCHED, never IS.
         qtokens = {bgi.normalize_label(t) for t in query.split()} | {bgi.normalize_label(query)}
         qtokens.discard("")
+        # Instance aliases (LABEL_ALIASES.json): a label in the same group as
+        # a query token also matches, and the reason names the alias.
+        try:
+            amap = bgi.load_label_aliases(root)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
+        via: dict[str, str] = {}
+        for t in sorted(qtokens):
+            for member in sorted(amap.get(t, ("", set()))[1]):
+                if member not in qtokens:
+                    via.setdefault(member, t)
         try:
             label_rows = con.execute(
                 "SELECT node_id, label_raw, label_norm, label_source FROM labels").fetchall()
@@ -133,12 +156,14 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
         for nid, raw, norm, source in sorted(label_rows, key=lambda r: (r[0], r[2])):
             if nid in used or len(entries) >= max_records:
                 continue
-            if norm in qtokens:
+            if norm in qtokens or norm in via:
                 used.add(nid)
                 row = con.execute("SELECT path, title FROM nodes WHERE id=?", (nid,)).fetchone()
                 if not row:
                     continue
                 reason = f"label: `{raw}` matched query context"
+                if norm not in qtokens:
+                    reason += f" via alias `{via[norm]}` (LABEL_ALIASES.json)"
                 if source == "legacy-kind":
                     reason += " (legacy kind compatibility)"
                 entries.append({"id": nid, "path": row[0], "title": row[1],
@@ -186,27 +211,6 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
             if len(entries) >= max_records:
                 break
 
-    # Attach content under the global token budget.
-    spent = 0
-    per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
-    for e in entries:
-        if e.get("candidate"):
-            sp = e.get("source_passage") or {}
-            text = (f"{e.get('title', '')}\n{e.get('candidate_text', '')}\n"
-                    f"passage: {sp.get('quote', '')} ({sp.get('path', '')})")
-        else:
-            p = root / e["path"]
-            try:
-                text = p.read_text(encoding="utf-8", errors="ignore")
-            except OSError:
-                text = ""
-        body = text[:per_cap_chars]
-        est = len(body) // CHARS_PER_TOKEN
-        e["content"] = body
-        e["content_truncated"] = len(text) > len(body)
-        e["tokens_est"] = est
-        spent += est
-
     lens_id: str | None = None
     lens_record: dict | None = None
     if lens is not None or accepted_only:
@@ -227,7 +231,59 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
             lens_record = dict(lens_record)
             lens_record["candidate_visibility"] = "exclude"
             lens_record["authority_mode"] = "accepted-only"
-        entries = apply_lens(entries, lens_record, lens_id or "accepted-only")
+
+    fg_sections = [str(x) for x in ((lens_record or {}).get("foreground_sections") or [])]
+
+    # Attach content under the global token budget.
+    spent = 0
+    per_cap_chars = (budget_tokens * CHARS_PER_TOKEN) // max(1, len(entries))
+    for e in entries:
+        if e.get("candidate"):
+            sp = e.get("source_passage") or {}
+            text = (f"{e.get('title', '')}\n{e.get('candidate_text', '')}\n"
+                    f"passage: {sp.get('quote', '')} ({sp.get('path', '')})")
+        else:
+            p = root / e["path"]
+            try:
+                text = p.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                text = ""
+        body = text[:per_cap_chars]
+        est = len(body) // CHARS_PER_TOKEN
+        e["content"] = body
+        if fg_sections and not e.get("candidate"):
+            # Presentation order only: content stays exactly as written.
+            order, hits = section_order(text, fg_sections)
+            e["section_order"] = order
+            e["sections_foregrounded"] = hits
+        e["content_truncated"] = len(text) > len(body)
+        e["tokens_est"] = est
+        spent += est
+
+    # Profiles steer attention: reasons only, never membership or authority.
+    profile_meta: dict = {}
+    active, _ = wp.active_records(root)
+    if active:
+        labels_of: dict[str, list[str]] = {}
+        try:
+            for nid, raw in con.execute(
+                    "SELECT node_id, label_raw FROM labels ORDER BY rowid"):
+                labels_of.setdefault(nid, []).append(raw)
+        except Exception:  # index built before labels existed; rebuild it
+            pass
+        entries = apply_profiles(entries, seed_label_map(active), labels_of)
+        profile_meta = {
+            "active_profiles": [pid for pid, _ in active],
+            "profile_offers": {
+                "suggested_lenses": lens_offers(root, active),
+                "note": "offers only; a lens applies only when asked for",
+            },
+        }
+
+    if lens_record is not None:
+        joins = lens_relation_joins(con, lens_record.get("foreground_relations") or [])
+        entries = apply_lens(entries, lens_record, lens_id or "accepted-only",
+                             relation_joins=joins)
 
     return {
         "meta": {
@@ -240,6 +296,7 @@ def build_pack(root: Path, seed: str, hops: int = 1, query: str | None = None,
                                "scores and inclusion reasons are never evidence; "
                                "model output from it stays candidate-tier."),
             "generated_at_epoch": int(time.time()),
+            **profile_meta,
         },
         "records": entries,
     }
@@ -276,12 +333,112 @@ def _raise_unknown_lens(root: Path, lens_id: str):
                      + (f" (known: {', '.join(known)})" if known else ""))
 
 
-def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
+def seed_label_map(active: list[tuple[str, dict]]) -> dict[str, list[tuple[str, str]]]:
+    """normalized seed label -> [(profile id, seed label as written)]."""
+    seeds: dict[str, list[tuple[str, str]]] = {}
+    for pid, rec in active:
+        for raw in rec.get("seed_labels") or []:
+            norm = bgi.normalize_label(str(raw))
+            if norm and (pid, str(raw)) not in seeds.get(norm, []):
+                seeds.setdefault(norm, []).append((pid, str(raw)))
+    return seeds
+
+
+def apply_profiles(entries: list[dict], seeds: dict[str, list[tuple[str, str]]],
+                   labels_of: dict[str, list[str]]) -> list[dict]:
+    """Add a reason per (profile, matching label); never filters or reorders.
+
+    A record's labels come from the graph index (`labels_of`) or, for a
+    candidate projection, from its `candidate_labels`. The reason quotes the
+    label as the record wrote it.
+    """
+    out: list[dict] = []
+    for e in entries:
+        written = (e.get("candidate_labels") if e.get("candidate")
+                   else labels_of.get(str(e.get("id")))) or []
+        hits: list[dict] = []
+        for raw in written:
+            for pid, _ in seeds.get(bgi.normalize_label(str(raw)), []):
+                hit = {"profile": pid, "label": str(raw)}
+                if hit not in hits:
+                    hits.append(hit)
+        if hits:
+            e = dict(e)
+            e["reason"] = str(e.get("reason", "")) + "".join(
+                f" (profile {h['profile']} seed label `{h['label']}`)" for h in hits)
+            e["profile_attention"] = hits
+        out.append(e)
+    return out
+
+
+def lens_offers(root: Path, active: list[tuple[str, dict]]) -> list[dict]:
+    """Lenses the active profiles suggest, with who suggests them and
+    whether the lens ships here. Offered, never applied."""
+    offers: dict[str, list[str]] = {}
+    for pid, rec in active:
+        for lid in rec.get("suggested_lenses") or []:
+            offers.setdefault(str(lid), [])
+            if pid not in offers[str(lid)]:
+                offers[str(lid)].append(pid)
+    return [{"id": lid, "profiles": pids,
+             "available": (root / LENSES_DIRNAME / f"{lid}.md").is_file()}
+            for lid, pids in offers.items()]
+
+
+SECTION_HEAD = re.compile(r"^##\s+(.+?)\s*#*\s*$", re.MULTILINE)
+
+
+def section_order(text: str, foreground: list[str]) -> tuple[list[str], list[str]]:
+    """(presentation order, foregrounded headings) for a record's `##` sections.
+
+    Headings the lens names come first, in the lens's order; the rest follow
+    as written. Matching is case- and space-insensitive; headings are
+    returned as written.
+    """
+    heads = SECTION_HEAD.findall(text)
+    key = {bgi.normalize_label(h): h for h in reversed(heads)}
+    hits = [key[k] for k in dict.fromkeys(bgi.normalize_label(f) for f in foreground)
+            if k in key]
+    rest = [h for h in heads if h not in hits]
+    return hits + rest, hits
+
+
+def lens_relation_joins(con, foreground_relations: list) -> dict[str, list[str]]:
+    """node id -> foregrounded relation types it takes part in (the relation too).
+
+    Reads the graph index's non-evidence `relation_types` table and the
+    relation's resolved `participants`. Empty when the lens names none.
+    """
+    wanted = {bgi.normalize_label(str(x)) for x in foreground_relations}
+    wanted.discard("")
+    if not wanted:
+        return {}
+    try:
+        rows = con.execute(
+            "SELECT relation_id, type_norm FROM relation_types").fetchall()
+    except Exception:  # index built before relation types existed; rebuild it
+        return {}
+    joins: dict[str, set[str]] = {}
+    for rel_id, norm in rows:
+        if norm not in wanted:
+            continue
+        joins.setdefault(rel_id, set()).add(norm)
+        for (pid,) in con.execute(
+                "SELECT resolved_id FROM edges WHERE src_id=? AND "
+                "field='fm:participants' AND resolved_id IS NOT NULL", (rel_id,)):
+            joins.setdefault(pid, set()).add(norm)
+    return {k: sorted(v) for k, v in joins.items()}
+
+
+def apply_lens(entries: list[dict], lens: dict, lens_id: str,
+               relation_joins: dict[str, list[str]] | None = None) -> list[dict]:
     """Foreground per a lens; never alters authority, never silently drops.
 
     Entries carrying authority == "candidate" are dropped ONLY when the lens
     explicitly says candidate_visibility == "exclude" (the accepted-only
     view, always explicit). Everything else passes through annotated.
+    `relation_joins` (node id -> foregrounded relation types) adds a reason
+    per relation type; it never adds or removes an entry.
     """
     exclude = lens.get("candidate_visibility") == "exclude"
     fg = {bgi.normalize_label(str(x)) for x in (lens.get("foreground_labels") or [])}
@@ -301,6 +458,12 @@ def apply_lens(entries: list[dict], lens: dict, lens_id: str) -> list[dict]:
             if cand_norms & fg:
                 e["reason"] = reason + f" (foregrounded by lens {lens_id})"
                 e["foregrounded"] = True
+        rel_types = (relation_joins or {}).get(str(e.get("id")))
+        if rel_types:
+            e["reason"] = str(e.get("reason", "")) + "".join(
+                f" (lens {lens_id} foregrounds relation `{t}`)" for t in rel_types)
+            e["foregrounded"] = True
+            e["foregrounded_relations"] = list(rel_types)
         out.append(e)
     return out
 

@@ -468,7 +468,7 @@ def check_holdings_census(root: Path, state: dict, errors: list[str]) -> None:
     # -> reviewed -> promoted); "registered" there means the capture was
     # registered by that pipeline, not that an artifact was adjudicated
     # into the corpus of record. Reading those 12 records (measured in
-    # mozare-wiki, 2026-09-18) as adjudication claims would demand the
+    # a populated instance, 2026-09-18) as adjudication claims would demand the
     # operator "fix" records that were never wrong.
     for rel, fm in records.items():
         record_type = fm.get("type")

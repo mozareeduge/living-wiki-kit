@@ -209,8 +209,8 @@ class TestStateMachine(IsolatedRoot):
         wc.set_state(cid, "processing", "test-op")
         wc.record_transcript(cid, "متن آزمایشی", "manual", "v1")
         wc.set_state(cid, "transcribed", "test-op")
-        wc.set_state(cid, "reviewed", "Mohammad", note="one name corrected")
-        wc.set_state(cid, "promoted", "Mohammad", target="03-objects/works/x.md")
+        wc.set_state(cid, "reviewed", "Owner", note="one name corrected")
+        wc.set_state(cid, "promoted", "Owner", target="03-objects/works/x.md")
         self.assertEqual(wc.validate_record(cid), [])
         r = wc.read_capture(cid)
         self.assertEqual(r["front_matter"]["promoted_to"], "03-objects/works/x.md")
@@ -218,16 +218,16 @@ class TestStateMachine(IsolatedRoot):
     def test_illegal_skip_rejected(self):
         cid = wc.capture_text("skip me", "obsidian")["id"]
         with self.assertRaises(wc.CaptureError) as c:
-            wc.set_state(cid, "promoted", "Mohammad", target="03-objects/x.md")
+            wc.set_state(cid, "promoted", "Owner", target="03-objects/x.md")
         self.assertEqual(c.exception.code, "E_BAD_TRANSITION")
 
     def test_received_reviewed_only_for_duplicates(self):
         cid = wc.capture_text("not a dup", "obsidian")["id"]
         with self.assertRaises(wc.CaptureError) as c:
-            wc.set_state(cid, "reviewed", "Mohammad")
+            wc.set_state(cid, "reviewed", "Owner")
         self.assertEqual(c.exception.code, "E_BAD_TRANSITION")
         dup = wc.capture_text("not a dup", "obsidian")["id"]
-        wc.set_state(dup, "reviewed", "Mohammad", note="dup triage")
+        wc.set_state(dup, "reviewed", "Owner", note="dup triage")
         self.assertEqual(wc.validate_record(dup), [])
 
     def test_promotion_needs_target_and_actor(self):
@@ -236,7 +236,7 @@ class TestStateMachine(IsolatedRoot):
         with self.assertRaises(wc.CaptureError):
             wc.set_state(cid, "processing", "")
         with self.assertRaises(wc.CaptureError):
-            wc.set_state(cid, "reviewed", "Mohammad")
+            wc.set_state(cid, "reviewed", "Owner")
 
 
 class TestSeparation(IsolatedRoot):

@@ -3,7 +3,7 @@
 ## Role and write scope (your whole write scope)
 
 You are the adversarial reviewer for a planning change in the **living-wiki-kit**
-repo (`C:\Users\Zarinpal\Documents\Personal Formal Documents\living-wiki-kit`,
+repo (`<local checkout>`,
 branch `system/2026-09-16--harden-kit-spec`, HEAD 48dd711). You may edit ONLY:
 
 - `openspec/changes/harden-kit-against-state-drift/proposal.md`
@@ -27,7 +27,7 @@ plain python (`python tests/test_validator_mutations.py`; no pytest in venv).
 Kit state is empty and must PASS both validators at birth
 (`wiki-corpus-empty`, count 0).
 
-## Evidence motivating this change (2026-09-16, verified in the ref-wiki instance)
+## Evidence motivating this change (2026-09-16, verified in the other-wiki instance)
 
 1. Entry docs (README/HOME/SYSTEM_DESIGN §1/CLAUDE.md/reconcile skill)
    asserted a 6-day-stale seed state ("11 sources, intake paused") after the
@@ -35,13 +35,13 @@ Kit state is empty and must PASS both validators at birth
    looked un-ingested.
 2. Root causes were kit-level: nothing binds entry prose to the registers;
    INSTANTIATE.md invites hardcoding "corpus facts"; the shipped
-   wiki-reconcile skill hardcodes a mozare baseline ("94 artifacts,
+   wiki-reconcile skill hardcodes a instance baseline ("94 artifacts,
    `mw-corpus-a33b260403015901`") wrong for every instance; the shipped
    TEMPLATE_source-record.md omits the `filename` field its own validator
    requires; the intake skill never says to refresh entry pages.
 3. The fix (validator `check_entry_pages()` gate + skill/template/instantiator
    alignment) was designed, TDD'd, e2e-proven (hook-blocked a drift commit),
-   and merged in ref-wiki PRs #3–#7 (main db27adf).
+   and merged in other-wiki PRs #3–#7 (main db27adf).
 
 ## Artifacts to review (in the change dir)
 

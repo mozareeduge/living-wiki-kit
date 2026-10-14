@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Evidence audit for the candidate layer (Phase 3).
 
-Reads _proposals/proposals.jsonl, validates every record against
+Reads the durable proposal queue (_proposals/records/, with terminal
+decisions in _proposals/adjudications/; the legacy _proposals/proposals.jsonl
+is read-only history), validates every record against
 00-system/policies/proposal_schema.json, and AUTO-REJECTS any proposal
 whose required evidence is missing or unverifiable:
   - source_passage.quote must be >= 20 chars

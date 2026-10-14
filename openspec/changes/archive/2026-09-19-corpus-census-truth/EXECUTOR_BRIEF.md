@@ -26,7 +26,7 @@ Each task row names its `Context` files. Load those, plus:
 - the file you are editing
 
 Do **not** read the corpus, the 556 source records, `_originals/`, or another
-instance. If a row needs a number from `mozare-wiki`, it says so and gives the
+instance. If a row needs a number from `source-instance`, it says so and gives the
 exact read-only command that produces it.
 
 Budget: if you are past ~15 tool calls on a `[size:S]` rung or ~40 on an

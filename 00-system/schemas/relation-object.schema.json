@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://living-wiki-kit.local/schemas/relation-object.schema.json",
-  "title": "This Wiki relation object",
+  "title": "Living Wiki relation object",
   "type": "object",
   "required": [
     "id",
@@ -39,6 +39,22 @@
         "may-argue-cautiously",
         "may-argue",
         "blocked"
+      ]
+    },
+    "relation_type": {
+      "description": "Optional relation language (relation before type: may be absent). Read by lenses to foreground; never evidence.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       ]
     }
   },

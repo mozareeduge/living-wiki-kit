@@ -34,6 +34,13 @@ line-breaks, no exact duplicates. An unfamiliar label is always valid. The
 search layer may normalize labels for indexing (NFKC, trim, case-fold) but
 must never rewrite the written label and never auto-merge synonyms.
 
+An instance may declare label aliases in
+`00-system/configuration/LABEL_ALIASES.json` (`{"aliases": {"poetry":
+["poem", "poems"]}}`). Aliases are retrieval-only: a search for one member
+reaches records labelled with another, and the reason names the alias. They
+never rewrite a label, never merge records, never become evidence, and a
+label belongs to one group only.
+
 ## Substantive classification uses relations and claims
 
 When a classification carries meaning — *session X is a rehearsal of work
@@ -42,19 +49,47 @@ an evidence-bearing relation or claim, not as a label and never as a
 mandatory kind. No new classification record type exists; the kernel's
 relation/claim machinery is sufficient.
 
+A relation-object may name its relation language in an optional
+`relation_type` (`rehearses`, `supports`, …). Relation before type still
+holds: a relation without one is complete. The written value is never
+rewritten; the search layer indexes it (normalized) only so lenses can
+foreground it. Like a label, it organizes attention and is never evidence.
+
 ## Profiles configure the practice; they do not define the truth
 
 Profiles (`00-system/configuration/profiles/`) bundle suggestions —
 vocabulary, relation language, lenses, outputs — for a practice, domain,
-collaboration shape, or compliance context. They compose additively, may
-tighten kernel rules, and may never weaken them. A profile never requires an
-object to fit its vocabulary; unknown labels always remain allowed.
+collaboration shape, or compliance context. They compose additively and may
+never weaken kernel rules: the profile schema accepts advisory keys only, so
+no key can switch off validation, authority or evidence rules. A profile may
+make rules stricter while it is active, from a closed set listed in
+`tighten`: `object-labels` (every object carries a label), `relation-type`
+(every relation names its type) and `record-visibility` (every canonical
+record declares `visibility`). `wiki_profiles.py check` enforces the union
+of the active profiles' rules. A profile never
+requires an object to fit its vocabulary; unknown labels always remain
+allowed.
+
+An object page's `## Profiles` section is not an instance profile. That
+section describes the object as different practices see it (a work as a
+score, as a rehearsal, as a case study); it is content, written and sourced
+like the rest of the page. Instance profiles live in
+`00-system/configuration/profiles/` and only configure attention.
+In retrieval an active profile only explains: a record carrying one of its
+seed labels gets a reason naming the profile, and its suggested lenses are
+offered, never applied. It never selects, hides, or reorders a record.
 
 ## Lenses foreground; they do not filter truth
 
 Lenses (`00-system/configuration/lenses/`) configure retrieval and
 presentation for a persona or task. Defaults: candidates included,
-authority annotated. A lens may prioritize, group, and format; it must never
+authority annotated. `foreground_labels` and `foreground_relations` add an
+inspectable reason to the records they match (a relation's type foregrounds
+the relation and every record it joins); `foreground_sections` sets the
+order in which a record's sections are presented, never its content. A
+pack's membership is the same with or without a lens (the explicit
+accepted-only view is the one exception).
+A lens may prioritize, group, and format; it must never
 silently hide contradictory evidence, promote candidate material, treat a
 label as evidence, suppress non-adjudicated records, or change authority.
 Authority-only views must be explicit.
