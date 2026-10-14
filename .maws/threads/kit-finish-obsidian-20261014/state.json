@@ -143,6 +143,25 @@
         "opened_at": "2026-10-14T15:10:34Z",
         "override_reason": null,
         "closed_at": "2026-10-14T15:26:08Z"
+      },
+      {
+        "id": "verify-03048fcf31",
+        "scope": "full",
+        "name": "final-native-field-ci",
+        "fingerprint": "d71bcec4bae9dd672831f70236d2cdc2afd8eb8b",
+        "status": "closed",
+        "opened_at": "2026-10-14T15:26:55Z",
+        "override_reason": "User-requested final release gate on the native-corrected single-file bundle and locked build. Earlier passing full regression is retained; CI is required for this exact changed commit before merge, with no repeated local full suite.",
+        "closed_at": "2026-10-14T15:31:05Z"
+      },
+      {
+        "id": "verify-edac50729a",
+        "scope": "full",
+        "name": "release-ci-camera-layout",
+        "fingerprint": "b8134609520e49872f8045f1c067908ab677bf77",
+        "status": "open",
+        "opened_at": "2026-10-14T15:31:05Z",
+        "override_reason": "Final camera and ResizeObserver correction changes the native view after d71bcec passed. CI on the exact latest commit is required before the owner-requested release merge; no further local full suite."
       }
     ],
     "records": [
@@ -181,20 +200,29 @@
         "result": "pass",
         "evidence": "Fresh fictional demo generated from committed kit at 247750c; all four governance checks passed. Later native tests verified the installed final bundled UI and unchanged archive bytes.",
         "at": "2026-10-14T15:26:08Z"
+      },
+      {
+        "permit_id": "verify-03048fcf31",
+        "scope": "full",
+        "name": "final-native-field-ci",
+        "fingerprint": "d71bcec4bae9dd672831f70236d2cdc2afd8eb8b",
+        "result": "pass",
+        "evidence": "CI 38589417511 on exact commit d71bcec passed validate and fresh-wiki; includes full Python suite, eight Node model cases, npm locked build and bundle freshness. Final camera-size UI change b813460 has native acceptance but needs its own CI.",
+        "at": "2026-10-14T15:31:05Z"
       }
     ]
   },
   "counters": {
     "subagent_spawns": 1,
     "thread_review_spawns": 0,
-    "full_verification_runs": 3,
+    "full_verification_runs": 4,
     "scope_additions_after_freeze": 0,
     "repair_rounds": 3
   },
   "host": {
-    "last": "codex",
+    "last": "claude",
     "handoff_to": null
   },
   "created_at": "2026-10-14T14:33:08Z",
-  "updated_at": "2026-10-14T15:26:08Z"
+  "updated_at": "2026-10-14T17:30:48Z"
 }

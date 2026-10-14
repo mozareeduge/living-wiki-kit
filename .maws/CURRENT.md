@@ -6,7 +6,7 @@
 **Active item:** walkthrough-release  
 **Scope frozen:** True  
 **Open subagent permits:** 0/1  
-**Full verification runs:** 3/1  
+**Full verification runs:** 4/1  
 
 ## Work items
 
