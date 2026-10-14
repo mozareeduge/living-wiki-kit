@@ -43,6 +43,7 @@ def create(destination: pathlib.Path) -> pathlib.Path:
          'extracted_text_path': None, 'authority_scope': 'fictional-demo-fixture',
          'validation_status': 'registered-not-fully-claim-validated', 'status': 'registered', 'visibility': 'private'},
          '# Demo rehearsal receipt\n\n' + passage + '\n\nThis synthetic source proves only its own fixture bytes. It makes no claim about a real work.')
+    claim_text = 'After the director\'s note, the second scene was rewritten.'
     for slug,title,text in [('first','First rehearsal','An early fictional rehearsal.'),('second','بازنویسی صحنه','A later fictional scene revision. Persian title demonstrates bidirectional reading.')]:
         note(destination, '03-objects/' + slug + '.md', {'id': 'demo-obj-' + slug, 'type': 'object', 'title': title,
              'status': 'active-record', 'labels': ['demo', 'rehearsal'], 'authority_tier': 'candidate', 'visibility': 'private',
@@ -53,10 +54,10 @@ def create(destination: pathlib.Path) -> pathlib.Path:
          'supporting_sources': [sid], 'counter_evidence': [], 'status': 'active', 'visibility': 'private'},
          '# Candidate: rehearsal leads to revision\n\nA fictional, unaccepted relation. Its graph projection is an aid to navigation.\n\nThe source passage is: ' + passage)
     note(destination, '05-claims/change.md', {'id': 'demo-claim-change', 'type': 'claim-object',
-         'title': 'Candidate claim: the scene changed', 'statement': passage, 'supporting_sources': [sid],
+         'title': 'Candidate claim: the scene was rewritten', 'statement': claim_text, 'supporting_sources': [sid],
          'unsupported_zones': ['No evidence about an actual artwork'], 'counter_evidence': [], 'certainty': 'candidate',
          'current_claim_permission': 'may-note', 'responsible_language': 'en', 'status': 'active', 'visibility': 'private'},
-         '# Candidate claim\n\n' + passage + '\n\nThis remains candidate material. [[03-objects/second|Read the revised scene]].')
+         '# Candidate claim\n\n' + claim_text + '\n\nThis remains candidate material. [[03-objects/second|Read the revised scene]].')
     run(destination, 'scripts/wiki_state.py', '--repo', '.', 'rebuild')
     run(destination, 'scripts/sync_intake_registers.py', '--accept-corpus-change', '--apply')
     sys.path.insert(0, str(destination / 'scripts'))
@@ -67,16 +68,23 @@ def create(destination: pathlib.Path) -> pathlib.Path:
     run(destination, 'scripts/build_graph_index.py')
     run(destination, 'scripts/candidate_projection.py', 'rebuild')
     run(destination, 'scripts/context_pack.py', '--seed', 'demo-obj-first', '--hops', '1')
-    note(destination, 'WALKTHROUGH.md', {'id': 'demo-index-walkthrough', 'type': 'index', 'title': 'Start the walkthrough', 'status': 'active'},
+    case = {'claim_id': 'demo-claim-change', 'title': 'The scene that changed', 'minutes': 4,
+            'brief': 'A colleague wants to cite this claim in a programme note. Before they do, check it against the passage it points to.',
+            'answer': 'overstated',
+            'options': [{'key': 'supported', 'label': 'Supported'}, {'key': 'overstated', 'label': 'Overstated'}, {'key': 'unclear', 'label': 'Needs more evidence'}],
+            'reveal_right': 'Right. The source says the scene changed after a recorded discussion. It never mentions a director, a note, or a rewrite. The claim adds all three.',
+            'reveal_other': 'Look at the highlighted words: the claim adds a director, a note and a rewrite that the source never states.',
+            'next_label': 'Start with your own document', 'next_path': 'QUICKSTART.md'}
+    note(destination, 'WALKTHROUGH.md', {'id': 'demo-index-walkthrough', 'type': 'index', 'title': 'Start the walkthrough', 'status': 'active', 'case': case},
         '# Start the walkthrough\n\nThis vault is fictional. No personal archive has been changed.\n\n'
-        '1. Open **Living Wiki Field: Open Field view** from the command palette. Select **First rehearsal**.\n'
-        '2. Read its note beside the graph. Follow **rehearsal leads to revision** and then **بازنویسی صحنه**.\n'
-        '3. Follow the source receipt to the immutable original. Compare the recorded statement with its bytes.\n'
-        '4. Open **Route** to retrace your visits. Open **Index / View** to filter candidate and recorded material.\n'
-        '5. Open **Review** to inspect the unaccepted proposal. Open **Health**, then **Run governance checks**.\n\n'
-        'Expected outcome: you can find a record, follow a relation, inspect evidence, return through your route, '
-        'and see why a candidate has not become accepted knowledge. Estimated duration: 12 minutes.\n\n'
-        '[[03-objects/first|Start at First rehearsal]] · [[05-claims/change|Inspect the candidate claim]]')
+        '**Case file: the scene that changed.** About four minutes.\n\n'
+        '1. The **Case** tab should already be open. If not, run **Living Wiki Field: Open the case**.\n'
+        '2. Press **Show it on the map**. The pulsing dashed ring is the claim.\n'
+        '3. Compare the claim with the source. Highlighted words are not in the source.\n'
+        '4. Choose a verdict. It is saved in the plugin only, never in the archive.\n'
+        '5. Optional: open **Review** to see an AI suggestion waiting for a person, and **Health** to run the governance checks.\n\n'
+        'Afterwards you will know what the kit is for: it does not stop you from writing claims, it shows you which ones outrun their evidence.\n\n'
+        '[[03-objects/first|Browse from First rehearsal]] · [[05-claims/change|Open the claim record]]')
     from install_obsidian_field import install
     install(destination)
     obs = destination / '.obsidian'

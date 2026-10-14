@@ -1497,4 +1497,5 @@ var IndexView = (function () {
 })();
 
 require('./extensions.js').install(LivingWikiFieldPlugin, FieldView, ReaderView, IndexView);
+require('./case.js').install(LivingWikiFieldPlugin, FieldView);
 module.exports = LivingWikiFieldPlugin;
