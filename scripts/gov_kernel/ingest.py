@@ -48,19 +48,37 @@ class IngestError(Exception):
 
 
 def _lock_file(f: Any) -> None:
+    """Exclusive inter-process lock: fcntl on POSIX, msvcrt byte lock on Windows."""
     try:
         import fcntl
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-    except Exception:
-        pass
+    except ImportError:
+        import msvcrt
+        import time
+        f.seek(0)
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                return
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise IngestError("E_LOCK_TIMEOUT", "idempotency lock busy for 30 s")
+                time.sleep(0.05)
+    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
 
 
 def _unlock_file(f: Any) -> None:
     try:
         import fcntl
-        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except Exception:
-        pass
+    except ImportError:
+        import msvcrt
+        try:
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+        return
+    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
 class IdempotencyGuard:

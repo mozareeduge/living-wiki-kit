@@ -164,6 +164,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `evidence_audit.py` | candidate-layer audit against `proposal_schema.json`: a proposal whose `source_passage` cannot be verified is reported `rejected-audit`; never edits the queue | operational |
 | `schema_drift_fixer.py` | derives path-derivable frontmatter fixes (filename, type/kind) as a `PATCH_MANIFEST`; leaves semantic fields for human adjudication | operational |
 | `wiki_capture.py` (+ `capture/`) | governed multimodal capture: hash, dedupe, atomic store, state machine | operational |
+| `ingest_file.py` (+ `gov_kernel/ingest.py`) | file ingest door: source record + text derivative, request_id idempotency, commit state | operational |
 | `wiki_mcp_server.py` | governance MCP (stdio, UTF-8), profile-scoped: `--profile read` (default) = `wiki_read_text`, `wiki_get_record`, `wiki_search` (portable FTS5 floor + optional QMD over the collections in `qmd-collections-v1.1.0.json`), `wiki_resolve_id`, `wiki_get_source`, `wiki_state`, `wiki_context_pack`; `--profile capture` adds the capture tools and `wiki_propose` / `wiki_propose_from_capture` (immutable candidate records in `_proposals/records/`). No profile writes canonical records | operational |
 | `export_interchange.py` | PROV-O JSON-LD, SKOS, TEI skeletons — derived views, never the record | available (unexercised) |
 | `export_public.py` | sensitivity-reviewed public export OUTSIDE the repo | available (unexercised) |
