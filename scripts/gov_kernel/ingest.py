@@ -83,6 +83,12 @@ class IdempotencyGuard:
 
     def acquire_and_check(self) -> dict[str, Any] | None:
         self.intake_dir.mkdir(parents=True, exist_ok=True)
+        intake_gi = self.intake_dir / ".gitignore"
+        if not intake_gi.is_file():
+            try:
+                intake_gi.write_text("*.lock\n.*.lock\n.tmp*\n", encoding="utf-8")
+            except OSError:
+                pass
         self._lock_file_obj = open(self.lock_path, "a+")
         _lock_file(self._lock_file_obj)
         if self.log_path.is_file():
@@ -239,6 +245,118 @@ def _update_census_and_entry_pages(root: pathlib.Path, tier: str) -> None:
                 page.write_text(txt.replace(old_marker, new_marker), encoding="utf-8")
         except Exception:
             pass
+
+
+def get_last_failure(root: pathlib.Path) -> str | None:
+    st_file = root / "_intake" / "commit_status.json"
+    if st_file.is_file():
+        try:
+            data = json.loads(st_file.read_text(encoding="utf-8"))
+            return data.get("last_failure")
+        except Exception:
+            pass
+    return None
+
+
+def set_commit_status(root: pathlib.Path, last_failure: str | None) -> None:
+    intake = root / "_intake"
+    intake.mkdir(parents=True, exist_ok=True)
+    st_file = intake / "commit_status.json"
+    if last_failure is None:
+        if st_file.is_file():
+            try:
+                st_file.unlink()
+            except OSError:
+                pass
+    else:
+        data = {
+            "last_failure": last_failure,
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        _atomic_write(st_file, json.dumps(data, indent=2).encode("utf-8"))
+
+
+def get_uncommitted_count(root: pathlib.Path) -> int:
+    if not (root / ".git").exists():
+        return 0
+    try:
+        cp = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if cp.returncode == 0:
+            lines = [line for line in cp.stdout.splitlines() if line.strip()]
+            return len(lines)
+    except Exception:
+        pass
+    return 0
+
+
+def get_commit_status(root: pathlib.Path) -> dict[str, Any]:
+    return {
+        "uncommitted": {
+            "count": get_uncommitted_count(root),
+            "last_failure": get_last_failure(root),
+        }
+    }
+
+
+def wiki_status(root: pathlib.Path | None = None) -> dict[str, Any]:
+    if root is None:
+        root = pathlib.Path.cwd()
+    root = pathlib.Path(root).resolve()
+    return get_commit_status(root)
+
+
+def attempt_git_commit(
+    root: pathlib.Path, staged_paths: list[str], commit_message: str
+) -> tuple[str, str | None]:
+    if not (root / ".git").exists():
+        return "uncommitted", None
+    try:
+        # Stage named paths only
+        valid_paths = [p for p in staged_paths if (root / p).exists()]
+        if valid_paths:
+            cp_add = subprocess.run(
+                ["git", "add", "--", *valid_paths],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            if cp_add.returncode != 0:
+                err = cp_add.stderr.strip() or f"git add failed with exit {cp_add.returncode}"
+                set_commit_status(root, err)
+                return "uncommitted", err
+
+        cp_commit = subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if cp_commit.returncode == 0:
+            set_commit_status(root, None)
+            return "committed", None
+        else:
+            err = (
+                cp_commit.stderr.strip()
+                or cp_commit.stdout.strip()
+                or f"git commit failed with exit {cp_commit.returncode}"
+            )
+            set_commit_status(root, err)
+            return "uncommitted", err
+    except Exception as exc:
+        err = str(exc)
+        set_commit_status(root, err)
+        return "uncommitted", err
 
 
 def _extract_derivative(src_file: pathlib.Path) -> tuple[str, dict[str, Any]]:
@@ -427,6 +545,28 @@ def ingest_file(
         # Update census counts
         _update_census_and_entry_pages(root, chosen_tier)
 
+        # Attempt git commit if configured
+        commit_state = "uncommitted"
+        last_failure = None
+        if auto_commit and (root / ".git").exists():
+            staged_paths = [
+                orig_rel,
+                rec_rel,
+                deriv_rel,
+                "00-system/registers/CORPUS_STATE.json",
+            ]
+            for name in ENTRY_PAGES:
+                if (root / name).is_file():
+                    staged_paths.append(name)
+            if (root / "_intake" / "idempotency.jsonl").is_file():
+                staged_paths.append("_intake/idempotency.jsonl")
+            if (root / "_intake" / ".gitignore").is_file():
+                staged_paths.append("_intake/.gitignore")
+
+            commit_state, last_failure = attempt_git_commit(
+                root, staged_paths, f"intake: ingest {record_id} ({src.name})"
+            )
+
         receipt = {
             "ok": True,
             "source_ref": f"rec:{record_id}",
@@ -437,8 +577,10 @@ def ingest_file(
             "extraction": extraction,
             "source_version": source_version,
             "chunk_count": 0,
-            "commit_state": "uncommitted",
+            "commit_state": commit_state,
         }
+        if last_failure:
+            receipt["last_failure"] = last_failure
 
         # Chunk index hook
         try:
