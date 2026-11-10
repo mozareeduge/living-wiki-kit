@@ -34,6 +34,14 @@ from gov_kernel.retrieval import (  # noqa: E402
     search_fts,
 )
 from gov_kernel.state import load_state  # noqa: E402
+from mcp_transport import (  # noqa: E402
+    HttpTransport,
+    StdioTransport,
+    ToolDefinition,
+    ToolRegistry,
+    run_http,
+    run_stdio,
+)
 
 sys.path.insert(0, str(ROOT / "scripts" / "capture"))
 try:
@@ -160,7 +168,7 @@ def _qmd_search(query: str, collections: tuple[str, ...], n: int, profile: str) 
 def tool_wiki_read_text(args: dict[str, Any]) -> str:
     p = _safe_text_path(str(args.get("path", "")))
     if p is None:
-        return json.dumps({"error": "path rejected or non-text-safe extension", "path": args.get("path")})
+        return json.dumps({"error": "path rejected or non-text-safe extension", "path": args.get("path")}, ensure_ascii=False)
     return json.dumps(_read_text(p), ensure_ascii=False)
 
 
@@ -483,56 +491,90 @@ DISPATCH: dict[str, Callable[[dict[str, Any]], str]] = {
 }
 
 
-def advertised_tools() -> list[dict[str, Any]]:
-    return READ_TOOLS + (CAPTURE_TOOLS if ACTIVE_PROFILE == "capture" else [])
+WRITE_TOOLS: frozenset[str] = frozenset({
+    "wiki_capture_text",
+    "wiki_propose",
+    "wiki_propose_from_capture",
+    "wiki_mark_capture_reviewed",
+    "wiki_transcribe_capture",
+})
+
+REGISTRY = ToolRegistry(server_name="wiki-governance", server_version="2.0.0")
+
+for _t in READ_TOOLS:
+    REGISTRY.register(ToolDefinition(
+        name=_t["name"],
+        description=_t["description"],
+        input_schema=_t["inputSchema"],
+        fn=DISPATCH[_t["name"]],
+        profile="read",
+        is_write=False,
+    ))
+
+for _t in CAPTURE_TOOLS:
+    REGISTRY.register(ToolDefinition(
+        name=_t["name"],
+        description=_t["description"],
+        input_schema=_t["inputSchema"],
+        fn=DISPATCH[_t["name"]],
+        profile="capture",
+        is_write=(_t["name"] in WRITE_TOOLS),
+    ))
+
+REGISTRY.register_alias("wiki_read", "wiki_read_text")
+REGISTRY.register_alias("wiki_exact", "wiki_resolve_id")
 
 
-def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
-    method = msg.get("method"); msg_id = msg.get("id")
-    if method == "initialize":
-        return {"jsonrpc": "2.0", "id": msg_id, "result": {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "wiki-governance", "version": "2.0.0"}}}
-    if method is None or str(method).startswith("notifications/"):
-        return None
-    if method == "tools/list":
-        return {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": advertised_tools()}}
-    if method == "tools/call":
-        params = msg.get("params") or {}; name = str(params.get("name") or "")
-        allowed = {x["name"] for x in advertised_tools()}
-        if name not in allowed:
-            return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32602, "message": f"tool not enabled in {ACTIVE_PROFILE!r} profile: {name}"}}
-        fn = DISPATCH.get(name)
-        if fn is None:
-            return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32602, "message": f"unknown tool: {name}"}}
-        try:
-            text = fn(params.get("arguments") or {})
-            is_error = False
-        except Exception as exc:  # noqa: BLE001
-            text = json.dumps({"error": f"{type(exc).__name__}: {exc}"}); is_error = True
-        return {"jsonrpc": "2.0", "id": msg_id, "result": {"content": [{"type": "text", "text": text}], "isError": is_error}}
-    if msg_id is not None:
-        return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"method not found: {method}"}}
-    return None
+def advertised_tools(profile: str | None = None) -> list[dict[str, Any]]:
+    return REGISTRY.advertised_tools(profile or ACTIVE_PROFILE)
+
+
+def handle(msg: dict[str, Any], transport: str = "stdio") -> dict[str, Any] | None:
+    return REGISTRY.handle(msg, profile=ACTIVE_PROFILE, transport=transport)
+
+
+def _parse_bind(bind_str: str) -> tuple[str, int]:
+    host = "127.0.0.1"
+    port = 8787
+    if ":" in bind_str:
+        h, p = bind_str.rsplit(":", 1)
+        if h.strip():
+            host = h.strip()
+        if p.strip() and p.strip().isdigit():
+            port = int(p.strip())
+    elif bind_str.isdigit():
+        port = int(bind_str)
+    elif bind_str.strip():
+        host = bind_str.strip()
+    return host, port
 
 
 def main() -> int:
     global ACTIVE_PROFILE
-    ap = argparse.ArgumentParser(); ap.add_argument("--profile", choices=["read", "capture"], default="read")
-    args = ap.parse_args(); ACTIVE_PROFILE = args.profile
-    # JSON-RPC over stdio is UTF-8 by contract. A piped stdio on Windows
-    # defaults to the locale code page, which cannot carry Persian text.
-    sys.stdin.reconfigure(encoding="utf-8")
-    sys.stdout.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser(description="Living Wiki governance MCP server.")
+    ap.add_argument("--profile", choices=["read", "capture"], default="read", help="Capability profile (default: read)")
+    ap.add_argument("--transport", choices=["stdio", "http"], default="stdio", help="Transport mechanism (default: stdio)")
+    ap.add_argument("--bind", default="127.0.0.1:8787", help="Host:port to bind for HTTP transport (default: 127.0.0.1:8787)")
+    ap.add_argument("--host", default=None, help="Host to bind for HTTP transport")
+    ap.add_argument("--port", type=int, default=None, help="Port to bind for HTTP transport")
+    args = ap.parse_args()
+    ACTIVE_PROFILE = args.profile
+
     # Fail closed on broken profile config at process start.
     load_profiles(ROOT)
-    for line in sys.stdin:
-        line = line.strip()
-        if not line: continue
-        try: msg = json.loads(line)
-        except json.JSONDecodeError: continue
-        resp = handle(msg)
-        if resp is not None:
-            sys.stdout.write(json.dumps(resp, ensure_ascii=False) + "\n"); sys.stdout.flush()
-    return 0
+
+    if args.transport == "http":
+        b_host, b_port = _parse_bind(args.bind)
+        host = args.host or b_host
+        port = args.port or b_port
+        return run_http(
+            lambda msg, tr="http": handle(msg, transport=tr),
+            lambda: ACTIVE_PROFILE,
+            host=host,
+            port=port,
+        )
+
+    return run_stdio(lambda msg, tr="stdio": handle(msg, transport=tr))
 
 
 if __name__ == "__main__":
