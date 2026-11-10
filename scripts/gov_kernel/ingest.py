@@ -47,6 +47,90 @@ class IngestError(Exception):
         self.message = message
 
 
+def _lock_file(f: Any) -> None:
+    try:
+        import fcntl
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+    except Exception:
+        pass
+
+
+def _unlock_file(f: Any) -> None:
+    try:
+        import fcntl
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+
+
+class IdempotencyGuard:
+    """Manages _intake/idempotency.jsonl with process concurrency locking."""
+
+    def __init__(self, root: pathlib.Path, request_id: str, door: str, payload: Any):
+        if not isinstance(request_id, str) or len(request_id) < 8 or len(request_id) > 100:
+            raise IngestError("E_BAD_REQUEST_ID", "request_id must be a string of 8-100 characters")
+        self.root = root
+        self.request_id = request_id
+        self.door = door
+        self.payload = payload
+        self.payload_hash = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        self.intake_dir = root / "_intake"
+        self.log_path = self.intake_dir / "idempotency.jsonl"
+        self.lock_path = self.intake_dir / ".idempotency.lock"
+        self._lock_file_obj = None
+
+    def acquire_and_check(self) -> dict[str, Any] | None:
+        self.intake_dir.mkdir(parents=True, exist_ok=True)
+        self._lock_file_obj = open(self.lock_path, "a+")
+        _lock_file(self._lock_file_obj)
+        if self.log_path.is_file():
+            try:
+                for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    entry = json.loads(line)
+                    if entry.get("request_id") == self.request_id:
+                        if entry.get("payload_hash") == self.payload_hash:
+                            self.release()
+                            return entry.get("receipt")
+                        else:
+                            self.release()
+                            raise IngestError(
+                                "E_IDEMPOTENCY_CONFLICT",
+                                f"request_id {self.request_id!r} already used with different payload",
+                            )
+            except IngestError:
+                raise
+            except Exception:
+                pass
+        return None
+
+    def record(self, receipt: dict[str, Any]) -> None:
+        try:
+            entry = {
+                "request_id": self.request_id,
+                "door": self.door,
+                "payload_hash": self.payload_hash,
+                "receipt": receipt,
+                "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+            with open(self.log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        finally:
+            self.release()
+
+    def release(self) -> None:
+        if self._lock_file_obj:
+            try:
+                _unlock_file(self._lock_file_obj)
+                self._lock_file_obj.close()
+            except Exception:
+                pass
+            self._lock_file_obj = None
+
+
 def on_ingested(receipt: dict[str, Any]) -> None:
     """Hook for chunk indexer (wired by lane L1 in Phase C)."""
     pass
@@ -230,120 +314,145 @@ def ingest_file(
     digest = hashlib.sha256(data).hexdigest()
     mime = MIME_TABLE.get(ext) or mimetypes.guess_type(src.name)[0] or "application/octet-stream"
 
-    # Step 1: Dedup check
-    existing = find_existing_original(root, digest)
-    if existing:
-        # Re-derive source_version from existing derivative if available
-        deriv_rel = existing.get("extracted_text_path")
-        s_ver = digest
-        if deriv_rel and (root / deriv_rel).is_file():
-            _, s_ver = normalize_derivative_text((root / deriv_rel).read_text(encoding="utf-8"))
-        return {
+    guard = None
+    if request_id is not None:
+        guard = IdempotencyGuard(
+            root,
+            request_id,
+            "wiki_ingest_file",
+            {"sha256": digest, "title": title or "", "description": description or ""},
+        )
+        cached = guard.acquire_and_check()
+        if cached is not None:
+            return cached
+
+    try:
+        # Step 1: Dedup check
+        existing = find_existing_original(root, digest)
+        if existing:
+            # Re-derive source_version from existing derivative if available
+            deriv_rel = existing.get("extracted_text_path")
+            s_ver = digest
+            if deriv_rel and (root / deriv_rel).is_file():
+                _, s_ver = normalize_derivative_text((root / deriv_rel).read_text(encoding="utf-8"))
+            receipt = {
+                "ok": True,
+                "duplicate_of": existing["source_ref"],
+                "source_ref": existing["source_ref"],
+                "record_id": existing["record_id"],
+                "sha256": digest,
+                "bytes": len(data),
+                "mime": mime,
+                "extraction": {"method": "dedup", "quality_note": "duplicate artifact", "fa_ratio": 0.0, "status": "ok", "ok": True, "flags": []},
+                "source_version": s_ver,
+                "chunk_count": 0,
+                "commit_state": "committed",
+            }
+            if guard:
+                guard.record(receipt)
+            return receipt
+
+        # Step 2: Copy to _originals/<prefix>-<yyyy>/<sha[:2]>/<sha>.<ext>
+        prefix = get_instance_prefix(root)
+        yyyy = datetime.datetime.now(datetime.timezone.utc).strftime("%Y")
+        orig_rel = f"_originals/{prefix}-{yyyy}/{digest[:2]}/{digest}{ext}"
+        orig_dest = root / orig_rel
+        orig_dest.parent.mkdir(parents=True, exist_ok=True)
+        _atomic_write(orig_dest, data)
+        # Set read-only after write (444)
+        try:
+            os.chmod(orig_dest, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        except OSError:
+            pass
+
+        # Declare holdings tier per policy
+        policy_tier = "pending-registration"
+        policy_path = root / "00-system" / "policies" / "HOLDINGS_POLICY.json"
+        if policy_path.exists():
+            try:
+                pol = json.loads(policy_path.read_text(encoding="utf-8"))
+                policy_tier = pol.get("default_tier_for_unregistered", "pending-registration")
+            except Exception:
+                pass
+        chosen_tier = holdings_tier or policy_tier
+
+        # Step 3 & 4: Extract derivative text & normalize
+        md_content, extraction = _extract_derivative(orig_dest)
+        norm_text, source_version = normalize_derivative_text(md_content)
+
+        # Step 5: Mint record ID and paths
+        record_id = f"{prefix}-src-{digest[:12]}"
+        rec_rel = f"02-sources/records/{record_id}.md"
+        deriv_rel = f"02-sources/text/{record_id}.extracted.md"
+
+        # Write derivative text
+        deriv_dest = root / deriv_rel
+        _atomic_write(deriv_dest, norm_text.encode("utf-8"))
+
+        # Construct frontmatter
+        doc_title = title or src.stem.replace("-", " ").replace("_", " ").title()
+        today_iso = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+        clean_format = ext.lstrip(".")
+        if clean_format == "markdown":
+            clean_format = "md"
+
+        import yaml
+        fm = {
+            "id": record_id,
+            "type": "source-record",
+            "title": doc_title,
+            "filename": src.name,
+            "aliases": [],
+            "family": None,
+            "version_role": None,
+            "current_priority": None,
+            "authority_scope": "external",
+            "format": clean_format,
+            "status": "pending-registration",
+            "holdings_tier": chosen_tier,
+            "validation_status": "unadjudicated",
+            "visibility": "private",
+            "sensitivity": "ordinary",
+            "created": today_iso,
+            "updated": today_iso,
+            "sha256": digest,
+            "original_path": orig_rel,
+            "extracted_text_path": deriv_rel,
+            "schema_version": "1.0.0",
+        }
+        rec_body = f"# {doc_title}\n\n## Artifact identity\n\n## Authority and use\n\n## Extraction status\n\n"
+        rec_text = "---\n" + yaml.safe_dump(fm, sort_keys=False, allow_unicode=True) + "---\n\n" + rec_body
+        _atomic_write(root / rec_rel, rec_text.encode("utf-8"))
+
+        # Update census counts
+        _update_census_and_entry_pages(root, chosen_tier)
+
+        receipt = {
             "ok": True,
-            "duplicate_of": existing["source_ref"],
-            "source_ref": existing["source_ref"],
-            "record_id": existing["record_id"],
+            "source_ref": f"rec:{record_id}",
+            "record_id": record_id,
             "sha256": digest,
             "bytes": len(data),
             "mime": mime,
-            "extraction": {"method": "dedup", "quality_note": "duplicate artifact", "fa_ratio": 0.0, "status": "ok", "ok": True, "flags": []},
-            "source_version": s_ver,
+            "extraction": extraction,
+            "source_version": source_version,
             "chunk_count": 0,
-            "commit_state": "committed",
+            "commit_state": "uncommitted",
         }
 
-    # Step 2: Copy to _originals/<prefix>-<yyyy>/<sha[:2]>/<sha>.<ext>
-    prefix = get_instance_prefix(root)
-    yyyy = datetime.datetime.now(datetime.timezone.utc).strftime("%Y")
-    orig_rel = f"_originals/{prefix}-{yyyy}/{digest[:2]}/{digest}{ext}"
-    orig_dest = root / orig_rel
-    orig_dest.parent.mkdir(parents=True, exist_ok=True)
-    _atomic_write(orig_dest, data)
-    # Set read-only after write (444)
-    try:
-        os.chmod(orig_dest, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-    except OSError:
-        pass
-
-    # Declare holdings tier per policy
-    policy_tier = "pending-registration"
-    policy_path = root / "00-system" / "policies" / "HOLDINGS_POLICY.json"
-    if policy_path.exists():
+        # Chunk index hook
         try:
-            pol = json.loads(policy_path.read_text(encoding="utf-8"))
-            policy_tier = pol.get("default_tier_for_unregistered", "pending-registration")
+            on_ingested(receipt)
         except Exception:
             pass
-    chosen_tier = holdings_tier or policy_tier
 
-    # Step 3 & 4: Extract derivative text & normalize
-    md_content, extraction = _extract_derivative(orig_dest)
-    norm_text, source_version = normalize_derivative_text(md_content)
+        if guard:
+            guard.record(receipt)
 
-    # Step 5: Mint record ID and paths
-    record_id = f"{prefix}-src-{digest[:12]}"
-    rec_rel = f"02-sources/records/{record_id}.md"
-    deriv_rel = f"02-sources/text/{record_id}.extracted.md"
+        return receipt
+    finally:
+        if guard:
+            guard.release()
 
-    # Write derivative text
-    deriv_dest = root / deriv_rel
-    _atomic_write(deriv_dest, norm_text.encode("utf-8"))
 
-    # Construct frontmatter
-    doc_title = title or src.stem.replace("-", " ").replace("_", " ").title()
-    today_iso = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    clean_format = ext.lstrip(".")
-    if clean_format == "markdown":
-        clean_format = "md"
-
-    import yaml
-    fm = {
-        "id": record_id,
-        "type": "source-record",
-        "title": doc_title,
-        "filename": src.name,
-        "aliases": [],
-        "family": None,
-        "version_role": None,
-        "current_priority": None,
-        "authority_scope": "external",
-        "format": clean_format,
-        "status": "pending-registration",
-        "holdings_tier": chosen_tier,
-        "validation_status": "unadjudicated",
-        "visibility": "private",
-        "sensitivity": "ordinary",
-        "created": today_iso,
-        "updated": today_iso,
-        "sha256": digest,
-        "original_path": orig_rel,
-        "extracted_text_path": deriv_rel,
-        "schema_version": "1.0.0",
-    }
-    rec_body = f"# {doc_title}\n\n## Artifact identity\n\n## Authority and use\n\n## Extraction status\n\n"
-    rec_text = "---\n" + yaml.safe_dump(fm, sort_keys=False, allow_unicode=True) + "---\n\n" + rec_body
-    _atomic_write(root / rec_rel, rec_text.encode("utf-8"))
-
-    # Update census counts
-    _update_census_and_entry_pages(root, chosen_tier)
-
-    receipt = {
-        "ok": True,
-        "source_ref": f"rec:{record_id}",
-        "record_id": record_id,
-        "sha256": digest,
-        "bytes": len(data),
-        "mime": mime,
-        "extraction": extraction,
-        "source_version": source_version,
-        "chunk_count": 0,
-        "commit_state": "uncommitted",
-    }
-
-    # Chunk index hook
-    try:
-        on_ingested(receipt)
-    except Exception:
-        pass
-
-    return receipt
+wiki_ingest_file = ingest_file

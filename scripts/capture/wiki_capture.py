@@ -315,7 +315,11 @@ def _finalize_record(fm: dict, sections: dict) -> Path:
     return dest
 
 
-def capture_text(text: str, channel: str, language_hint: str = "unknown") -> dict:
+def capture_text(text: str, channel: str, language_hint: str = "unknown",
+                 request_id: str | None = None) -> dict:
+    if request_id is not None:
+        if not isinstance(request_id, str) or len(request_id) < 8 or len(request_id) > 100:
+            raise CaptureError("E_BAD_REQUEST_ID", "request_id must be a string of 8-100 characters")
     if channel not in CHANNELS:
         raise CaptureError("E_BAD_CHANNEL", f"unknown channel: {channel}")
     if language_hint not in LANGS:
@@ -323,28 +327,55 @@ def capture_text(text: str, channel: str, language_hint: str = "unknown") -> dic
     canonical = text.rstrip("\n") + "\n" if text.strip() else ""
     if not canonical:
         raise CaptureError("E_EMPTY", "text capture is empty")
-    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-    dup = find_by_hash(digest)
-    cid = _new_id()
-    sections = _blank_sections()
-    sections["User-supplied text"] = canonical
-    sections["Provenance events"] = _event_line("created", "ok", f"sha256:{digest[:16]}") + "\n"
-    fm = {"id": cid, "type": "capture", "title": f"Capture {cid}", "status": "received",
-          "capture_kind": "text", "captured_at": _now_iso(),
-          "capture_channel": channel, "language_hint": language_hint,
-          "raw_media": None, "raw_media_available": False,
-          "sha256": digest, "bytes": len(canonical.encode("utf-8")),
-          "duplicate_of": dup,
-          "transcription_state": "not-requested", "transcription_method": None,
-          "transcription_version": None, "transcription_reviewed": False,
-          "quality_flags": [], "promoted_to": None,
-          "schema_version": CAPTURE_SCHEMA_VERSION}
-    if dup:
-        sections["Provenance events"] += _event_line("duplicate-of", "ok", dup) + "\n"
-    dest = _finalize_record(fm, sections)
-    return {"ok": True, "id": cid, "status": "received", "path": _repo_rel(dest),
-            "sha256": digest, "bytes": fm["bytes"], "duplicate_of": dup,
-            "message": f"duplicate of {dup}" if dup else "text capture stored"}
+
+    guard = None
+    if request_id is not None:
+        try:
+            sys_path = str(REPO_ROOT / "scripts")
+            if sys_path not in sys.path:
+                sys.path.insert(0, sys_path)
+            from gov_kernel.ingest import IdempotencyGuard, IngestError
+            guard = IdempotencyGuard(
+                REPO_ROOT,
+                request_id,
+                "wiki_capture_text",
+                {"text": canonical, "channel": channel, "language_hint": language_hint},
+            )
+            cached = guard.acquire_and_check()
+            if cached is not None:
+                return cached
+        except IngestError as exc:
+            raise CaptureError(exc.code, exc.message)
+
+    try:
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        dup = find_by_hash(digest)
+        cid = _new_id()
+        sections = _blank_sections()
+        sections["User-supplied text"] = canonical
+        sections["Provenance events"] = _event_line("created", "ok", f"sha256:{digest[:16]}") + "\n"
+        fm = {"id": cid, "type": "capture", "title": f"Capture {cid}", "status": "received",
+              "capture_kind": "text", "captured_at": _now_iso(),
+              "capture_channel": channel, "language_hint": language_hint,
+              "raw_media": None, "raw_media_available": False,
+              "sha256": digest, "bytes": len(canonical.encode("utf-8")),
+              "duplicate_of": dup,
+              "transcription_state": "not-requested", "transcription_method": None,
+              "transcription_version": None, "transcription_reviewed": False,
+              "quality_flags": [], "promoted_to": None,
+              "schema_version": CAPTURE_SCHEMA_VERSION}
+        if dup:
+            sections["Provenance events"] += _event_line("duplicate-of", "ok", dup) + "\n"
+        dest = _finalize_record(fm, sections)
+        result = {"ok": True, "id": cid, "status": "received", "path": _repo_rel(dest),
+                  "sha256": digest, "bytes": fm["bytes"], "duplicate_of": dup,
+                  "message": f"duplicate of {dup}" if dup else "text capture stored"}
+        if guard:
+            guard.record(result)
+        return result
+    finally:
+        if guard:
+            guard.release()
 
 
 def capture_media(src: str, kind: str, channel: str,
@@ -756,6 +787,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--channel", required=True, choices=sorted(CHANNELS))
     c.add_argument("--lang", default="unknown", choices=sorted(LANGS))
     c.add_argument("--text", required=True)
+    c.add_argument("--request-id", default=None)
 
     m = sub.add_parser("capture-media")
     m.add_argument("--src", required=True)
@@ -809,7 +841,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.cmd == "capture-text":
-            return _out(capture_text(args.text, args.channel, args.lang), as_json)
+            return _out(capture_text(args.text, args.channel, args.lang, args.request_id), as_json)
         if args.cmd == "capture-media":
             return _out(capture_media(args.src, args.kind, args.channel, args.lang), as_json)
         if args.cmd == "capture-url":
@@ -857,6 +889,9 @@ def main(argv: list[str] | None = None) -> int:
     except CaptureError as e:
         return _out({"ok": False, "code": e.code, "message": e.message}, as_json)
     return 1
+
+
+wiki_capture_text = capture_text
 
 
 if __name__ == "__main__":
