@@ -8,6 +8,12 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
+from .chunking import (
+    chunk_text,
+    compute_source_version,
+    detect_language_hint,
+    normalize_derivative_text,
+)
 from .common import repo_path, sha256_file
 from .frontmatter import load_markdown_frontmatter
 from .normalize import normalize_persian_for_search
@@ -91,11 +97,25 @@ def _metadata(path: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, Any], s
     }, body
 
 
-def build_index(root: pathlib.Path, db_path: pathlib.Path) -> dict[str, Any]:
+def build_index(
+    root: pathlib.Path,
+    db_path: pathlib.Path,
+    *,
+    chunk_profiles: tuple[str, ...] | list[str] | str | None = None,
+) -> dict[str, Any]:
     profiles = load_profiles(root)
     governed = profiles.get("all-governed")
     if not governed:
         raise RuntimeError("all-governed profile is required")
+
+    if chunk_profiles is None:
+        chunk_prof_names = ("canonical", "captures", "evidence-text")
+    elif isinstance(chunk_profiles, str):
+        chunk_prof_names = (chunk_profiles,)
+    else:
+        chunk_prof_names = tuple(chunk_profiles)
+    active_chunk_profs = [profiles[name] for name in chunk_prof_names if name in profiles]
+
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
         db_path.unlink()
@@ -103,9 +123,25 @@ def build_index(root: pathlib.Path, db_path: pathlib.Path) -> dict[str, Any]:
     try:
         if not probe_fts5(conn):
             raise FTS5Unavailable("FTS5_UNAVAILABLE")
-        conn.execute("CREATE TABLE docs(path TEXT PRIMARY KEY, record_id TEXT, record_type TEXT, status TEXT, authority_level INTEGER, title TEXT, language_hint TEXT, content_sha256 TEXT, updated TEXT)")
+        conn.execute(
+            "CREATE TABLE docs(path TEXT PRIMARY KEY, record_id TEXT, record_type TEXT, "
+            "status TEXT, authority_level INTEGER, title TEXT, language_hint TEXT, "
+            "content_sha256 TEXT, updated TEXT)"
+        )
         conn.execute("CREATE VIRTUAL TABLE docs_fts USING fts5(path UNINDEXED, title, body, normalized_body)")
-        count = 0
+        conn.execute(
+            "CREATE TABLE sources(source_ref TEXT PRIMARY KEY, source_version TEXT, path TEXT, "
+            "tier TEXT, authority_level INTEGER, language_hint TEXT, indexed_at TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE chunks(chunk_ref TEXT PRIMARY KEY, source_ref TEXT, source_version TEXT, "
+            "start INTEGER, end INTEGER, heading_path TEXT, text TEXT, text_sha256 TEXT)"
+        )
+        conn.execute("CREATE VIRTUAL TABLE chunks_fts USING fts5(chunk_ref UNINDEXED, text, normalized_text)")
+
+        doc_count = 0
+        chunk_count = 0
+        source_count = 0
         for p in sorted(root.rglob("*")):
             if not p.is_file() or p.suffix.lower() not in TEXT_EXTS:
                 continue
@@ -113,11 +149,99 @@ def build_index(root: pathlib.Path, db_path: pathlib.Path) -> dict[str, Any]:
             if rel.startswith(".git/") or rel.startswith("_search/") or not profile_allows(rel, governed):
                 continue
             meta, body = _metadata(p, root)
-            conn.execute("INSERT INTO docs VALUES(?,?,?,?,?,?,?,?,?)", (meta["path"], meta["record_id"], meta["record_type"], meta["status"], meta["authority_level"], meta["title"], meta["language_hint"], meta["content_sha256"], meta["updated"]))
-            conn.execute("INSERT INTO docs_fts(path,title,body,normalized_body) VALUES(?,?,?,?)", (meta["path"], meta["title"], body, normalize_persian_for_search(body)))
-            count += 1
+            conn.execute(
+                "INSERT INTO docs VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    meta["path"],
+                    meta["record_id"],
+                    meta["record_type"],
+                    meta["status"],
+                    meta["authority_level"],
+                    meta["title"],
+                    meta["language_hint"],
+                    meta["content_sha256"],
+                    meta["updated"],
+                ),
+            )
+            conn.execute(
+                "INSERT INTO docs_fts(path,title,body,normalized_body) VALUES(?,?,?,?)",
+                (meta["path"], meta["title"], body, normalize_persian_for_search(body)),
+            )
+            doc_count += 1
+
+            # Check if this document qualifies for chunking
+            if p.suffix.lower() in {".md", ".txt"} and any(profile_allows(rel, cp) for cp in active_chunk_profs):
+                rec_id = meta.get("record_id")
+                if rec_id:
+                    s_id = str(rec_id)
+                    if s_id.startswith(("rec:", "cap:", "doc:", "prop:", "hist:")):
+                        src_ref = s_id
+                    elif meta.get("record_type") == "capture" or "cap-" in s_id or rel.startswith(("01-inbox/captures/", "_captures/")):
+                        src_ref = f"cap:{s_id}"
+                    else:
+                        src_ref = f"rec:{s_id}"
+                else:
+                    src_ref = f"doc:{meta['content_sha256']}"
+
+                norm_body = normalize_derivative_text(body)
+                src_version = compute_source_version(norm_body)
+                tier = meta.get("status") or meta.get("tier") or (
+                    "captures" if rel.startswith(("01-inbox/captures/", "_captures/"))
+                    else ("canonical" if rel.startswith(("03-objects/", "04-notes/", "05-claims/", "06-relations/")) else "source")
+                )
+                auth_lvl = meta.get("authority_level")
+                if auth_lvl is None:
+                    if rel.startswith(("01-inbox/captures/", "_captures/")):
+                        auth_lvl = 6
+                    elif rel.startswith(("03-objects/", "04-notes/", "05-claims/", "06-relations/")):
+                        auth_lvl = 2
+                    else:
+                        auth_lvl = 1
+
+                lang = meta.get("language_hint") or detect_language_hint(body)
+                indexed_at = meta.get("updated")
+
+                conn.execute(
+                    "INSERT OR REPLACE INTO sources VALUES(?,?,?,?,?,?,?)",
+                    (src_ref, src_version, rel, tier, auth_lvl, lang, indexed_at),
+                )
+                source_count += 1
+
+                chunks = chunk_text(
+                    body,
+                    source_ref=src_ref,
+                    source_version=src_version,
+                    language_hint=lang,
+                )
+                for chk in chunks:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO chunks VALUES(?,?,?,?,?,?,?,?)",
+                        (
+                            chk.chunk_ref,
+                            chk.source_ref,
+                            chk.source_version,
+                            chk.span["start"],
+                            chk.span["end"],
+                            json.dumps(chk.heading_path, ensure_ascii=False),
+                            chk.text,
+                            chk.text_sha256,
+                        ),
+                    )
+                    norm_txt = normalize_persian_for_search(chk.text)
+                    conn.execute(
+                        "INSERT INTO chunks_fts(chunk_ref, text, normalized_text) VALUES(?,?,?)",
+                        (chk.chunk_ref, chk.text, norm_txt),
+                    )
+                    chunk_count += 1
+
         conn.commit()
-        return {"capability": "FTS5_AVAILABLE", "indexed_documents": count, "db": str(db_path)}
+        return {
+            "capability": "FTS5_AVAILABLE",
+            "indexed_documents": doc_count,
+            "indexed_chunks": chunk_count,
+            "indexed_sources": source_count,
+            "db": str(db_path),
+        }
     finally:
         conn.close()
 
