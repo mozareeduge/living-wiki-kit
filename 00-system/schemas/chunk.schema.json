@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://living-wiki-kit.local/schemas/chunk.schema.json",
+  "title": "Living Wiki chunk",
+  "description": "Schema for deterministic text chunks derived from source derivatives.",
+  "type": "object",
+  "required": [
+    "chunk_ref",
+    "source_ref",
+    "source_version",
+    "span",
+    "text_sha256",
+    "heading_path",
+    "language_hint",
+    "char_len"
+  ],
+  "properties": {
+    "chunk_ref": {
+      "type": "string",
+      "pattern": "^chk:[0-9a-f]{32}$",
+      "description": "chk: prefix followed by first 32 hex of sha256(source_version + ':' + start + ':' + end)"
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the source record, derivative, or capture"
+    },
+    "source_version": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 hex of the normalized derivative text"
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "text_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 hex of the exact un-normalized chunk text slice"
+    },
+    "heading_path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Hierarchical heading context leading to this chunk"
+    },
+    "language_hint": {
+      "type": "string",
+      "enum": ["fa", "en", "mixed", "unknown"]
+    },
+    "char_len": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "text": {
+      "type": "string",
+      "description": "Optional verbatim chunk text slice corresponding to span"
+    }
+  },
+  "additionalProperties": true
+}

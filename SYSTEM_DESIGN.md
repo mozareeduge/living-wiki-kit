@@ -70,7 +70,7 @@ pointer-true restatements refreshed in the same change as the registers.
    stopped.
 4. **Search is a route, never evidence.** Canonical page → claim/relation →
    source record → derivative → original. A retrieval score organizes
-   attention; it proves nothing.
+   attention; it proves nothing. See `00-system/policies/RETRIEVAL_MODEL.md`.
 5. **Convergence of write paths.** All changes travel: branch → bounded
    change or patch manifest → validator green → reviewable diff → merge → CI
    green. Conversational edits never modify the wiki.
