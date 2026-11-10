@@ -307,3 +307,117 @@ def open_current_result(root: pathlib.Path, result: dict[str, Any], profile_name
         raise FileNotFoundError(f"STALE_BACKEND_PATH:{rel}")
     text=p.read_text(encoding="utf-8",errors="replace")
     return {"path":rel,"current_content":text,"current_sha256":sha256_file(p),"backend_hint":result.get("backend"),"authority_note":"current content loaded from repository filesystem"}
+
+
+def index_status(root: pathlib.Path, db_path: pathlib.Path | None = None) -> dict[str, Any]:
+    """Check retrieval index status across four states: empty, fresh, stale, missing.
+
+    Empty corpus with no index returns status='empty' and degraded=False ('nothing to index' != 'stale').
+    """
+    if db_path is None:
+        db_path = root / "_search" / "retrieval.sqlite"
+
+    profiles = load_profiles(root)
+    governed = profiles.get("all-governed")
+    if not governed:
+        return {
+            "status": "missing",
+            "degraded": True,
+            "reasons": ["all-governed profile is missing from configuration"],
+            "corpus_documents": 0,
+            "indexed_documents": 0,
+        }
+
+    corpus_files: dict[str, pathlib.Path] = {}
+    for p in root.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in TEXT_EXTS:
+            continue
+        rel = str(p.relative_to(root)).replace("\\", "/")
+        if rel.startswith(".git/") or rel.startswith("_search/") or not profile_allows(rel, governed):
+            continue
+        corpus_files[rel] = p
+
+    corpus_count = len(corpus_files)
+    if corpus_count == 0:
+        return {
+            "status": "empty",
+            "degraded": False,
+            "reasons": [],
+            "corpus_documents": 0,
+            "indexed_documents": 0,
+        }
+
+    if not db_path.exists():
+        return {
+            "status": "missing",
+            "degraded": True,
+            "reasons": ["search index database file does not exist"],
+            "corpus_documents": corpus_count,
+            "indexed_documents": 0,
+        }
+
+    conn = sqlite3.connect(db_path)
+    try:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        if "docs" not in tables:
+            return {
+                "status": "missing",
+                "degraded": True,
+                "reasons": ["docs table missing from index database"],
+                "corpus_documents": corpus_count,
+                "indexed_documents": 0,
+            }
+
+        rows = conn.execute("SELECT path, content_sha256 FROM docs").fetchall()
+        indexed_map = {r[0]: r[1] for r in rows}
+        indexed_count = len(indexed_map)
+
+        if set(corpus_files.keys()) != set(indexed_map.keys()):
+            return {
+                "status": "stale",
+                "degraded": True,
+                "reasons": ["search index stale: document set on disk does not match indexed documents"],
+                "corpus_documents": corpus_count,
+                "indexed_documents": indexed_count,
+            }
+
+        for rel, p in corpus_files.items():
+            curr_sha = sha256_file(p)
+            if curr_sha != indexed_map.get(rel):
+                return {
+                    "status": "stale",
+                    "degraded": True,
+                    "reasons": [f"search index stale: document modified ({rel})"],
+                    "corpus_documents": corpus_count,
+                    "indexed_documents": indexed_count,
+                }
+
+        return {
+            "status": "fresh",
+            "degraded": False,
+            "reasons": [],
+            "corpus_documents": corpus_count,
+            "indexed_documents": indexed_count,
+        }
+    finally:
+        conn.close()
+
+
+def check_index_status(root: pathlib.Path, db_path: pathlib.Path | None = None) -> dict[str, Any]:
+    return index_status(root, db_path)
+
+
+def get_index_status(root: pathlib.Path, db_path: pathlib.Path | None = None) -> dict[str, Any]:
+    return index_status(root, db_path)
+
+
+def wiki_status(root: pathlib.Path, db_path: pathlib.Path | None = None) -> dict[str, Any]:
+    """Overall status reporting degraded flag and search index semantics."""
+    idx = index_status(root, db_path)
+    return {
+        "status": idx["status"],
+        "degraded": idx["degraded"],
+        "reasons": list(idx["reasons"]),
+        "search_index": idx,
+    }
+
