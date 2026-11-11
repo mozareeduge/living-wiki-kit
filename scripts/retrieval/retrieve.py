@@ -16,6 +16,7 @@ from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+from gov_kernel.enrichment import anchored_chunks, current_revision  # noqa: E402
 from gov_kernel.normalize import normalize_persian_for_search  # noqa: E402
 from gov_kernel.retrieval import (  # noqa: E402
     FTS5Unavailable,
@@ -147,6 +148,60 @@ def _candidates(
     return found
 
 
+ENRICH_REASONS = ("enrichment-topic", "enrichment-entity")
+
+
+def _label_matches(tokens: list[str], label: str) -> bool:
+    have = {t.lower() for t in _tokens(label)}
+    return bool(have) and all(t.lower() in have for t in tokens)
+
+
+def _enrichment_candidates(
+    conn: sqlite3.Connection, root: pathlib.Path, tokens: list[str], found: dict[str, dict[str, Any]]
+) -> int:
+    """Add enrichment-topic / enrichment-entity reasons (level 7, non-evidence) to ``found``.
+
+    Only the latest revision made for the CURRENT source version counts, and only chunks that are
+    current chunks of that source. Chunk-level labels (chunk topics, entity names/aliases) attach to
+    their own chunk; source-level topics/tags/categories attach to the chunks the annotation is
+    anchored to. The returned text is always the chunk text. Returns the number of sources used.
+    """
+    used = 0
+    for src_ref, version in conn.execute("SELECT source_ref, source_version FROM sources").fetchall():
+        rev = current_revision(root, src_ref, version)
+        if rev is None:
+            continue
+        ann = rev["annotation"]
+        hits: dict[str, str] = {}  # chunk_ref -> reason
+
+        def add(ref: str, reason: str) -> None:
+            hits.setdefault(ref, reason)
+
+        anchors = anchored_chunks(ann)
+        for label in (ann.get("topics") or []) + (ann.get("tags") or []) + (ann.get("categories") or []):
+            if _label_matches(tokens, label):
+                for ref in anchors:
+                    add(ref, "enrichment-topic")
+        for ca in ann.get("chunk_annotations") or []:
+            if any(_label_matches(tokens, t) for t in ca.get("topics") or []):
+                add(ca["chunk_ref"], "enrichment-topic")
+        for ent in ann.get("entities") or []:
+            if any(_label_matches(tokens, n) for n in [ent["name"], *(ent.get("aliases") or [])]):
+                add(ent["mention"]["chunk_ref"], "enrichment-entity")
+        for ref, reason in hits.items():
+            row = conn.execute("SELECT source_ref, source_version FROM chunks WHERE chunk_ref=?", (ref,)).fetchone()
+            if not row or row[0] != src_ref or row[1] != version:
+                continue
+            cur = found.get(ref)
+            if cur is None:
+                found[ref] = {"score": 0.0, "reasons": [reason], "alias": []}
+            elif reason not in cur["reasons"]:
+                cur["reasons"].append(reason)
+        if hits:
+            used += 1
+    return used
+
+
 def wiki_retrieve(
     root: pathlib.Path | str,
     *,
@@ -177,6 +232,7 @@ def wiki_retrieve(
     try:
         profiles = load_profiles(root)
         cands = _candidates(conn, tokens, load_alias_groups(root))
+        enrich_sources = _enrichment_candidates(conn, root, tokens, cands)
         meta: dict[str, tuple] = {}
         for ref in cands:
             row = conn.execute(
@@ -233,6 +289,11 @@ def wiki_retrieve(
                 "score": cand["score"],
                 "coverage": {"returned_chars": len(text), "truncated": truncated},
             }
+            weak = [r for r in reasons if r in ENRICH_REASONS]
+            if weak:
+                hit["non_evidence_reasons"] = weak
+                if len(weak) == len(reasons):
+                    hit["non_evidence"] = True
             if cand["alias"]:
                 hit["alias_matches"] = cand["alias"]
             groups_out[g].append(hit)
@@ -253,6 +314,7 @@ def wiki_retrieve(
         "next_cursor": _encode_cursor(new_offsets, qkey) if more else None,
         "index_state": status["status"],
         "authority_note": AUTHORITY_NOTE,
+        "enrichment": {"sources_matched": enrich_sources, "non_evidence": True},
     }
     if status["degraded"]:
         out["warnings"] = ["index-" + status["status"]] + list(status["reasons"])
@@ -340,6 +402,7 @@ def wiki_artifact_read(
             (source_ref, limit, offset),
         ).fetchall()
         disk = root / src[1]
+        coverage = _annotation_coverage(conn, root, source_ref, src[0], total)
         return {
             "ok": True,
             "source_ref": source_ref,
@@ -358,10 +421,29 @@ def wiki_artifact_read(
                     for r in rows
                 ],
             },
+            "annotation_coverage": coverage,
             "authority_note": AUTHORITY_NOTE,
         }
     finally:
         conn.close()
+
+
+def _annotation_coverage(conn: sqlite3.Connection, root: pathlib.Path, source_ref: str,
+                         version: str, total: int) -> dict[str, Any]:
+    """E4: how many current chunks the current enrichment revision is anchored to (non-evidence)."""
+    rev = current_revision(root, source_ref, version)
+    annotated = 0
+    if rev is not None:
+        current = {r[0] for r in conn.execute("SELECT chunk_ref FROM chunks WHERE source_ref=?", (source_ref,))}
+        annotated = len([r for r in anchored_chunks(rev["annotation"]) if r in current])
+    return {
+        "annotated_chunks": annotated,
+        "total_chunks": total,
+        "ratio": round(annotated / total, 4) if total else 0.0,
+        "annotation_revision": rev["revision"] if rev else None,
+        "state": "none" if rev is None else ("full" if total and annotated >= total else "partial"),
+        "non_evidence": True,
+    }
 
 
 # ---------------------------------------------------------------- tool handlers

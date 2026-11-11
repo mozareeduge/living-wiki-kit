@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["source_ref", "source_version", "revision", "idempotency_key", "producer", "created_at", "authority_level", "non_evidence", "annotation"],
   "properties": {
-    "source_ref": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9._-]+$"},
+    "source_ref": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9._:-]+$"},
     "source_version": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "revision": {"type": "integer", "minimum": 1},
     "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 100},
