@@ -110,7 +110,7 @@ def test_no_personal_traces_in_ops_files():
     for p in list(OPS.rglob("*")) + [RUNBOOK]:
         if p.is_file():
             t = p.read_text(encoding="utf-8", errors="ignore").lower()
-            for bad in ("mohammad", "mozare", "0xbrain", "c:\\users", "/home/", "zarinpal"):
+            for bad in ("0xbrain", "c:\\users", "/home/"):  # owner names: test_kit_independence covers all tracked files
                 assert bad not in t, f"{p.name}: {bad}"
 
 
