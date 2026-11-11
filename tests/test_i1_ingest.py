@@ -67,7 +67,7 @@ def test_ingest_text_file(clean_wiki: Path) -> None:
     assert receipt["extraction"]["status"] == "ok"
     assert receipt["extraction"]["method"] == "passthrough"
     assert len(receipt["source_version"]) == 64
-    assert receipt["chunk_count"] == 0
+    assert receipt["chunk_count"] > 0  # A0: real count
 
     # Verify original file created
     prefix_year = f"tst-{Path(clean_wiki).stat().st_ctime and '2026'}"

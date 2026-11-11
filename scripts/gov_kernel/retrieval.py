@@ -97,6 +97,91 @@ def _metadata(path: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, Any], s
     }, body
 
 
+_CHUNK_DDL = (
+    "CREATE TABLE IF NOT EXISTS docs(path TEXT PRIMARY KEY, record_id TEXT, record_type TEXT, "
+    "status TEXT, authority_level INTEGER, title TEXT, language_hint TEXT, "
+    "content_sha256 TEXT, updated TEXT)",
+    "CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(path UNINDEXED, title, body, normalized_body)",
+    "CREATE TABLE IF NOT EXISTS sources(source_ref TEXT PRIMARY KEY, source_version TEXT, path TEXT, "
+    "tier TEXT, authority_level INTEGER, language_hint TEXT, indexed_at TEXT)",
+    "CREATE TABLE IF NOT EXISTS chunks(chunk_ref TEXT PRIMARY KEY, source_ref TEXT, source_version TEXT, "
+    "start INTEGER, end INTEGER, heading_path TEXT, text TEXT, text_sha256 TEXT)",
+    "CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(chunk_ref UNINDEXED, text, normalized_text)",
+)
+
+
+def derivative_source_ref(rel: str) -> str | None:
+    """Stable ``rec:<id>`` ref for an ingest derivative ``02-sources/text/<id>.extracted.md``."""
+    p = rel.replace("\\", "/")
+    if p.startswith("02-sources/text/") and p.endswith(".extracted.md"):
+        stem = p[len("02-sources/text/"):-len(".extracted.md")]
+        if stem and "/" not in stem:
+            return f"rec:{stem}"
+    return None
+
+
+def index_derivative(
+    root: pathlib.Path,
+    db_path: pathlib.Path,
+    *,
+    source_ref: str,
+    rel_path: str,
+    text: str,
+    tier: str = "source",
+    authority_level: int = 1,
+) -> dict[str, Any]:
+    """Incrementally (re)index one derivative: replaces that source's chunk rows only.
+
+    Creates the chunk tables when the index does not exist yet. Existing tables are not altered.
+    """
+    norm = normalize_derivative_text(text)
+    version = compute_source_version(norm)
+    lang = detect_language_hint(norm)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    try:
+        if not probe_fts5(conn):
+            raise FTS5Unavailable("FTS5_UNAVAILABLE")
+        for ddl in _CHUNK_DDL:
+            conn.execute(ddl)
+        old = [r[0] for r in conn.execute("SELECT chunk_ref FROM chunks WHERE source_ref=?", (source_ref,))]
+        for ref in old:
+            conn.execute("DELETE FROM chunks_fts WHERE chunk_ref=?", (ref,))
+        conn.execute("DELETE FROM chunks WHERE source_ref=?", (source_ref,))
+        conn.execute(
+            "INSERT OR REPLACE INTO sources VALUES(?,?,?,?,?,?,?)",
+            (source_ref, version, rel_path, tier, authority_level, lang,
+             datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")),
+        )
+        chunks = chunk_text(norm, source_ref=source_ref, source_version=version, language_hint=lang)
+        for chk in chunks:
+            conn.execute(
+                "INSERT OR REPLACE INTO chunks VALUES(?,?,?,?,?,?,?,?)",
+                (chk.chunk_ref, chk.source_ref, chk.source_version, chk.span["start"], chk.span["end"],
+                 json.dumps(chk.heading_path, ensure_ascii=False), chk.text, chk.text_sha256),
+            )
+            conn.execute(
+                "INSERT INTO chunks_fts(chunk_ref, text, normalized_text) VALUES(?,?,?)",
+                (chk.chunk_ref, chk.text, normalize_persian_for_search(chk.text)),
+            )
+        conn.commit()
+        return {"source_ref": source_ref, "source_version": version, "chunk_count": len(chunks)}
+    finally:
+        conn.close()
+
+
+def chunk_count_for(db_path: pathlib.Path, source_ref: str) -> int:
+    if not db_path.is_file():
+        return 0
+    conn = sqlite3.connect(db_path)
+    try:
+        return int(conn.execute("SELECT count(*) FROM chunks WHERE source_ref=?", (source_ref,)).fetchone()[0])
+    except sqlite3.Error:
+        return 0
+    finally:
+        conn.close()
+
+
 def build_index(
     root: pathlib.Path,
     db_path: pathlib.Path,
@@ -181,7 +266,7 @@ def build_index(
                     else:
                         src_ref = f"rec:{s_id}"
                 else:
-                    src_ref = f"doc:{meta['content_sha256']}"
+                    src_ref = derivative_source_ref(rel) or f"doc:{meta['content_sha256']}"
 
                 norm_body = normalize_derivative_text(body)
                 src_version = compute_source_version(norm_body)
