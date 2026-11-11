@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly Living Wiki backup (@PREFIX@)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+Unit=wiki-backup.service
+
+[Install]
+WantedBy=timers.target

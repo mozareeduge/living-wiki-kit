@@ -1,0 +1,10 @@
+[Unit]
+Description=Living Wiki governance validation (@PREFIX@)
+
+[Service]
+Type=oneshot
+User=wiki
+Group=wiki
+WorkingDirectory=/srv/@PREFIX@-wiki
+EnvironmentFile=/etc/@PREFIX@-wiki/env
+ExecStart=/srv/@PREFIX@-wiki/.venv/bin/python scripts/wiki_validate.py --format json

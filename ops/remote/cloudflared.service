@@ -1,0 +1,23 @@
+# Template. Outbound-only tunnel to the loopback MCP server; the VM opens no inbound port.
+# The tunnel's public hostname must point at service http://127.0.0.1:8787 (set in the dashboard by hand).
+# TUNNEL_TOKEN comes from /etc/@PREFIX@-wiki/env (mode 0600), never from the repo.
+[Unit]
+Description=Cloudflare Tunnel to the Living Wiki MCP server (@PREFIX@)
+After=network-online.target wiki-mcp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wiki
+Group=wiki
+EnvironmentFile=/etc/@PREFIX@-wiki/env
+ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate run
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Living Wiki validation (@PREFIX@)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+Unit=wiki-validate.service
+
+[Install]
+WantedBy=timers.target

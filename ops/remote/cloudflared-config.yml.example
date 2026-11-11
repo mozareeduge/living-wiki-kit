@@ -1,0 +1,8 @@
+# Reference for a locally managed tunnel (alternative to the token-based unit).
+# Create the tunnel and DNS record in the Cloudflare dashboard by hand; nothing here does it.
+tunnel: @TUNNEL_ID@
+credentials-file: /etc/@PREFIX@-wiki/cloudflared-credentials.json
+ingress:
+  - hostname: brain.@OWNER_DOMAIN@
+    service: http://127.0.0.1:8787
+  - service: http_status:404

@@ -1,0 +1,8 @@
+# OPTIONAL drop-in, off by default. Install as
+#   /etc/systemd/system/wiki-mcp.service.d/insecure-local-only.conf
+# ONLY after Cloudflare Access (or an equivalent edge gate) in front of the tunnel is verified.
+# It enables /upload and the write tools over HTTP WITHOUT any auth inside the server.
+# Pending owner decisions D-1/D-2 (auth design); the flag refuses to bind anything but 127.0.0.1.
+[Service]
+ExecStart=
+ExecStart=/srv/@PREFIX@-wiki/.venv/bin/python scripts/wiki_mcp_server.py --transport http --profile capture --bind 127.0.0.1:8787 --insecure-local-only

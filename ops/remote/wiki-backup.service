@@ -1,0 +1,11 @@
+[Unit]
+Description=Living Wiki backup: git push to a private remote plus EBS snapshot (@PREFIX@)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=wiki
+Group=wiki
+WorkingDirectory=/srv/@PREFIX@-wiki
+EnvironmentFile=/etc/@PREFIX@-wiki/env
+ExecStart=/srv/@PREFIX@-wiki/ops/remote/wiki-backup.sh
