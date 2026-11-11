@@ -142,3 +142,22 @@ class ToolRegistry:
             }
 
         return None
+
+
+def register_retrieval_tools(registry: "ToolRegistry", root: Any) -> None:
+    """Register wiki_retrieve (C4) and wiki_artifact_read (C5): read-profile, read-only tools."""
+    import pathlib
+    import sys
+
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "retrieval"))
+    import retrieve as _r
+
+    root = pathlib.Path(root)
+    registry.register(ToolDefinition(
+        name="wiki_retrieve",
+        description="Chunk-level retrieval with exact spans. Canonical and capture hits are separate groups; ranking is not evidence.",
+        input_schema=_r.RETRIEVE_SCHEMA, fn=_r.make_retrieve_handler(root), profile="read", is_write=False))
+    registry.register(ToolDefinition(
+        name="wiki_artifact_read",
+        description="Read one source as layers plus paginated chunks, or one chunk by chunk_ref with prev/next. Stale refs fail with E_STALE_SOURCE.",
+        input_schema=_r.ARTIFACT_READ_SCHEMA, fn=_r.make_artifact_read_handler(root), profile="read", is_write=False))

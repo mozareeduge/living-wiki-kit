@@ -156,8 +156,31 @@ class IdempotencyGuard:
 
 
 def on_ingested(receipt: dict[str, Any]) -> None:
-    """Hook for chunk indexer (wired by lane L1 in Phase C)."""
-    pass
+    """Chunk the derivative (C2) and write chunk rows (C3); report the real chunk_count.
+
+    ``receipt["_index_ctx"]`` (``root``, ``derivative_path``, ``text``) is supplied by
+    ``ingest_file`` and removed again before the receipt is returned.
+    """
+    ctx = receipt.get("_index_ctx")
+    if not ctx:
+        return
+    from . import retrieval
+
+    root = pathlib.Path(ctx["root"])
+    res = retrieval.index_derivative(
+        root,
+        root / "_search" / "retrieval.sqlite",
+        source_ref=receipt["source_ref"],
+        rel_path=ctx["derivative_path"],
+        text=ctx["text"],
+    )
+    receipt["chunk_count"] = res["chunk_count"]
+
+
+def _existing_chunk_count(root: pathlib.Path, source_ref: str) -> int:
+    from . import retrieval
+
+    return retrieval.chunk_count_for(root / "_search" / "retrieval.sqlite", source_ref)
 
 
 def get_instance_prefix(root: pathlib.Path) -> str:
@@ -481,7 +504,7 @@ def ingest_file(
                 "mime": mime,
                 "extraction": {"method": "dedup", "quality_note": "duplicate artifact", "fa_ratio": 0.0, "status": "ok", "ok": True, "flags": []},
                 "source_version": s_ver,
-                "chunk_count": 0,
+                "chunk_count": _existing_chunk_count(root, existing["source_ref"]),
                 "commit_state": "committed",
             }
             if guard:
@@ -601,10 +624,14 @@ def ingest_file(
             receipt["last_failure"] = last_failure
 
         # Chunk index hook
+        receipt["_index_ctx"] = {"root": str(root), "derivative_path": deriv_rel, "text": norm_text}
         try:
             on_ingested(receipt)
         except Exception:
-            pass
+            receipt["chunk_count"] = 0
+            receipt["warnings"] = list(receipt.get("warnings", [])) + ["index-failed"]
+        finally:
+            receipt.pop("_index_ctx", None)
 
         if guard:
             guard.record(receipt)
