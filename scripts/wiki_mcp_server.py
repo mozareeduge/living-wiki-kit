@@ -39,6 +39,7 @@ from mcp_transport import (  # noqa: E402
     StdioTransport,
     ToolDefinition,
     ToolRegistry,
+    register_retrieval_tools,
     run_http,
     run_stdio,
 )
@@ -523,6 +524,7 @@ for _t in CAPTURE_TOOLS:
 
 REGISTRY.register_alias("wiki_read", "wiki_read_text")
 REGISTRY.register_alias("wiki_exact", "wiki_resolve_id")
+register_retrieval_tools(REGISTRY, ROOT)
 
 
 def advertised_tools(profile: str | None = None) -> list[dict[str, Any]]:

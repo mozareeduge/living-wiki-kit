@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from mcp_transport.http import HttpTransport, create_mcp_http_server, run_http
-from mcp_transport.registry import ToolDefinition, ToolRegistry
+from mcp_transport.registry import ToolDefinition, ToolRegistry, register_retrieval_tools
 from mcp_transport.stdio import StdioTransport, run_stdio
 
 __all__ = [
@@ -12,5 +12,6 @@ __all__ = [
     "ToolRegistry",
     "create_mcp_http_server",
     "run_http",
+    "register_retrieval_tools",
     "run_stdio",
 ]
