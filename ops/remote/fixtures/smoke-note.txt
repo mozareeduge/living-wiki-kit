@@ -1,0 +1,2 @@
+Smoke fixture for the remote server check.
+The unique phrase is lwk-smoke-fixture-heron-7731.

@@ -1,0 +1,24 @@
+# Template. Render @PREFIX@ with the instance prefix (see RUNBOOK_REMOTE_SERVER.md, step 6).
+# Loopback only. No write door over HTTP until auth exists (owner decisions D-1/D-2).
+[Unit]
+Description=Living Wiki governance MCP server (@PREFIX@, HTTP on loopback)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wiki
+Group=wiki
+WorkingDirectory=/srv/@PREFIX@-wiki
+EnvironmentFile=/etc/@PREFIX@-wiki/env
+ExecStart=/srv/@PREFIX@-wiki/.venv/bin/python scripts/wiki_mcp_server.py --transport http --profile capture --bind 127.0.0.1:8787
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/@PREFIX@-wiki
+
+[Install]
+WantedBy=multi-user.target

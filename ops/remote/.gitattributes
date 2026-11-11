@@ -1,0 +1,2 @@
+# Keep shell scripts and unit files LF so they run on the Linux VM.
+* text eol=lf
