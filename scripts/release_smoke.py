@@ -94,7 +94,17 @@ def run(kit: Path, work: Path, name: str = "CI Wiki", prefix: str = "ciw",
     echo(line)
     if not same:
         echo((r.stdout + r.stderr)[-2000:])
-    return same, log
+        return False, log
+    # Last: the reader's path on the fresh instance (ingest -> retrieve -> enrichment).
+    r = subprocess.run([sys.executable, "scripts/release_smoke_flow.py"], cwd=wiki, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace")
+    flow_ok = r.returncode == 0 and "FLOW OK" in r.stdout
+    line = f"{'PASS' if flow_ok else 'FAIL'}  ingest/retrieve/enrichment flow  (exit {r.returncode})"
+    log.append(line)
+    echo(line)
+    if not flow_ok:
+        echo((r.stdout + r.stderr)[-2000:])
+    return flow_ok, log
 
 
 def main(argv: list[str] | None = None) -> int:

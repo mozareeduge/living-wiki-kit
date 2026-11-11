@@ -14,7 +14,9 @@ import release_smoke  # noqa: E402
 def test_fresh_wiki_passes_every_gate(tmp_path: Path) -> None:
     ok, log = release_smoke.run(ROOT, tmp_path, echo=lambda s: None)
     assert ok, "\n".join(log)
-    assert log[-1] == "PASS  instantiate rerun byte-identical"
+    assert "PASS  instantiate rerun byte-identical" in log
+    # a fresh instance can ingest, retrieve, enrich and report coverage end to end
+    assert log[-1].startswith("PASS  ingest/retrieve/enrichment flow"), log
     assert any(line.startswith("PASS  report_holdings") for line in log)
 
 
@@ -31,3 +33,16 @@ def test_injected_validator_error_fails_and_names_the_step(tmp_path: Path) -> No
     assert log[-1].startswith("FAIL  validate_repo --full"), log
     # the kit itself is untouched by the run
     assert not (ROOT / "02-sources" / "records" / "ciw-src-0123456789ab--broken.md").exists()
+
+
+def test_enrichment_that_cannot_run_in_a_fresh_wiki_fails_the_flow_step(tmp_path: Path) -> None:
+    """If a fresh instance cannot accept enrichment, the release check must say so, not pass."""
+    ok, log = release_smoke.run(ROOT, tmp_path, echo=lambda s: None, after_instantiate=_hide_flow_dependency)
+    assert not ok
+    assert log[-1].startswith("FAIL  ingest/retrieve/enrichment flow"), log
+
+
+def _hide_flow_dependency(wiki: Path) -> None:
+    # make the flow's enrichment submit fail by making the kernel module unimportable
+    # in the new wiki only (the kit itself is untouched)
+    (wiki / "scripts" / "gov_kernel" / "enrichment.py").write_text("raise ImportError('broken')" + chr(10), encoding="utf-8")
