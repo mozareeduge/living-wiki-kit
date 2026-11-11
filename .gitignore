@@ -28,3 +28,6 @@ tools/obsidian-living-wiki-field/node_modules/
 # OS noise
 Thumbs.db
 .DS_Store
+
+# Upload staging (H2): TTL'd bytes, never committed
+_staging/

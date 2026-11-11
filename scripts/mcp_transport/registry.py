@@ -31,6 +31,8 @@ class ToolRegistry:
         self.server_version = server_version
         self._tools: dict[str, ToolDefinition] = {}
         self._aliases: dict[str, str] = {}
+        # Set only by `--insecure-local-only` (loopback bind); default keeps writes refused over HTTP.
+        self.http_writes_allowed = False
 
     def register(self, tool: ToolDefinition) -> None:
         self._tools[tool.name] = tool
@@ -105,7 +107,7 @@ class ToolRegistry:
                 }
 
             # Enforce write authentication gate over HTTP transport until auth exists (H3)
-            if transport == "http" and tool.is_write:
+            if transport == "http" and tool.is_write and not self.http_writes_allowed:
                 err_payload = json.dumps({
                     "ok": False,
                     "code": "E_AUTH_REQUIRED",

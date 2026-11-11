@@ -34,6 +34,8 @@ from gov_kernel.retrieval import (  # noqa: E402
     search_fts,
 )
 from gov_kernel.state import load_state  # noqa: E402
+import upload as _upload  # noqa: E402
+import upload.tools as _upload_tools  # noqa: E402
 from mcp_transport import (  # noqa: E402
     HttpTransport,
     StdioTransport,
@@ -521,6 +523,16 @@ for _t in CAPTURE_TOOLS:
         is_write=(_t["name"] in WRITE_TOOLS),
     ))
 
+# H2: wiki_ingest_file consumes a single-use upload ref (never a path).
+REGISTRY.register(ToolDefinition(
+    name="wiki_ingest_file",
+    description=_upload_tools.INGEST_TOOL_DESCRIPTION,
+    input_schema=_upload_tools.INGEST_TOOL_SCHEMA,
+    fn=_upload_tools.make_ingest_tool(lambda: ROOT, lambda: _upload.default_store(ROOT)),
+    profile="capture",
+    is_write=True,
+))
+
 REGISTRY.register_alias("wiki_read", "wiki_read_text")
 REGISTRY.register_alias("wiki_exact", "wiki_resolve_id")
 
@@ -557,6 +569,10 @@ def main() -> int:
     ap.add_argument("--bind", default="127.0.0.1:8787", help="Host:port to bind for HTTP transport (default: 127.0.0.1:8787)")
     ap.add_argument("--host", default=None, help="Host to bind for HTTP transport")
     ap.add_argument("--port", type=int, default=None, help="Port to bind for HTTP transport")
+    ap.add_argument(
+        "--insecure-local-only", action="store_true",
+        help="Allow /upload and write tools over HTTP WITHOUT auth. Needs --profile capture and a 127.0.0.1 bind.",
+    )
     args = ap.parse_args()
     ACTIVE_PROFILE = args.profile
 
@@ -567,11 +583,19 @@ def main() -> int:
         b_host, b_port = _parse_bind(args.bind)
         host = args.host or b_host
         port = args.port or b_port
+        if args.insecure_local_only:
+            if args.profile != "capture":
+                ap.error("--insecure-local-only needs --profile capture")
+            if host != "127.0.0.1":
+                ap.error("--insecure-local-only binds to 127.0.0.1 only")
+            REGISTRY.http_writes_allowed = True
         return run_http(
             lambda msg, tr="http": handle(msg, transport=tr),
             lambda: ACTIVE_PROFILE,
             host=host,
             port=port,
+            upload_store=_upload.default_store(ROOT),
+            insecure_local_only=args.insecure_local_only,
         )
 
     return run_stdio(lambda msg, tr="stdio": handle(msg, transport=tr))

@@ -12,6 +12,9 @@ class McpHttpRequestHandler(BaseHTTPRequestHandler):
 
     handle_fn: Callable[[dict[str, Any], str], dict[str, Any] | None]
     profile_provider: Callable[[], str]
+    # H2: upload routes are inert unless both are set (see upload.routes._gate).
+    upload_store: Any = None
+    insecure_local_only: bool = False
 
     def _set_cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -44,6 +47,10 @@ class McpHttpRequestHandler(BaseHTTPRequestHandler):
             self._set_cors_headers()
             self.end_headers()
             self.wfile.write(payload)
+        elif path == "/upload":
+            from upload.routes import handle_upload_get
+
+            handle_upload_get(self)
         elif path == "/mcp":
             accept = self.headers.get("Accept", "")
             if "text/event-stream" in accept:
@@ -64,6 +71,11 @@ class McpHttpRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.path.split("?")[0]
+        if path == "/upload":
+            from upload.routes import handle_upload_post
+
+            handle_upload_post(self)
+            return
         if path != "/mcp":
             self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
@@ -114,11 +126,24 @@ def create_mcp_http_server(
     port: int,
     handle_fn: Callable[[dict[str, Any], str], dict[str, Any] | None],
     profile_provider: Callable[[], str],
+    upload_store: Any = None,
+    insecure_local_only: bool = False,
 ) -> ThreadingHTTPServer:
+    if insecure_local_only:
+        from upload.routes import is_loopback_host
+
+        # Fail closed: no auth exists yet (D-1/D-2), so never expose this beyond loopback.
+        if not is_loopback_host(host):
+            raise ValueError("--insecure-local-only requires binding to 127.0.0.1 only")
     handler_class = type(
         "ConfiguredMcpHttpRequestHandler",
         (McpHttpRequestHandler,),
-        {"handle_fn": staticmethod(handle_fn), "profile_provider": staticmethod(profile_provider)},
+        {
+            "handle_fn": staticmethod(handle_fn),
+            "profile_provider": staticmethod(profile_provider),
+            "upload_store": upload_store,
+            "insecure_local_only": bool(insecure_local_only),
+        },
     )
     return ThreadingHTTPServer((host, port), handler_class)
 
@@ -132,8 +157,13 @@ class HttpTransport:
         profile_provider: Callable[[], str],
         host: str = "127.0.0.1",
         port: int = 8787,
+        upload_store: Any = None,
+        insecure_local_only: bool = False,
     ) -> None:
-        self.server = create_mcp_http_server(host, port, handle_fn, profile_provider)
+        self.server = create_mcp_http_server(
+            host, port, handle_fn, profile_provider,
+            upload_store=upload_store, insecure_local_only=insecure_local_only,
+        )
 
     def run(self) -> int:
         try:
@@ -150,6 +180,11 @@ def run_http(
     profile_provider: Callable[[], str],
     host: str = "127.0.0.1",
     port: int = 8787,
+    upload_store: Any = None,
+    insecure_local_only: bool = False,
 ) -> int:
-    transport = HttpTransport(handle_fn, profile_provider, host=host, port=port)
+    transport = HttpTransport(
+        handle_fn, profile_provider, host=host, port=port,
+        upload_store=upload_store, insecure_local_only=insecure_local_only,
+    )
     return transport.run()
