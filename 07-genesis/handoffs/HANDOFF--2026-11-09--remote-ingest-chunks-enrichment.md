@@ -1,7 +1,7 @@
 # HANDOFF — 2026-11-09 — remote server, file ingest, chunk retrieval, enrichment sidecar
 
 **To:** Jimmy (executing agent)
-**From:** Mohammad (owner), drafted with Claude
+**From:** the owner, drafted with Claude
 **Repo:** `mozareeduge/living-wiki-kit` — baseline `main` @ `ac66be8` (tag `v1.4.1`)
 **Target release:** kit **1.5.0**
 **Place this file at:** `07-genesis/handoffs/HANDOFF--2026-11-09--remote-ingest-chunks-enrichment.md`
@@ -222,7 +222,7 @@ Read tools may be reachable with read-scoped credentials; write tools require wr
 
 ---
 
-## 6. Owner decisions needed (ask Mohammad; do not guess)
+## 6. Owner decisions needed (ask the owner; do not guess)
 
 - **D-1 Auth model for claude.ai connectors.** Verify against current Anthropic docs (docs.claude.com / support.claude.com: "custom connectors / remote MCP") which auth a claude.ai custom connector supports today. Then choose between: (a) MCP OAuth served by our app (or an OAuth provider in front), (b) Cloudflare Access for the upload page + OAuth for `/mcp`, (c) other. Write the decision to `07-genesis/handoffs/`. **H3 is blocked until then.**
 - **D-2 Upload page access.** Cloudflare Access with the owner's email (recommended) vs app-level login.

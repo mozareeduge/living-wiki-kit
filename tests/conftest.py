@@ -24,4 +24,8 @@ def _close_sqlite_connections(monkeypatch):
     monkeypatch.setattr(sqlite3, "connect", connect)
     yield
     for con in opened:
-        con.close()
+        try:
+            con.close()
+        except sqlite3.ProgrammingError:
+            # opened in a server thread (HTTP tests); that thread owns it
+            pass

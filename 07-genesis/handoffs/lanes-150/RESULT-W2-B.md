@@ -31,7 +31,7 @@ Files: `scripts/gov_kernel/enrichment.py`, `00-system/schemas/enrichment-revisio
 `python -m pytest -q tests scripts/tests -p no:cacheprovider`
 → `1 failed, 515 passed, 2 skipped, 2 xfailed`
 
-The one failure, `tests/test_kit_independence.py::test_no_tracked_file_carries_a_personal_wiki_trace`, is not from this lane: it flags the word "mohammad" in the tracked file `07-genesis/handoffs/HANDOFF--2026-11-09--remote-ingest-chunks-enrichment.md` (placed in base commit `0e94df3`). The lane brief reported 478 passed at the base; I did not verify why this test passed then, and I did not edit the handoff. Raw output: `.mission-evidence/M-100.5.txt`.
+The one failure, `tests/test_kit_independence.py::test_no_tracked_file_carries_a_personal_wiki_trace`, is not from this lane: it flags an owner-name literal in the tracked file `07-genesis/handoffs/HANDOFF--2026-11-09--remote-ingest-chunks-enrichment.md` (placed in base commit `0e94df3`). The lane brief reported 478 passed at the base; I did not verify why this test passed then, and I did not edit the handoff. Raw output: `.mission-evidence/M-100.5.txt`.
 
 ## Open questions
 
