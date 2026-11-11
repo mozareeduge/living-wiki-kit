@@ -522,6 +522,19 @@ for _t in CAPTURE_TOOLS:
         is_write=(_t["name"] in WRITE_TOOLS),
     ))
 
+# W2-B: enrichment sidecar tools (E1 write / E2 read); handlers live in gov_kernel.enrichment
+from gov_kernel import enrichment as _enr  # noqa: E402
+REGISTRY.register(ToolDefinition(
+    name="wiki_enrichment_pending",
+    description="List sources whose current version has no enrichment revision (limit <= 5, cursor, retry_failed). Read-only.",
+    input_schema={"type": "object", "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 5}, "cursor": {"type": "string"}, "retry_failed": {"type": "boolean"}}},
+    fn=lambda a: _enr.tool_pending(ROOT, a), profile="read", is_write=False))
+REGISTRY.register(ToolDefinition(
+    name="wiki_enrichment_submit",
+    description="Append one level-7, non-evidence enrichment revision to the sidecar (source_version + expected_annotation_revision + idempotency_key). Never edits the corpus.",
+    input_schema={"type": "object", "properties": {"source_ref": {"type": "string"}, "source_version": {"type": "string"}, "expected_annotation_revision": {"type": "integer", "minimum": 0}, "idempotency_key": {"type": "string"}, "producer": {"type": "object"}, "annotation": {"type": "object"}}, "required": ["source_ref", "source_version", "expected_annotation_revision", "idempotency_key", "producer", "annotation"]},
+    fn=lambda a: _enr.tool_submit(ROOT, a), profile="capture", is_write=True))
+
 REGISTRY.register_alias("wiki_read", "wiki_read_text")
 REGISTRY.register_alias("wiki_exact", "wiki_resolve_id")
 register_retrieval_tools(REGISTRY, ROOT)

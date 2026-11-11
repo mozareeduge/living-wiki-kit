@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://living-wiki-kit.local/schemas/enrichment-revision.schema.json",
+  "title": "Living Wiki enrichment revision",
+  "description": "One append-only line of _search/enrichment/<source_ref>.jsonl. Model output: authority level 7 (candidate), never evidence, never a corpus record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_ref", "source_version", "revision", "idempotency_key", "producer", "created_at", "authority_level", "non_evidence", "annotation"],
+  "properties": {
+    "source_ref": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9._-]+$"},
+    "source_version": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 100},
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["harness", "model", "prompt_version"],
+      "properties": {
+        "harness": {"type": "string", "minLength": 1, "maxLength": 100},
+        "model": {"type": "string", "minLength": 1, "maxLength": 100},
+        "prompt_version": {"type": "string", "minLength": 1, "maxLength": 100}
+      }
+    },
+    "created_at": {"type": "string", "minLength": 10},
+    "authority_level": {"const": 7},
+    "non_evidence": {"const": true},
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 800},
+        "topics": {"type": "array", "maxItems": 5, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+        "tags": {"type": "array", "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 60}},
+        "categories": {"type": "array", "maxItems": 5, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+        "entities": {
+          "type": "array", "maxItems": 10,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "kind", "mention"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1, "maxLength": 200},
+              "kind": {"enum": ["concept", "person", "project", "organization", "work", "place", "other"]},
+              "aliases": {"type": "array", "maxItems": 10, "items": {"type": "string", "minLength": 1, "maxLength": 200}},
+              "mention": {
+                "type": "object", "additionalProperties": false, "required": ["chunk_ref", "text"],
+                "properties": {
+                  "chunk_ref": {"type": "string", "pattern": "^chk:[0-9a-f]{32}$"},
+                  "text": {"type": "string", "minLength": 1, "maxLength": 500}
+                }
+              }
+            }
+          }
+        },
+        "links": {
+          "type": "array", "maxItems": 10,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["relation", "target", "evidence"],
+            "properties": {
+              "relation": {"enum": ["about", "mentions", "part_of_project", "related_to", "supports", "contradicts"]},
+              "target": {"type": "string", "minLength": 1, "maxLength": 300},
+              "evidence": {
+                "type": "array", "minItems": 1, "maxItems": 3,
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["chunk_ref", "quote"],
+                  "properties": {
+                    "chunk_ref": {"type": "string", "pattern": "^chk:[0-9a-f]{32}$"},
+                    "quote": {"type": "string", "minLength": 8, "maxLength": 500}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "chunk_annotations": {
+          "type": "array", "maxItems": 20,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["chunk_ref", "note"],
+            "properties": {
+              "chunk_ref": {"type": "string", "pattern": "^chk:[0-9a-f]{32}$"},
+              "note": {"type": "string", "minLength": 1, "maxLength": 300},
+              "topics": {"type": "array", "maxItems": 5, "items": {"type": "string", "minLength": 1, "maxLength": 80}}
+            }
+          }
+        },
+        "uncertainty": {"type": "array", "maxItems": 8, "items": {"type": "string", "minLength": 1, "maxLength": 300}}
+      }
+    }
+  }
+}

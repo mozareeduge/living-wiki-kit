@@ -173,3 +173,81 @@ def test_holdings_counts_durable_proposals(gate: Path) -> None:
                        submitted_by={"actor_type": "agent", "tool": "t"})
     report = rh.generate_report(gate)
     assert report["proposals_by_status"]["total"] >= 1
+
+
+# ---- C6: chunk evidence (chk: refs) ----------------------------------------
+import sqlite3  # noqa: E402
+
+CHUNK_TEXT = "Chunk evidence says the archive remembers what the citation forgets."
+CHK = "chk:" + "a" * 32
+SRC_VER = "f" * 64
+
+
+def _chunk_db(root: Path, *, chunk_ref: str = CHK, text: str = CHUNK_TEXT,
+              chunk_version: str = SRC_VER, current_version: str = SRC_VER) -> None:
+    db = root / "_search" / "retrieval.sqlite"
+    db.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE IF NOT EXISTS sources(source_ref TEXT PRIMARY KEY, source_version TEXT, path TEXT, "
+                 "tier TEXT, authority_level INTEGER, language_hint TEXT, indexed_at TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS chunks(chunk_ref TEXT PRIMARY KEY, source_ref TEXT, source_version TEXT, "
+                 "start INTEGER, end INTEGER, heading_path TEXT, text TEXT, text_sha256 TEXT)")
+    conn.execute("INSERT INTO sources VALUES('src-1',?, 'x.md','t',2,'en',NULL)", (current_version,))
+    conn.execute("INSERT INTO chunks VALUES(?,?,?,0,?, '[]', ?, 'h')",
+                 (chunk_ref, "src-1", chunk_version, len(text), text))
+    conn.commit()
+    conn.close()
+
+
+def _chunk_body(quote: str, chunk_ref: str = CHK) -> str:
+    return _body(target_id="x", proposed_type="supports", why="w",
+                 source_passage={"chunk_ref": chunk_ref, "quote": quote})
+
+
+def test_c6_accepts_exact_chunk_quote(gate: Path) -> None:
+    _chunk_db(gate)
+    p = kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive remembers what the citation"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[CHK])
+    assert p.exists()
+
+
+def test_c6_rejects_quote_not_in_chunk(gate: Path) -> None:
+    _chunk_db(gate)
+    with pytest.raises(ValueError, match="NOT found verbatim in chunk"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("this sentence is nowhere in the chunk text"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[CHK])
+
+
+def test_c6_rejects_short_quote(gate: Path) -> None:
+    _chunk_db(gate)
+    with pytest.raises(ValueError, match="too short"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[CHK])
+
+
+def test_c6_rejects_unknown_or_rebuilt_chunk(gate: Path) -> None:
+    _chunk_db(gate)
+    other = "chk:" + "b" * 32
+    with pytest.raises(ValueError, match="E_STALE_SOURCE"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive remembers what", other),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[other])
+
+
+def test_c6_rejects_stale_chunk_version(gate: Path) -> None:
+    _chunk_db(gate, chunk_version="e" * 64)  # chunk row from an older source version
+    with pytest.raises(ValueError, match="E_STALE_SOURCE"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive remembers what the citation"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[CHK])
+
+
+def test_c6_rejects_when_index_missing(gate: Path) -> None:
+    with pytest.raises(ValueError, match="chunk index"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive remembers what the citation"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[CHK])
+
+
+def test_c6_evidence_ref_must_match_passage_chunk(gate: Path) -> None:
+    _chunk_db(gate)
+    with pytest.raises(ValueError, match="evidence_refs"):
+        kp.create_proposal(gate, kind="relation-edge", body=_chunk_body("the archive remembers what the citation"),
+                           submitted_by={"actor_type": "agent", "tool": "t"}, evidence_refs=[])

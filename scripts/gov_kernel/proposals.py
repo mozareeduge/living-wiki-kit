@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import pathlib
 import re
+import sqlite3
 import uuid
 from typing import Any
 
@@ -47,13 +48,50 @@ def _extract_passage(body: Any) -> dict[str, str] | None:
                 struct = {}
     sp = struct.get("source_passage")
     if isinstance(sp, dict):
-        return {"path": str(sp.get("path", "")), "quote": str(sp.get("quote", ""))}
+        out = {"path": str(sp.get("path", "")), "quote": str(sp.get("quote", ""))}
+        if sp.get("chunk_ref"):
+            out["chunk_ref"] = str(sp["chunk_ref"])
+        return out
     if isinstance(body, str):
         pm = _PASSAGE_PATH_RE.search(body)
         qm = _PASSAGE_QUOTE_RE.search(body)
         if pm and qm:
             return {"path": pm.group(1).strip(), "quote": qm.group(1).strip()}
     return None
+
+
+CHUNK_REF_RE = re.compile(r"^chk:[0-9a-f]{32}$")
+
+
+def chunk_current_text(root: pathlib.Path, chunk_ref: str) -> tuple[str | None, str | None]:
+    """Look a chunk up in the C3 chunks table. Returns (text, error).
+
+    Fail closed: missing index, unknown ref, or a chunk whose source_version
+    is no longer the source's current version is an error, never a remap.
+    """
+    db = root / "_search" / "retrieval.sqlite"
+    if not db.exists():
+        return None, "chunk index missing (_search/retrieval.sqlite); rebuild the index"
+    try:
+        conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    except sqlite3.Error as exc:
+        return None, f"chunk index unreadable: {exc}"
+    try:
+        row = conn.execute(
+            "SELECT c.text, c.source_version, s.source_version FROM chunks c "
+            "LEFT JOIN sources s ON s.source_ref = c.source_ref WHERE c.chunk_ref = ?",
+            (chunk_ref,),
+        ).fetchone()
+    except sqlite3.Error as exc:
+        return None, f"chunk index unreadable: {exc}"
+    finally:
+        conn.close()
+    if row is None:
+        return None, f"E_STALE_SOURCE: chunk {chunk_ref} is not in the current index (stale or unknown)"
+    text, chunk_ver, current_ver = row
+    if current_ver is None or chunk_ver != current_ver:
+        return None, f"E_STALE_SOURCE: chunk {chunk_ref} belongs to a superseded source_version"
+    return str(text), None
 
 
 def door_errors(root: pathlib.Path, *, kind: str, body: Any,
@@ -75,6 +113,18 @@ def door_errors(root: pathlib.Path, *, kind: str, body: Any,
     path = sp["path"].strip()
     if len(quote) < 20:
         return [f"source_passage.quote too short ({len(quote)} chars, min 20)"]
+    cref = sp.get("chunk_ref")
+    if cref:
+        if not CHUNK_REF_RE.match(cref):
+            return [f"source_passage.chunk_ref malformed: {cref!r}"]
+        if cref not in [str(x) for x in (evidence_refs or [])]:
+            return ["source_passage.chunk_ref must also be listed in evidence_refs"]
+        text, err = chunk_current_text(root, cref)
+        if err:
+            return [err]
+        if quote not in (text or ""):
+            return ["source_passage.quote NOT found verbatim in chunk text"]
+        return []
     if not path:
         return ["source_passage.path missing"]
     norm = path.replace("\\", "/")
