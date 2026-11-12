@@ -230,6 +230,40 @@ another lane and never block the S/W/R chain except where `Depends` says so.
 
 ---
 
+## Ladder 1.5.0 — remote server, file ingest, chunk retrieval, enrichment
+
+Authority: `07-genesis/handoffs/HANDOFF--2026-11-09--remote-ingest-chunks-enrichment.md`.
+Branch `system/2026-11-09--remote-ingest-chunks`. Built in lanes (wave 1: C/I/H1;
+wave 2: A/B/C; wave 3: W3), merged here.
+
+| ID | Task | Status |
+|---|---|---|
+| C1 | Retrieval model policy + chunk schema | cc:done (697963c) |
+| C2 | Deterministic chunker | cc:done (55bffb3) |
+| C3 | Chunk index tables | cc:done (cc7edf2) |
+| C4 | `wiki_retrieve` tool + CLI | cc:done (39f7211) |
+| C5 | `wiki_artifact_read` | cc:done (0bba73e) |
+| C6 | Proposal door accepts `chk:` evidence | cc:done (fa8b0ef) |
+| H5 | Status states empty/fresh/stale/missing | cc:done (87ceeed) |
+| I1 | Ingest core + `ingest_file.py` (A0 wires chunks: ef7e8a4) | cc:done (592cc26) |
+| I2 | `request_id` idempotency | cc:done (50410c8, 129dcfb) |
+| I3 | Commit state in receipts and status | cc:done (b8d1d1a) |
+| E1 | Enrichment sidecar + `wiki_enrichment_submit` | cc:done (7950a26) |
+| E2 | `wiki_enrichment_pending` | cc:done (7950a26) |
+| E3 | Enrichment as non-evidence retrieval reasons | cc:done (2847884) — proposal-door refusal of a summary quote not separately tested |
+| E4 | Annotation coverage in artifact read | cc:done (2847884) |
+| H1 | Transport split: stdio + streamable HTTP | cc:done (97f49e7) |
+| H2 | Upload page + `wiki_ingest_file` | cc:done (c8bfa9e) |
+| H3 | Auth + per-caller scopes | **blocked by D-1** — not built; HTTP writes refused (`E_AUTH_REQUIRED`) unless `--insecure-local-only` on 127.0.0.1 |
+| H4 | Remote server runbook + ops templates + smoke | cc:done (22cc32b) — not yet run on a real VM |
+| R1 | Version 1.5.0, CHANGELOG, QUICKSTART, README; fresh-instance smoke covers ingest + retrieve + enrichment | cc:done on branch; CI on ubuntu + windows not yet run (not pushed) |
+
+Owner decisions D-1…D-5 (handoff §6): all open. OM-862 test rule applied at
+release: tests pinning only new code shape moved to
+`07-genesis/test-archive/2026-11-12--om-862/`.
+
+---
+
 ## Continuity (MAWS)
 
 ### Field UI completion — 2026-10-14

@@ -36,7 +36,14 @@ registers.
 
 ## Kit version
 
-`1.4.0` — perspectives complete, an independent kit. Lenses highlight
+`1.5.0` — files in, exact passages out. Add a PDF, Word, EPUB or other
+file and the original is kept exact; ask a question and get the exact
+passages, each with its source, position and authority; model notes help
+search but are always marked non-evidence; retries never write twice; the
+server also runs over HTTP (read-only remotely until sign-in ships). See
+`QUICKSTART.md` §5–6.
+
+Before that, `1.4.0` — perspectives complete, an independent kit. Lenses highlight
 relationships (optional `relation_type`) and set section order; active
 profiles explain why records surface and offer their lenses; six practices
 (one in Persian) run on the unchanged kernel; profiles can make rules
