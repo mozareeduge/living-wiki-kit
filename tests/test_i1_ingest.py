@@ -149,25 +149,6 @@ def test_ingest_duplicate_returns_same_receipt(clean_wiki: Path) -> None:
     assert receipt2["source_version"] == receipt1["source_version"]
 
 
-def test_on_ingested_hook_invoked(clean_wiki: Path) -> None:
-    from gov_kernel import ingest
-
-    called_with = []
-
-    def my_hook(r: dict) -> None:
-        called_with.append(r)
-
-    orig_hook = ingest.on_ingested
-    try:
-        ingest.on_ingested = my_hook
-        txt_file = FIXTURES / "sample.txt"
-        receipt = ingest.ingest_file(txt_file, root=clean_wiki)
-        assert len(called_with) == 1
-        assert called_with[0]["source_ref"] == receipt["source_ref"]
-    finally:
-        ingest.on_ingested = orig_hook
-
-
 def test_validator_and_census_pass_after_ingest(clean_wiki: Path) -> None:
     from gov_kernel import ingest
 

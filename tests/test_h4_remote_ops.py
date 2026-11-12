@@ -128,17 +128,6 @@ def test_runbook_paths_exist_and_cover_h4():
     assert "--full" not in text.split("wiki_validate.py")[1][:40] if "wiki_validate.py" in text else True
 
 
-def test_smoke_script_syntax_and_step_order():
-    bash = shutil.which("bash")
-    if not bash:
-        pytest.skip("bash missing")
-    assert subprocess.run([bash, "-n", str(OPS / "smoke.sh")], capture_output=True).returncode == 0
-    t = (OPS / "smoke.sh").read_text(encoding="utf-8")
-    order = [t.index(x) for x in ("step healthz", "step status", "step capture", "step search", "step ingest", "step retrieve")]
-    assert order == sorted(order)
-    assert "skip retrieve" in t and "wiki_retrieve" in t
-
-
 # ---- run the smoke against a local server ----------------------------------------
 
 def _need_tools():

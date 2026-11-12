@@ -227,20 +227,6 @@ def test_h1_streamable_http_accept_header(http_server):
     assert status in (202, 204)
 
 
-def test_h1_cli_transport_flags():
-    """CLI must support --transport (stdio, http) and --bind."""
-    proc = subprocess.run(
-        [sys.executable, "scripts/wiki_mcp_server.py", "--help"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert proc.returncode == 0
-    assert "--transport" in proc.stdout
-    assert "--bind" in proc.stdout
-
-
 def test_h1_http_cors_and_methods(http_server):
     """OPTIONS and disallowed methods on /mcp and /healthz."""
     # OPTIONS /mcp

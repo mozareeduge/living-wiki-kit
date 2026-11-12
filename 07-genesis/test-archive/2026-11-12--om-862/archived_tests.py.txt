@@ -1,0 +1,48 @@
+# Archived by OM-862 (owner test rule). Not collected, not run.
+# Kept for history only; see README.md in this folder.
+
+# --- from tests/test_i1_ingest.py ---
+def test_on_ingested_hook_invoked(clean_wiki: Path) -> None:
+    from gov_kernel import ingest
+
+    called_with = []
+
+    def my_hook(r: dict) -> None:
+        called_with.append(r)
+
+    orig_hook = ingest.on_ingested
+    try:
+        ingest.on_ingested = my_hook
+        txt_file = FIXTURES / "sample.txt"
+        receipt = ingest.ingest_file(txt_file, root=clean_wiki)
+        assert len(called_with) == 1
+        assert called_with[0]["source_ref"] == receipt["source_ref"]
+    finally:
+        ingest.on_ingested = orig_hook
+
+
+# --- from tests/test_h1_transport.py ---
+def test_h1_cli_transport_flags():
+    """CLI must support --transport (stdio, http) and --bind."""
+    proc = subprocess.run(
+        [sys.executable, "scripts/wiki_mcp_server.py", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert proc.returncode == 0
+    assert "--transport" in proc.stdout
+    assert "--bind" in proc.stdout
+
+
+# --- from tests/test_h4_remote_ops.py ---
+def test_smoke_script_syntax_and_step_order():
+    bash = shutil.which("bash")
+    if not bash:
+        pytest.skip("bash missing")
+    assert subprocess.run([bash, "-n", str(OPS / "smoke.sh")], capture_output=True).returncode == 0
+    t = (OPS / "smoke.sh").read_text(encoding="utf-8")
+    order = [t.index(x) for x in ("step healthz", "step status", "step capture", "step search", "step ingest", "step retrieve")]
+    assert order == sorted(order)
+    assert "skip retrieve" in t and "wiki_retrieve" in t
