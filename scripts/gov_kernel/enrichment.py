@@ -21,7 +21,7 @@ ENRICH_DIR = "_search/enrichment"
 FAILED_DIR = "_search/enrichment/_failed"
 SCHEMA_FILE = "enrichment-revision.schema.json"
 RELATIONS = ("about", "mentions", "part_of_project", "related_to", "supports", "contradicts")
-_REF_SAFE = re.compile(r"^[A-Za-z0-9._-]{1,200}$")
+_REF_SAFE = re.compile(r"^[A-Za-z0-9._:-]{1,200}$")  # real refs are rec:<id> / doc:<sha>
 _VER = re.compile(r"^[0-9a-f]{64}$")
 PENDING_MAX = 5
 CHUNK_CHAR_BUDGET = 6000  # page-sized chunk text per source in a pending item
@@ -40,10 +40,15 @@ def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _fname(source_ref: str) -> str:
+    """File-safe name (':' is not allowed in Windows file names)."""
+    return source_ref.replace(":", "%3A")
+
+
 def _sidecar(root: pathlib.Path, source_ref: str) -> pathlib.Path:
     if not _REF_SAFE.match(source_ref or "") or source_ref.startswith("."):
         raise EnrichmentError("E_INVALID", f"unsafe source_ref: {source_ref!r}")
-    return root / ENRICH_DIR / f"{source_ref}.jsonl"
+    return root / ENRICH_DIR / f"{_fname(source_ref)}.jsonl"
 
 
 def load_revisions(root: pathlib.Path, source_ref: str) -> list[dict[str, Any]]:
@@ -95,7 +100,7 @@ def _check_texts(conn: sqlite3.Connection, source_ref: str, version: str, ann: d
 
 
 def _log_failure(root: pathlib.Path, source_ref: str, version: str, errors: list[str]) -> None:
-    p = root / FAILED_DIR / f"{source_ref}.jsonl"
+    p = root / FAILED_DIR / f"{_fname(source_ref)}.jsonl"
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "a", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps({"source_version": version, "at": _now(), "errors": errors[:5]}, ensure_ascii=False) + "\n")
@@ -121,7 +126,7 @@ def submit(root: pathlib.Path, args: dict[str, Any]) -> dict[str, Any]:
             raise EnrichmentError("E_STALE_SOURCE", "source_version is not current", current_source_version=row[0])
 
         side.parent.mkdir(parents=True, exist_ok=True)
-        with open(side.parent / f".{source_ref}.lock", "a+b") as lf:
+        with open(side.parent / f".{_fname(source_ref)}.lock", "a+b") as lf:
             _lock_file(lf)
             try:
                 revs = load_revisions(root, source_ref)
@@ -155,7 +160,7 @@ def submit(root: pathlib.Path, args: dict[str, Any]) -> dict[str, Any]:
 
 
 def _failed_versions(root: pathlib.Path, source_ref: str) -> set[str]:
-    p = root / FAILED_DIR / f"{source_ref}.jsonl"
+    p = root / FAILED_DIR / f"{_fname(source_ref)}.jsonl"
     if not p.exists():
         return set()
     return {json.loads(ln)["source_version"] for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()}
@@ -201,6 +206,29 @@ def pending(root: pathlib.Path, *, limit: int = PENDING_MAX, cursor: str | None 
                 "authority_note": "enrichment is level 7, non-evidence; quote only chunk text"}
     finally:
         conn.close()
+
+
+def anchored_chunks(annotation: dict[str, Any]) -> list[str]:
+    """Chunk refs an annotation is anchored to (chunk notes, entity mentions, link evidence), in order."""
+    refs: list[str] = []
+    for ca in annotation.get("chunk_annotations") or []:
+        refs.append(ca["chunk_ref"])
+    for ent in annotation.get("entities") or []:
+        refs.append(ent["mention"]["chunk_ref"])
+    for link in annotation.get("links") or []:
+        refs.extend(ev["chunk_ref"] for ev in link["evidence"])
+    return list(dict.fromkeys(refs))
+
+
+def current_revision(root: pathlib.Path, source_ref: str, version: str) -> dict[str, Any] | None:
+    """Latest revision of a source, only if it was made for the current source version."""
+    try:
+        revs = load_revisions(root, source_ref)
+    except (EnrichmentError, ValueError, OSError):
+        return None
+    if revs and revs[-1].get("source_version") == version:
+        return revs[-1]
+    return None
 
 
 def tool_submit(root: pathlib.Path, args: dict[str, Any]) -> str:
