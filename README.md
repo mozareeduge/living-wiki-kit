@@ -56,7 +56,9 @@ checked by creating a fresh wiki in CI. Built on `1.3.0` (governance kernel
 
 Everything an AI produces is candidate material. Fluency never upgrades it.
 Retrieval scores organize attention; they are never evidence. Content changes
-reach the wiki only through a reviewed, validated, human-approved path.
+reach the wiki only through a validated path that names who made them (model,
+provider, effort, host, harness). No human approval wait: the owner corrects
+after the fact, and a correction is appended, never a deletion (OM-888).
 
 ## Validate
 

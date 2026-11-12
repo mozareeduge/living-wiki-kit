@@ -13,4 +13,4 @@ status: candidate
 4. Label every inference and uncertainty; unreviewed machine text is never
    quoted as a wiki statement.
 5. Requested wiki change → `wiki_propose_from_capture` with IDs + hashes →
-   existing approval path. No direct canonical writes, on any client.
+   stamped intake path (OM-888). No direct canonical writes, on any client.

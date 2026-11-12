@@ -25,7 +25,7 @@ status: candidate
   review notes, provenance.
 - Correct a transcript: `commit-transcript` (manual) or edit then
   `set-state … reviewed --actor <you> --note <what you fixed>`.
-- Want it in the wiki? `wiki_propose_from_capture` — a human approves first.
+- Want it in the wiki? `wiki_propose_from_capture`, then an agent runs `/wiki-intake` and merges it, stamped with who did it (no approval wait, OM-888). Say "wrong" or "outdated" later and it is retracted or superseded.
   Captures never promote themselves.
 
 ## What never happens automatically

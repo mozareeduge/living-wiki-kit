@@ -25,6 +25,7 @@ from typing import Any, Callable
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from gov_kernel.changes import LedgerError, annotate_hits, append_change, feedback, trace  # noqa: E402
 from gov_kernel.proposals import create_proposal  # noqa: E402
 from gov_kernel.qmd_guard import govern_qmd_hits  # noqa: E402
 from gov_kernel.retrieval import (  # noqa: E402
@@ -200,6 +201,7 @@ def tool_wiki_search(args: dict[str, Any]) -> str:
     try:
         _ensure_fts()
         portable = search_fts(ROOT, FTS_DB, query, profile, n)
+        annotate_hits(ROOT, portable.get("results") or [])
     except Exception as exc:  # noqa: BLE001
         portable = {"capability": "FTS5_UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}", "results": []}
     canonical_cols, provenance_cols = qmd_collections(ROOT)
@@ -546,6 +548,62 @@ REGISTRY.register(ToolDefinition(
     profile="capture",
     is_write=True,
 ))
+
+# OM-888: trace any hit to its verbatim original; the owner corrects any hop by
+# an append-only retract/supersede row. Every write carries a who-stamp.
+STAMP_SCHEMA = {"type": "object", "description": "who made this change; every field required ('unknown' is allowed, blank is not)",
+                "properties": {k: {"type": "string"} for k in ("model", "provider", "effort", "host", "harness", "skill", "session_ref")},
+                "required": ["model", "provider", "effort", "host", "harness"]}
+
+
+def tool_wiki_trace(args: dict[str, Any]) -> str:
+    ref = str(args.get("id_or_path") or args.get("id") or "").strip()
+    if not ref:
+        return json.dumps({"error": "id_or_path is required"})
+    return json.dumps(trace(ROOT, ref), ensure_ascii=False, default=str)
+
+
+def tool_wiki_feedback(args: dict[str, Any]) -> str:
+    try:
+        row = feedback(ROOT, target=str(args.get("target", "")), verdict=str(args.get("verdict", "")),
+                       note=str(args.get("note", "")), stamp=args.get("stamp") or {},
+                       replaced_by=args.get("replaced_by"))
+    except LedgerError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    return json.dumps({"ok": True, "change": row}, ensure_ascii=False)
+
+
+def tool_wiki_record_change(args: dict[str, Any]) -> str:
+    try:
+        row = append_change(ROOT, action=str(args.get("action", "")), targets=list(args.get("targets") or []),
+                            stamp=args.get("stamp") or {}, reason=str(args.get("reason", "")),
+                            level=args.get("level"), sources=args.get("sources"), commit=args.get("commit"),
+                            replaced_by=args.get("replaced_by"))
+    except LedgerError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    return json.dumps({"ok": True, "change": row}, ensure_ascii=False)
+
+
+REGISTRY.register(ToolDefinition(
+    name="wiki_trace",
+    description=("Trace one retrieval hit for citation: the page/claim, its source records, the verbatim "
+                 "originals with sha256 re-checked, and every stamped change or owner correction on them. "
+                 "Use for any answer that rests on retrieval."),
+    input_schema={"type": "object", "properties": {"id_or_path": {"type": "string"}}, "required": ["id_or_path"]},
+    fn=tool_wiki_trace, profile="read", is_write=False))
+REGISTRY.register(ToolDefinition(
+    name="wiki_feedback",
+    description=("The owner said a hop of a trace is wrong / outdated / not-needed: append a retract "
+                 "(wrong, not-needed) or supersede (outdated) row to the change ledger. Deletes nothing; "
+                 "undo with wiki_record_change action=restore."),
+    input_schema={"type": "object", "properties": {"target": {"type": "string"}, "verdict": {"type": "string", "enum": ["wrong", "outdated", "not-needed"]}, "note": {"type": "string"}, "replaced_by": {"type": "string"}, "stamp": STAMP_SCHEMA}, "required": ["target", "verdict", "stamp"]},
+    fn=tool_wiki_feedback, profile="capture", is_write=True))
+REGISTRY.register(ToolDefinition(
+    name="wiki_record_change",
+    description=("Stamp a change an agent made (intake/reconcile/edit/audit/merge, or restore a correction) "
+                 "with model, provider, effort, host and harness. Append-only."),
+    input_schema={"type": "object", "properties": {"action": {"type": "string"}, "targets": {"type": "array", "items": {"type": "string"}}, "level": {"type": "string", "enum": ["capture", "L1", "L2", "full"]}, "reason": {"type": "string"}, "commit": {"type": "string"}, "sources": {"type": "array", "items": {"type": "object"}}, "stamp": STAMP_SCHEMA}, "required": ["action", "targets", "stamp"]},
+    fn=tool_wiki_record_change, profile="capture", is_write=True))
 
 REGISTRY.register_alias("wiki_read", "wiki_read_text")
 REGISTRY.register_alias("wiki_exact", "wiki_resolve_id")

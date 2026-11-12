@@ -90,4 +90,6 @@ separate drive. Obsidian File Recovery is a convenience layer only.
 1. Put any small text file in `01-inbox/`.
 2. Follow `.claude/skills/wiki-intake/SKILL.md` (manually invoked).
 3. **Pass condition:** intake branch created, SHA-256 computed, source
-   record + derivative proposed, work stops for your review before commit.
+   record + derivative created, change stamped in
+   `00-system/registers/CHANGE_LEDGER.jsonl`, merged on green gates
+   (no review stop, OM-888).

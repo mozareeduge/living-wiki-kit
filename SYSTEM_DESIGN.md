@@ -58,7 +58,9 @@ pointer-true restatements refreshed in the same change as the registers.
    primary → author confirmation → accepted canonical record → derived
    witness → interpretive synthesis → candidate/AI material → generated view.
    Everything a model produces is level 7. Fluency never upgrades evidence;
-   only human adjudication or recorded evidence does.
+   only recorded evidence or a stamped adjudication does (OM-888: agents
+   adjudicate and merge on green gates; every change is stamped in
+   `CHANGE_LEDGER.jsonl` and the owner corrects by retract/supersede).
 3. **Record grammar.** Markdown + YAML frontmatter. Source records prove
    provenance; objects persist across profiles. Relations are recorded
    *before* they are classified ("relation before type"); objects may be
@@ -146,6 +148,7 @@ See `INSTANTIATE.md` for the full checklist. Summary:
 | `wiki_validate.py` | authoritative governance gate (kernel): runs the validators in `00-system/configuration/validators.json` with structured findings; fails closed | operational |
 | `wiki_state.py` | kernel state: `rebuild` regenerates `SYSTEM_STATE.json`, the manifest and the accepted-evidence index from source records; `check` fails on drift; `set-axis` changes an authored axis only through `state-transitions.json` | operational |
 | `wiki_evidence.py` | accepted-evidence universe (`ACCEPTED_EVIDENCE_INDEX.jsonl`): registered sources plus durably promoted captures; `check` fails on drift | operational |
+| `wiki_changes.py` | OM-888 change ledger (`00-system/registers/CHANGE_LEDGER.jsonl`): `record` a stamped change (model, provider, effort, host, harness/skill), `feedback` wrong/outdated/not-needed → retract/supersede, `restore`, `trace` a page to its verbatim originals (sha256 checked), `check` the ledger | operational |
 | `wiki_proposals.py` | durable candidate proposals (`_proposals/records/`) and separate immutable adjudications (`_proposals/adjudications/`); lists pending | available (unexercised) |
 | `wiki_profiles.py` | instance profiles: `check` validates the active stack (unknown/retired profiles, weakening keys, slot conflicts) and enforces the rules active profiles tighten (`object-labels`, `relation-type`, `record-visibility`), `compose` prints the additive composition; profiles configure attention and may only make rules stricter | operational |
 | `wiki_release.py` | release controller: a release manifest from a passing release profile and receipts | available (unexercised) |

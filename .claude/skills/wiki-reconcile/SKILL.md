@@ -66,5 +66,5 @@ The run is complete only when every manifest row appears in exactly one batch re
    - system architecture;
    - indexes and search.
 8. Compare receipt IDs against the expected manifest. Stop on any gap or duplicate coverage.
-9. Propose changes. Do not apply them until the user approves the impact report, unless the user explicitly authorized direct implementation.
-10. After approved changes, run full validation, rebuild QMD, and create a reconciliation event and handoff.
+9. Apply the changes the impact report calls for (no approval gate, owner rule OM-888). Every applied change is stamped in the change ledger: `python scripts/wiki_changes.py record --action reconcile --target <id> --model ... --provider ... --effort ... --host ... --harness wiki-reconcile` (MCP: `wiki_record_change`). A replaced claim or page is superseded (`wiki_changes.py feedback --verdict outdated --replaced-by <new-id>`), never deleted.
+10. Run full validation, rebuild QMD, create a reconciliation event and handoff, and merge to `main` when every gate exits 0. The owner can later correct any hop with `wiki_feedback`; the correction is an appended row and can itself be undone (`restore`).

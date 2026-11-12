@@ -48,6 +48,6 @@ python scripts/capture/wiki_capture.py commit-transcript --id <capture-id> --tex
 - Capture the user's words VERBATIM. No summaries, titles, or tags.
 - Report back only: capture ID, status, path. The ID is the receipt.
 - Never write into 00-07 dirs or _originals/; promotion is proposal-only
-  (`wiki_propose` / PATCH_MANIFEST after human review).
+  (`wiki_propose`, then `/wiki-intake`; stamped and merged without an approval gate, OM-888).
 - Duplicate delivery is safe — the core dedups by content hash.
 - Validation before claiming success: `python scripts/capture/wiki_capture.py --json validate`.

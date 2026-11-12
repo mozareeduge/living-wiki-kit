@@ -12,7 +12,8 @@ those remain canonical.
    anything under it. No exception.
 2. Everything you (the model) produce is **candidate-tier material
    (authority level 7)**. Fluency, plausibility, or agreement never upgrades
-   it. Only human adjudication or evidence recorded in canonical records does.
+   it. Only evidence recorded in canonical records does; a recorded agent
+   adjudication counts as long as it is stamped (rule 6).
 3. Retrieval scores (qmd or any search layer) organize attention; they are
    **never evidence**. Labels likewise organize discovery and are **never
    evidence**: a shared label never justifies merging two object identities,
@@ -21,14 +22,29 @@ those remain canonical.
    canonical/system/source zones or `_originals/`. The explicit `capture` MCP
    profile may create noncanonical captures and durable proposals only; it does
    not grant canonical-write authority.
-5. Content changes travel only through approved patch manifests
-   (`PATCH_MANIFEST.json`) or accepted durable proposal/adjudication records;
+5. Content changes travel through a bounded change on a branch, a patch
+   manifest (`PATCH_MANIFEST.json`) or a durable proposal/adjudication record;
    do not broaden their scope.
+6. **No approval gate; every change is stamped and reversible (owner rule
+   OM-888, 2026-11-12).** Agents run intake at any level (capture, L1, L2,
+   full reconciliation + audit) and merge to `main` when the gates are green,
+   without waiting for a human. Each change appends one row to
+   `00-system/registers/CHANGE_LEDGER.jsonl` naming who made it: `model`,
+   `provider`, `effort`, `host`, `harness` (`scripts/wiki_changes.py record`,
+   MCP `wiki_record_change`). Any answer that used retrieval cites through
+   `wiki_trace` (hit -> page/claim -> source record -> verbatim original with
+   sha256 -> ledger rows). When the owner says a hop is wrong / outdated /
+   not needed, an agent appends a retract or supersede row
+   (`wiki_changes.py feedback`, MCP `wiki_feedback`). History is never
+   deleted; a correction is undone by a `restore` row.
 
 ## Roles (authority comes from the role and its evidence, never from the model)
 
-- **OWNER** — decides vocabulary, adjudications, releases; the only authority
-  that promotes candidate material.
+- **OWNER** — decides vocabulary and releases; corrects any change after the
+  fact (wrong / outdated / not needed). Does not gate merges (OM-888).
+- **Any agent role that writes** — promotes and adjudicates on green gates and
+  leaves a stamped `CHANGE_LEDGER.jsonl` row (model, provider, effort, host,
+  harness).
 - **RESEARCH_SYNTHESIS_AGENT** — drafts candidate synthesis from accepted
   evidence; never self-accepts.
 - **REPOSITORY_OPERATOR** — runs intake, gates, and merges; follows the skills
@@ -51,7 +67,7 @@ those remain canonical.
   `wiki_propose_from_capture` create immutable durable proposal records under
   `_proposals/records/`; adjudications are separate immutable records under
   `_proposals/adjudications/`. Proposals are candidate-tier and inert until
-  accepted by an authorized adjudicator. Do not append new proposals to the
+  adjudicated; an agent may adjudicate, stamped per rule 6. Do not append new proposals to the
   legacy `_proposals/proposals.jsonl` runtime log (read-only history).
 
 ## Machine contract
@@ -93,8 +109,9 @@ those remain canonical.
   as a bounded patch package (GPT_WORKFLOW.md) applied locally.
 - **All write paths converge the same way:** branch → bounded change /
   PATCH_MANIFEST.json / durable proposal adjudication → `python scripts/wiki_validate.py --format json` →
-  `python scripts/wiki_state.py --repo . check` → reviewable diff → merge to `main` → CI green. A candidate never promotes
-  itself to authority.
+  `python scripts/wiki_state.py --repo . check` → stamp in `CHANGE_LEDGER.jsonl` → merge to `main` → CI green.
+  No owner approval step (OM-888); the owner corrects afterwards through `wiki_feedback`.
+  A candidate never promotes itself without passing the gates and leaving a stamped row.
 
 ## Shared-register serialization
 

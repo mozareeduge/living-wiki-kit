@@ -11,7 +11,7 @@ disable-model-invocation: true
 - The target, genre, audience, and authority level are explicit.
 - Load-bearing sources have been opened.
 - A corpus-wide change has a completed reconciliation report.
-- The user has approved ambiguous biographical, artistic, strategic, or interpretive decisions.
+- Ambiguous biographical, artistic, strategic, or interpretive decisions are written in their most cautious supported form and listed as open questions for the owner; they do not block the write (OM-888). Stamp the change with `scripts/wiki_changes.py record --action edit`.
 
 ## Procedure
 

@@ -1,6 +1,6 @@
 ---
 name: wiki-validate
-description: Run deterministic validation and prepare a semantic audit report. Read-only unless the user separately approves repairs.
+description: Run deterministic validation and prepare a semantic audit report. Read-only; repairs are a separate stamped change (wiki_changes.py record --action audit).
 ---
 
 # Wiki Validate

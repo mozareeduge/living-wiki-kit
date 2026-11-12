@@ -11,7 +11,7 @@ Run `python scripts/install_obsidian_field.py --vault <existing-vault-folder>` f
 1. **Field:** zoom, pan, drag, select a node and inspect its neighbors. Dotted participant projections retain the generating relation record. The projection is navigation, never evidence.
 2. **Reader:** see the record's authority exactly as recorded, its claim permission, linked records and immutable original. Internal links follow the same Reader; Persian text uses automatic direction. No authority is inferred from color, a label or a retrieval score.
 3. **Route / View:** retrace the last eleven visits after reopening Obsidian. Filter by record type, authority, updated date, permission and candidate state. Filters change attention, never records.
-4. **Review:** inspect durable candidate proposals, their evidence pointers and adjudication status. The interface cannot accept, reject or apply them. The owner uses the established adjudication workflow.
+4. **Review:** inspect durable candidate proposals, their evidence pointers and adjudication status. The interface cannot accept, reject or apply them. Agents adjudicate through the stamped intake workflow with no approval wait (OM-888); the owner corrects afterwards with `wiki_feedback`.
 5. **Health:** inspect register counts and run the four existing governance checks. Until run, validation is explicitly unverified. A passing result is dated; later edits require another check. Python interpreter is configurable in plugin settings.
 
 ## Data boundaries

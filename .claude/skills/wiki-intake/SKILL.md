@@ -1,6 +1,6 @@
 ---
 name: wiki-intake
-description: Preserve and register new source artifacts, update corpus memory, and prepare a reviewable intake branch. Has side effects and must be invoked manually.
+description: Preserve and register new source artifacts, update corpus memory, and merge the stamped intake to main (no approval gate, OM-888). Has side effects and must be invoked manually.
 disable-model-invocation: true
 ---
 
@@ -15,7 +15,12 @@ Input: one or more files placed in `01-inbox/`.
 - **exact duplicate**: the same byte checksum.
 - **textual duplicate**: different files with identical normalized extracted text.
 - **new version**: a distinct artifact that belongs to an existing work or document family.
-- **replacement**: a user-confirmed artifact that takes over a specific current function; it does not delete predecessors.
+- **replacement**: an artifact that takes over a specific current function, recorded with `supersede` in the change ledger; it does not delete predecessors.
+- **stamp**: who made a change: `model`, `provider`, `effort`, `host` (nanobot, Claude Code, VM...), `harness` (skill or tool). `unknown` is allowed; a blank field is not.
+
+## No approval gate (owner rule OM-888, 2026-11-12)
+
+Run intake at any level (`capture`, `L1`, `L2`, `full` reconciliation + audit) and merge to the end without waiting for review. In exchange, every change is stamped and reversible: record it with `python scripts/wiki_changes.py record --action intake --level <level> --target <id> --model ... --provider ... --effort ... --host ... --harness wiki-intake` (MCP: `wiki_record_change`). When the owner later says a page, claim or source is wrong / outdated / not needed, append a correction with `wiki_changes.py feedback` (MCP: `wiki_feedback`); it is retracted or superseded, never deleted. `_originals/` is never edited.
 
 ## Procedure
 
@@ -37,8 +42,8 @@ Input: one or more files placed in `01-inbox/`.
     - `python scripts/sync_intake_registers.py --accept-corpus-change` (dry run), then add `--apply` (holdings counts, entry-page markers, content-release corpus pin)
 12. Rebuild search: `python scripts/retrieval/build_index.py --repo .` and `qmd embed`.
 13. Run full validation: `python scripts/wiki_validate.py --format json`, `python scripts/wiki_state.py --repo . check`, `python scripts/wiki_evidence.py --repo . check`. All must exit 0.
-14. Write an intake report with unchanged areas and unresolved decisions.
-15. Commit only after the user reviews the report.
+14. Write an intake report with unchanged areas and unresolved decisions (open questions go to the owner afterwards; they do not hold the merge).
+15. Commit, stamp the change (`wiki_changes.py record ... --commit HEAD`, with `--source <original_path>=<sha256>` for each new original), and merge the branch to `main` when every step-13 gate exits 0. A failing gate stops the merge; nothing else does.
 
 ## Registering an item already held (`status: pending-registration`)
 

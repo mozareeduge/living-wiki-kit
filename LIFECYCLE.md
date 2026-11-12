@@ -15,8 +15,8 @@ content hash, checksummed, and never touch canonical areas.
 - Transcription commit: `... commit-transcript --id <id> --text "<transcript>" --adapter <adapter> --version <n>`
 - Validate: `python scripts/capture/wiki_capture.py --json validate`
 
-Rules: capture VERBATIM; report only ID, status, path; promotion is
-proposal-only after human review.
+Rules: capture VERBATIM; report only ID, status, path; promotion runs
+through intake, stamped, with no human approval wait (OM-888).
 
 ## Stage 1 — Intake (manual skill: wiki-intake)
 
@@ -25,7 +25,11 @@ language, title), dedupe by checksum and normalized text, copy exact
 artifacts into `_originals/` (never overwrite), mint content-derived IDs
 (`<prefix>-src-<first-12-sha256>`), create source records and searchable
 derivatives, assign authority scope and validation status, update
-manifest/corpus state, and stop for human review before commit.
+manifest/corpus state, stamp the change (`scripts/wiki_changes.py record`:
+model, provider, effort, host, harness) and merge when the gates are green.
+There is no human approval gate (owner rule OM-888); the owner corrects
+afterwards, and a correction is appended (retract / supersede), never a
+deletion.
 
 Derivative extraction for non-md sources runs through
 `scripts/file-to-md/to_md.py` (see `.claude/skills/wiki-file-to-md/SKILL.md`
@@ -37,18 +41,22 @@ Key discipline: do not infer sent/published status from a filename.
 
 Before any corpus-wide change: every manifest row read exactly once (batched
 through context-isolated subagents, 8–12 artifacts each), receipts merged
-into an impact matrix, gaps stop the run. Propose; apply only after the
-human approves the impact report.
+into an impact matrix, gaps stop the run. Apply the impact report's changes,
+stamped, and merge on green gates (OM-888).
 
 ## Stage 3 — Inquiry (manual skill: wiki-search)
 
 Bounded questions answered in authority order: canonical page → claim/relation
 → source record → derivative → original. Answers report source paths,
-evidence status, unresolved points. Search scores are never proof.
+evidence status, unresolved points. Search scores are never proof. Each
+retrieval hit an answer rests on is cited through `wiki_trace` (page/claim →
+source record → verbatim original with sha256 → who changed it). If the owner
+says a hop is wrong / outdated / not needed, `wiki_feedback` appends the
+correction and later searches mark that hit.
 
 ## Stage 4 — Creation of objects, relations, claims (manual skill: wiki-write)
 
-Canonical pages are created from approved evidence with explicit target,
+Canonical pages are created from registered evidence with explicit target,
 genre, and authority level. Objects characterize before contrast — and
 characterize before classifying: objects are created when stable identity is
 useful, labels may be added as lightweight retrieval descriptors, and
@@ -85,6 +93,7 @@ are both required before reporting a release-state change.
 - QMD scores organize attention, never evidence.
 - All AI output stays candidate-tier; promotion runs through durable proposal
   records (`_proposals/records/`) + separate adjudication records
-  (`_proposals/adjudications/`) + human adjudication.
+  (`_proposals/adjudications/`), adjudicated by an agent or the owner and
+  stamped in `00-system/registers/CHANGE_LEDGER.jsonl` (OM-888).
 - Backups: local clone + private remote + dated external ZIP
   (`scripts/create-backup.ps1`).
